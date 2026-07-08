@@ -1,0 +1,13 @@
+{
+  "name": "scorekeeper",
+  "description": "Commitment tracking for LLM agents — a deontic scoreboard of the agent's own commitments, with entitlement provenance and incompatibility detection.",
+  "version": "0.0.1",
+  "author": {
+    "name": "Michal Strnadel",
+    "url": "https://github.com/michalstrnadel/scorekeeper"
+  },
+  "homepage": "https://github.com/michalstrnadel/scorekeeper",
+  "repository": "https://github.com/michalstrnadel/scorekeeper",
+  "license": "Apache-2.0",
+  "keywords": ["commitment-tracking", "agent-memory", "context-engineering", "inferentialism"]
+}
