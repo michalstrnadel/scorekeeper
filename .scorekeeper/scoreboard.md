@@ -43,11 +43,12 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 - **entitlement:** `document` — SPEC §7 Phase 0, §8 (scope creep is the main risk)
 - **incompatible_with:** universal "extract all commitments" in Phase 0
 
-### c-2026-07-08-0007 — Project name is not yet locked
-- **kind:** assumption · **status:** active
+### c-2026-07-08-0007 — Project name is `scorekeeper`, tagline "commitment tracking for LLM agents"
+- **kind:** decision · **status:** active
 - **scope:** `repo:root`, `topic:naming`
-- **entitlement:** `user_utterance` — Michal proposed "scorekeeper for agents"; decision pending
-- **note:** Working name `scorekeeper` used throughout until locked. See [ADR-0001](../adr/0001-project-name.md), QUESTIONS Q1.
+- **entitlement:** `user_utterance` + `tool_output` — Michal locked `scorekeeper`; availability verified 2026-07-08 (PyPI + `michalstrnadel/scorekeeper` repo free)
+- **supersedes:** the earlier `assumption` that the name was open
+- **note:** See [ADR-0001](../adr/0001-project-name.md) (Accepted). Distribution fallback `agent-scorekeeper` kept only if a collision surfaces.
 
 ---
 

@@ -6,4 +6,4 @@ Format: `NNNN-short-slug.md`. Status one of: Proposed · Accepted · Superseded 
 
 | ADR | Title | Status |
 |---|---|---|
-| [0001](0001-project-name.md) | Project name | Proposed |
+| [0001](0001-project-name.md) | Project name | Accepted |

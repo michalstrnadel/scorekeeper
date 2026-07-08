@@ -1,6 +1,6 @@
 # ADR-0001: Project name
 
-- **Status:** Proposed (pending Michal's decision)
+- **Status:** Accepted
 - **Date:** 2026-07-08
 
 ## Context
@@ -18,8 +18,15 @@ The name must satisfy: (a) available as a PyPI package and GitHub repo; (b) evoc
 
 ## Decision
 
-**Pending.** Leaning: repo/product name `scorekeeper` with the tagline "commitment tracking for LLM agents"; if the PyPI/GitHub name is taken, fall back to `agent-scorekeeper` for distribution while keeping `scorekeeper` as the conceptual name. To be confirmed with Michal before first public release.
+Name is **`scorekeeper`**, tagline **"commitment tracking for LLM agents"**.
+
+Availability verified 2026-07-08:
+- PyPI `scorekeeper` — free (HTTP 404).
+- GitHub repo `michalstrnadel/scorekeeper` — free (HTTP 404).
+- GitHub bare handle `github.com/scorekeeper` — taken by a dormant user (1 repo, no name); irrelevant for a repo hosted under Michal's account. No dedicated org under the bare name.
+
+`agent-scorekeeper` is retained only as a distribution fallback if a collision surfaces later.
 
 ## Consequences
 
-Affects PyPI package name, GitHub repo, MCP server id (`scorekeeper-mcp`), and the storage directory (`.scorekeeper/`). Kept flexible until the go decision; this ADR is superseded once the name is locked.
+Locks the PyPI package name (`scorekeeper`), GitHub repo, MCP server id (`scorekeeper-mcp`), and storage directory (`.scorekeeper/`). Tagline used across README and docs.
