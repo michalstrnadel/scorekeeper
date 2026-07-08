@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/og-image.png" alt="scorekeeper — commitment tracking for LLM agents. A galloping horse across an impressionist meadow, overlaid with a constellation of the deontic relations: entitlement → commitment ⨯ commitment (incompatibility)." width="100%">
+</p>
+
 # scorekeeper
 
 ### Commitment tracking for LLM agents
