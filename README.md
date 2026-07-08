@@ -29,6 +29,14 @@ Every existing memory / truth-maintenance system tracks facts about the **user a
 
 `scorekeeper` closes that gap. See [`docs/theory.md`](docs/theory.md) for the conceptual foundation and [`docs/SPEC-cs.md`](docs/SPEC-cs.md) for the full project specification.
 
+## Design stance: scaffolded, not extended
+
+An agent is never the model alone — it is the model plus its scaffold (`CLAUDE.md`, rules, skills, hooks, memory). Harness engineering is, in effect, *applied scaffolded-mind theory* (Sterelny): building cognitive supports for an entity with tiny working memory and no persistent memory of its own.
+
+That framing forces a choice. Self-editing memory (Letta-style) is **extended-mind-style** — the agent owns and edits its own external cognition, which is exactly why it has a *reliability gap*: if the agent forgets to write, the fact is gone. `scorekeeper` is deliberately the opposite — **scaffolded, not extended**: the scoreboard is maintained by deterministic hooks and an isolated scorer *outside the agent's authority*. The agent stands on the scaffold; it does not build it under itself at runtime.
+
+This is not just cleaner engineering — it is what the philosophy independently demands. For Brandom, keeping score is constitutively *social*: it is done by the *other* player, not by the speaker about itself. Philosophy of mind and philosophy of language converge on the same overlay design. (Full argument: [`docs/theory.md` §5](docs/theory.md).)
+
 ## Status
 
 **Phase 0 — MVP.** Scaffolding only. Nothing here works yet. See [`docs/SPEC-cs.md` §7](docs/SPEC-cs.md) for the roadmap.

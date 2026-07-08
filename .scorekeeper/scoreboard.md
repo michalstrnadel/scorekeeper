@@ -50,8 +50,11 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 - **supersedes:** the earlier `assumption` that the name was open
 - **note:** See [ADR-0001](../adr/0001-project-name.md) (Accepted). Distribution fallback `agent-scorekeeper` kept only if a collision surfaces.
 
----
-
-## Superseded / retracted / conflicted
+### c-2026-07-08-0008 — Architecture is scaffolded, not extended (external scorer outside agent authority)
+- **kind:** decision · **status:** active
+- **scope:** `topic:architecture`, `topic:stance`
+- **entitlement:** `prior_inference` + `document` — Sterelny scaffolded mind + Brandom social scorekeeping converge on the same choice already justified by Mercier & Sperber / Letta lesson (SPEC §2.4, §4.1.2); see [theory.md §5](../docs/theory.md)
+- **consequences:** the scoreboard MUST be maintained by deterministic hooks + isolated scorer, never by the agent's self-editing
+- **incompatible_with:** an extended-mind / self-editing-memory design where the agent owns and edits its own scoreboard at runtime (c-0004 reinforces this)
 
 *(none yet)*

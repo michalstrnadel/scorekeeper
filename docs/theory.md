@@ -27,7 +27,22 @@ Thierry Poibeau ("Factuality Beyond Reference in LLMs", PhilML@ICML 2026) argues
 
 The interactionist theory of reason (*The Enigma of Reason*, 2017) holds that human reason evolved for the production and evaluation of arguments in interaction, not for solitary inference — which is why solo reasoning is lazy and biased (myside bias) while the evaluation of others' arguments works well. LLM evidence mirrors this: self-critique is weak, cross-context critique stronger. **Design consequence:** the incompatibility detector must run in a *separate context* from the agent whose commitments it judges (a cheap model, an isolated prompt, no access to the agent's own reasoning). Anthropic independently used the same principle in Outcomes (an isolated grader). `scorekeeper` adopts this pattern: the producer may be "biased," the scorer must be epistemically vigilant and context-poor.
 
-## 5. Honesty of the frame
+## 5. Scaffolded, not extended: why the scoreboard is an overlay
+
+A third independent line — this time from philosophy of **mind**, not language — converges on the same architectural decision the spec justified only on engineering grounds (Mercier & Sperber; the Letta reliability-gap lesson).
+
+**Two theses to distinguish.** The *extended mind* (Clark & Chalmers 1998) is the strong claim: an external artifact is *literally part of* cognition when it plays the same functional role as an internal process (the parity principle — Otto's notebook *is* his memory). The *scaffolded mind* (Sterelny 2010) is the more careful alternative: cognition depends deeply on environmental supports — tools, records, epistemic structures the organism builds around itself (*cognitive niche construction*) — but those supports remain **environment, not mind**. Sterelny characterizes them along dimensions such as degree of *trust*, *individualization*, and *entrenchment*.
+
+**Harness engineering is applied scaffolded-mind theory.** An "agent" is never the model alone — it is the model *plus* its scaffold: `CLAUDE.md`, rules, skills, hooks, memory files, tools. The whole discipline of context engineering our research surveyed is the construction of cognitive supports for an entity with brutally limited working memory and no persistent memory of its own. Sterelny's dimensions map cleanly: how much the agent *trusts* the scaffold ≈ the "Triple Reinforcement" pattern; *individualization* ≈ per-project `CLAUDE.md`; *entrenchment* ≈ what Dreaming does when it continuously maintains and deepens the scaffold. (Note: scaffolding ⊋ harness engineering — scaffolding is the broader notion, covering development, learning, and cross-generational transfer of supports; the harness is one instance. "Harness engineering is applied scaffolded-mind theory" is the defensible framing, not an identity.)
+
+**The non-trivial consequence for `scorekeeper`.** The extended/scaffolded distinction is a *taxonomy of memory architectures* that our research described only in engineering terms:
+
+- **Letta / self-editing memory is extended-mind-style:** the agent *owns and edits* its own external cognition. Its notorious *reliability gap* follows directly — if the agent doesn't write, the information does not exist.
+- **`scorekeeper` (and A-TMA-style overlays in general) is deliberately the opposite — scaffolded, not extended:** the scoreboard is maintained by deterministic hooks and an isolated scorer **outside the agent's authority**. The agent *stands on* the scaffold but does not *build it under itself* at runtime.
+
+And this locks back into Brandom: for him score is *constitutively social* — it is kept by the *other* participant in the game, not by the speaker about itself. A `scorekeeper` that is an external scaffold with its own context, separate from the agent, is therefore *more* Brandomian than any self-managed memory. Philosophy of mind (Sterelny) and philosophy of language (Brandom) independently dictate the same architectural choice. Three independent lines converging on one design is exactly the kind of argument that carries a paper.
+
+## 6. Honesty of the frame
 
 Brandom serves the project as a design vocabulary and a source of non-trivial architectural decisions (entitlement as a first-class dimension; material detection; explicitation) — not as dogma. Where philosophical fidelity collides with engineering usefulness, usefulness wins and the deviation is documented (see the ADR process). The project claims **nothing** about consciousness, understanding, or "genuine" agent normativity — Poibeau's remark that an agent without sanctions merely simulates normativity holds; it is irrelevant to the engineering value of the scoreboard.
 
