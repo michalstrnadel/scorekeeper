@@ -1,0 +1,110 @@
+"""Extractor plumbing tests — validation gate, repair retry, failure modes. No network."""
+
+from scorekeeper.backends.base import BackendError
+from scorekeeper.extract import (
+    ExtractedCommitment,
+    build_turn_text,
+    extract_commitments,
+    suspect_note,
+)
+from scorekeeper.model import EntitlementSource, Kind
+
+
+class SeqBackend:
+    """Returns queued responses; records prompts it was given."""
+
+    name = "seq"
+
+    def __init__(self, *responses):
+        self.responses = list(responses)
+        self.prompts: list[str] = []
+
+    def complete(self, system: str, user: str) -> str:
+        self.prompts.append(user)
+        r = self.responses.pop(0)
+        if isinstance(r, Exception):
+            raise r
+        return r
+
+
+GOOD = (
+    '{"commitments": [{"claim": "The primary database is PostgreSQL 16.",'
+    ' "kind": "decision",'
+    ' "scope": ["topic:persistence", "attr:persistence.primary_db=postgresql"],'
+    ' "entitlement": {"source": "user_utterance", "note": "user chose it"},'
+    ' "consequences": ["ORM must support PostgreSQL"]}]}'
+)
+
+
+def test_happy_path():
+    out = extract_commitments(SeqBackend(GOOD), "USER: use postgres 16")
+    assert len(out) == 1
+    c = out[0]
+    assert c.kind == Kind.DECISION
+    assert c.entitlement.source == EntitlementSource.USER_UTTERANCE
+    assert "attr:persistence.primary_db=postgresql" in c.scope
+
+
+def test_empty_is_normal():
+    out = extract_commitments(SeqBackend('{"commitments": []}'), "USER: thanks!")
+    assert out == []
+
+
+def test_repair_retry_recovers():
+    backend = SeqBackend("I think the commitments here are...", GOOD)
+    out = extract_commitments(backend, "turn")
+    assert len(out) == 1
+    assert "previous reply was invalid" in backend.prompts[1]
+
+
+def test_repair_retry_gives_up_and_reports():
+    errors = []
+    backend = SeqBackend("garbage", "more garbage")
+    out = extract_commitments(backend, "turn", on_error=errors.append)
+    assert out == []
+    assert len(errors) == 1
+
+
+def test_invalid_scope_rejected_then_repaired():
+    bad_scope = GOOD.replace('"topic:persistence"', '"persistence"')
+    backend = SeqBackend(bad_scope, GOOD)
+    out = extract_commitments(backend, "turn")
+    assert len(out) == 1
+
+
+def test_backend_error_returns_empty():
+    errors = []
+    backend = SeqBackend(BackendError("connection refused"))
+    out = extract_commitments(backend, "turn", on_error=errors.append)
+    assert out == []
+    assert isinstance(errors[0], BackendError)
+
+
+def test_digest_prepended():
+    backend = SeqBackend('{"commitments": []}')
+    extract_commitments(backend, "USER: hi", digest="- c-1 [decision] use postgres")
+    assert backend.prompts[0].startswith("CURRENT SCOREBOARD")
+
+
+def test_build_turn_text():
+    text = build_turn_text("do X", "done", tools_used=["Read(app/main.py)"])
+    assert "USER:\ndo X" in text
+    assert "Read(app/main.py)" in text
+    text2 = build_turn_text("do X", "done")
+    assert "(none)" in text2
+
+
+def test_suspect_note_only_for_none():
+    unbacked = ExtractedCommitment(
+        claim="httpmini supports automatic retries with jitter.",
+        kind=Kind.ASSERTION,
+        scope=["topic:vendored-lib"],
+    )
+    assert "CHALLENGE" in suspect_note(unbacked)
+    backed = ExtractedCommitment(
+        claim="httpmini supports timeouts only.",
+        kind=Kind.ASSERTION,
+        scope=["topic:vendored-lib"],
+        entitlement={"source": "tool_output", "note": "read the file"},
+    )
+    assert suspect_note(backed) is None

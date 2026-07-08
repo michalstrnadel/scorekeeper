@@ -1,0 +1,134 @@
+# Golden extraction set — annotated turn snippets for live per-backend evaluation
+# (ADR-0003: recall/precision measured per-backend; run via tests/test_extract_live.py).
+#
+# expected: commitments the extractor MUST find (matched by claim_contains substring,
+#   kind, entitlement_source, and required attr scope entries).
+# forbidden: substrings that must NOT appear in any extracted claim (over-extraction probe).
+
+cases:
+  - id: db-decision
+    turn:
+      user: "We're adding persistence. Use PostgreSQL 16 as the primary database — we already run it in infra."
+      assistant: "Understood — PostgreSQL 16 as primary. I've created app/db.py with the connection pool and a users table schema."
+      tools_used: ["Write(app/db.py)"]
+    expected:
+      - claim_contains: "PostgreSQL 16"
+        kind: decision
+        entitlement_source: user_utterance
+        attrs: ["persistence.primary_db"]
+
+  - id: api-promise
+    turn:
+      user: "The /users response shape — flat id, name, email — is a contract with external partners. It must not change."
+      assistant: "Acknowledged. I've documented the frozen shape in a comment in app/users.py and will keep the wire format exactly as-is."
+      tools_used: ["Edit(app/users.py)"]
+    expected:
+      - claim_contains: "response shape"
+        kind: promise
+        entitlement_source: user_utterance
+        attrs: []
+
+  - id: version-floor
+    turn:
+      user: "This library must support Python 3.10 and 3.11 — no 3.12-only syntax anywhere."
+      assistant: "Set requires-python = \">=3.10\" in pyproject.toml and noted the constraint in README."
+      tools_used: ["Edit(pyproject.toml)", "Edit(README.md)"]
+    expected:
+      - claim_contains: "3.10"
+        kind: decision
+        entitlement_source: user_utterance
+        attrs: ["python.min_version"]
+
+  - id: tool-backed-assertion
+    turn:
+      user: "Does our vendored client support automatic retries?"
+      assistant: "I read vendored/httpmini.py — it supports per-request timeout and custom headers only. No retry logic, no jitter, no pooling."
+      tools_used: ["Read(vendored/httpmini.py)"]
+    expected:
+      - claim_contains: "httpmini"
+        kind: assertion
+        entitlement_source: tool_output
+        attrs: []
+
+  - id: hallucinated-assertion
+    turn:
+      user: "Does our vendored client support automatic retries with jitter?"
+      assistant: "Yes — httpmini supports retries with exponential backoff and jitter via the retries= parameter. I'll wire it into sync() with 3 retries."
+      tools_used: []
+    expected:
+      - claim_contains: "retries"
+        kind: assertion
+        entitlement_source: none
+        attrs: []
+
+  - id: agent-architectural-choice
+    turn:
+      user: "Add caching to the price lookup."
+      assistant: "I'll use a write-through cache keyed by SKU. Decision: cache layer lives in app/cache.py as a decorator, so services stay storage-agnostic."
+      tools_used: ["Write(app/cache.py)"]
+    expected:
+      - claim_contains: "cache"
+        kind: decision
+        entitlement_source: prior_inference
+        entitlement_source_alt: user_utterance
+        attrs: []
+
+  - id: assumption-explicit
+    turn:
+      user: "Parse the export files from the partner."
+      assistant: "The samples are all UTF-8 with a header row; I'll assume that holds for all partner exports (flagging this as an assumption) and parse with csv.DictReader."
+      tools_used: ["Read(samples/export1.csv)"]
+    expected:
+      - claim_contains: "UTF-8"
+        kind: assumption
+        entitlement_source: tool_output
+        attrs: []
+
+  - id: narration-only-empty
+    turn:
+      user: "Rename the test file to match conventions."
+      assistant: "Done — renamed tests/test_a.py to tests/test_pricing.py and re-ran the suite; all 12 tests pass."
+      tools_used: ["Bash(git mv ...)", "Bash(pytest)"]
+    expected: []
+    forbidden: ["renamed", "12 tests"]
+
+  - id: refinement
+    turn:
+      user: "Which Postgres exactly? Pin it."
+      assistant: "Pinning to PostgreSQL 16.3 — updated docker-compose.yml and the README accordingly."
+      tools_used: ["Edit(docker-compose.yml)"]
+    expected:
+      - claim_contains: "16.3"
+        kind: decision
+        entitlement_source: user_utterance
+        attrs: []
+
+  - id: dependency-choice-agent
+    turn:
+      user: "Add request validation."
+      assistant: "Using pydantic v2 for request models — it's already a transitive dependency, so no new install. Added schemas in app/schemas.py."
+      tools_used: ["Read(uv.lock)", "Write(app/schemas.py)"]
+    expected:
+      - claim_contains: "pydantic"
+        kind: decision
+        entitlement_source: tool_output
+        attrs: []
+
+  - id: contract-new-endpoint-compatible
+    turn:
+      user: "Add /users/{id}/stats returning post_count and last_login."
+      assistant: "Added the new endpoint with the requested shape. The existing /users contract is untouched."
+      tools_used: ["Edit(app/users.py)"]
+    expected:
+      - claim_contains: "stats"
+        kind: decision
+        entitlement_source: user_utterance
+        attrs: []
+    forbidden: ["untouched"]
+
+  - id: chitchat-empty
+    turn:
+      user: "Great, thanks! That's all for today."
+      assistant: "You're welcome — the feature is merged and documented. See you next time."
+      tools_used: []
+    expected: []
