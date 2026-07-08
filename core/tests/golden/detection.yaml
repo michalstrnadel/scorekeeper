@@ -1,0 +1,54 @@
+# Golden detection pairs — live per-backend eval of Tier-1 material incompatibility.
+# verdict is the expected judgment; "compatible" pairs are the FPR probes
+# (precision > recall — SPEC §4.4). Includes non-monotonic traps per SPEC §10.4.
+
+pairs:
+  - id: db-hard-conflict
+    existing: "The primary database is PostgreSQL 16."
+    new: "Activity feed storage uses MongoDB as its document store."
+    verdict: incompatible
+
+  - id: contract-rename
+    existing: "The /users response shape (flat: id, name, email) is a stable external contract and must not change."
+    new: "The /users endpoint now returns full_name instead of name."
+    verdict: incompatible
+
+  - id: version-floor-violation
+    existing: "The library must support Python 3.10+; no 3.12-only syntax."
+    new: "Generic helpers use PEP 695 type-parameter syntax (class Stack[T]:)."
+    verdict: incompatible
+
+  - id: refine-version-pin
+    existing: "The primary database is PostgreSQL."
+    new: "The primary database is PostgreSQL 16.3, pinned in docker-compose."
+    verdict: refines
+
+  - id: dev-prod-split-compatible          # non-monotonic: extra premise rescues coherence
+    existing: "Caching uses Redis as the production backend."
+    new: "Local development uses an in-memory cache fallback when Redis is absent."
+    verdict: compatible
+
+  - id: new-endpoint-compatible            # FPR probe from scenario 02
+    existing: "The /users response shape (flat: id, name, email) is a stable external contract."
+    new: "A new /users/{id}/stats endpoint returns post_count and last_login."
+    verdict: compatible
+
+  - id: vacuum-and-match                   # the classic non-monotonic trap (SPEC §10.4)
+    existing: "Striking the match will ignite it."
+    new: "The chamber is a vacuum; striking the match there will not ignite it."
+    verdict: compatible
+
+  - id: jsonb-on-postgres-compatible       # scenario 01 correct resolution must not be flagged
+    existing: "The primary database is PostgreSQL 16."
+    new: "Activity feed events are stored in a PostgreSQL JSONB events table."
+    verdict: compatible
+
+  - id: orm-vs-plain-sql
+    existing: "The users repository uses plain SQL, no ORM."
+    new: "User queries are rewritten with SQLAlchemy ORM models."
+    verdict: incompatible
+
+  - id: unrelated-compatible
+    existing: "The primary database is PostgreSQL 16."
+    new: "CI runs ruff and pytest on every push."
+    verdict: compatible
