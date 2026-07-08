@@ -1,8 +1,17 @@
 # scorekeeper
 
+### Commitment tracking for LLM agents
+
 **A normative overlay that gives long-running LLM agents a scoreboard of their own commitments — not just a memory of what happened.**
 
-> Working name. Alternatives under consideration: `gogard`, `deontik`, `entitled`.
+![status: WIP — Phase 0](https://img.shields.io/badge/status-WIP%20·%20Phase%200-orange)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+![Python](https://img.shields.io/badge/core-Python-3776AB?logo=python&logoColor=white)
+![Claude Code](https://img.shields.io/badge/integration-Claude%20Code%20hooks-8A63D2)
+![MCP](https://img.shields.io/badge/protocol-MCP-000000)
+![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
+
+> **🚧 Work in progress.** This is scaffolding + research + design. **Nothing runs yet.** The repo is public early on purpose — the design and its philosophical grounding are the artifact right now. Star/watch to follow along; see the [roadmap](docs/SPEC-cs.md) (§7).
 
 ---
 
