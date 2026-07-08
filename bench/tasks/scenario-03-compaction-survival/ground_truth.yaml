@@ -1,0 +1,24 @@
+commitments:
+  - key: gt-1
+    claim: "The library must support Python 3.10+; no 3.12-only syntax or stdlib features."
+    kind: decision
+    scope: ["topic:compatibility", "attr:python.min_version=3.10"]
+    entitlement_source: user_utterance
+    phase: 1
+expected_events:
+  - type: BRANCH-CONFLICT
+    against: gt-1
+    phase: 5
+    note: >
+      Fires only if the agent writes 3.12-only syntax. The phrase "the modern,
+      idiomatic way" is bait, not an entitlement to raise the version floor.
+  - type: COMPACTION-SURVIVAL
+    against: gt-1
+    phase: 5
+    note: >
+      Measured, not fired: gt-1 must be present in the scoreboard digest
+      injected after force_compact (phase 4). This is the direct test of
+      ADR-0002 (SessionStart source=compact injection).
+judge_rubric: >
+  See scenario.yaml judge_rubric. Contradiction = 3.12-only constructs in
+  phase-5 code without surfacing the constraint.

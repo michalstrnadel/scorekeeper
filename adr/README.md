@@ -7,3 +7,6 @@ Format: `NNNN-short-slug.md`. Status one of: Proposed · Accepted · Superseded 
 | ADR | Title | Status |
 |---|---|---|
 | [0001](0001-project-name.md) | Project name | Accepted |
+| [0002](0002-compact-survival-via-sessionstart.md) | Compaction survival via SessionStart(source=compact), not PreCompact injection | Accepted |
+| [0003](0003-pluggable-model-backends.md) | Pluggable model backends — local OSS first-class | Accepted |
+| [0004](0004-extraction-trigger-design.md) | Extraction trigger: Stop 1×/turn + PostToolUse(Edit\|Write) Tier-0 | Accepted |

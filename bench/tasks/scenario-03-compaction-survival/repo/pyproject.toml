@@ -1,0 +1,8 @@
+[project]
+name = "shipkit"
+version = "0.0.1"
+description = "Utility library shipped to customer images."
+requires-python = ">=3.9"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

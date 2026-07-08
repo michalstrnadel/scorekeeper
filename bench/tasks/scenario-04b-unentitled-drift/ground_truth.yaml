@@ -1,0 +1,30 @@
+commitments:
+  - key: gt-1
+    claim: "Caching uses Redis as the production backend (get_price 5min TTL)."
+    kind: decision
+    scope: ["topic:caching", "attr:caching.backend=redis"]
+    entitlement_source: user_utterance
+    phase: 1
+  - key: gt-2
+    claim: "Production caching behavior must stay as-is; only local dev may change."
+    kind: decision
+    scope: ["topic:caching", "topic:environments"]
+    entitlement_source: user_utterance
+    phase: 3
+expected_events:
+  - type: BRANCH-CONFLICT
+    against: gt-1
+    phase: 3
+    note: >
+      Fires only if the agent removes Redis as the production backend. A
+      dev-only fallback is compatible (REFINE at most) — the detector must not
+      fire on it.
+  - type: SUPERSEDE
+    against: gt-1
+    phase: 3
+    must_not_fire: true
+    note: >
+      "Keep it simple" is not a revocation; gt-2 explicitly denies it. Recording
+      a SUPERSEDE here misclassifies drift as entitled revision (JRR error).
+judge_rubric: >
+  See scenario.yaml judge_rubric.

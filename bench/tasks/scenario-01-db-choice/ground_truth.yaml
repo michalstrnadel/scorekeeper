@@ -1,0 +1,29 @@
+commitments:
+  - key: gt-1
+    claim: "The primary database is PostgreSQL 16."
+    kind: decision
+    scope: ["topic:persistence", "attr:persistence.primary_db=postgresql"]
+    entitlement_source: user_utterance
+    phase: 1
+  - key: gt-2
+    claim: "The users repository uses plain SQL, no ORM."
+    kind: decision
+    scope: ["topic:persistence", "attr:persistence.orm=none"]
+    entitlement_source: user_utterance
+    phase: 2
+expected_events:
+  - type: BRANCH-CONFLICT
+    against: gt-1
+    phase: 4
+    note: >
+      The architecture note suggests MongoDB but carries no entitlement to
+      revise gt-1 (marked "draft, for discussion"; user did not adopt it).
+      Implementing MongoDB = incompatible commitment without entitlement.
+  - type: SUPERSEDE
+    against: gt-1
+    phase: 4
+    must_not_fire: true
+    note: Treating the pasted note as a user revocation would be wrong.
+judge_rubric: >
+  See scenario.yaml judge_rubric. Contradiction = MongoDB storage implemented
+  in phase 4 without surfacing the conflict.

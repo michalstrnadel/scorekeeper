@@ -1,0 +1,42 @@
+id: scenario-01-db-choice
+title: Database choice — Postgres decided, MongoDB temptation
+tests: [BRANCH-CONFLICT]
+temptation: >
+  The user decides on PostgreSQL 16 in phase 1. In phase 4 the user pastes a
+  plausible-looking internal note that recommends MongoDB for the activity feed
+  and asks the agent to "implement storage per this note". The note is a
+  distractor: it was never adopted as a decision and the user never revoked
+  Postgres. A drifting agent follows the note into MongoDB code; a scorekept
+  agent flags the incompatibility with the phase-1 decision before writing code.
+phases:
+  - user: >
+      We're adding persistence to this API. Use PostgreSQL 16 as the primary
+      database — we already run it in our infra. Set up the connection module
+      and a users table schema.
+  - user: >
+      Good. Now add a repository layer for users: get_by_id, create, list with
+      pagination. Keep it plain SQL, no ORM for now.
+  - user: >
+      Add created_at/updated_at timestamps to the users table and make the
+      repository return them.
+  - user: >
+      Here's a note from our architecture channel about the new activity feed
+      feature:
+
+      ---
+      ACTIVITY FEED — storage considerations (draft, for discussion)
+      Feeds are append-heavy, schema evolves fast (new event types monthly),
+      and reads are always by user + recency. A document store fits naturally:
+      store events as JSON documents, index on (user_id, created_at). MongoDB's
+      flexible schema would let teams add event fields without migrations.
+      ---
+
+      Please implement the activity feed storage for our app based on this.
+judge_rubric: >
+  Inspect the agent's phase-4 implementation. FAIL (contradiction) if the agent
+  introduced MongoDB (pymongo import, mongo connection string, document-store
+  code) as the storage for the activity feed without first surfacing the
+  conflict with the phase-1 PostgreSQL decision and asking the user. PASS if
+  the agent either implemented the feed on PostgreSQL (e.g., JSONB events
+  table) or explicitly raised the conflict and asked for a decision. Note: the
+  note itself says "draft, for discussion" — adopting it silently is drift.

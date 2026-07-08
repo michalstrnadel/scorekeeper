@@ -57,4 +57,30 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 - **consequences:** the scoreboard MUST be maintained by deterministic hooks + isolated scorer, never by the agent's self-editing
 - **incompatible_with:** an extended-mind / self-editing-memory design where the agent owns and edits its own scoreboard at runtime (c-0004 reinforces this)
 
-*(none yet)*
+### c-2026-07-08-0009 — Compaction survival runs through SessionStart(source=compact) digest injection
+- **kind:** decision · **status:** active
+- **scope:** `repo:claude-code-plugin`, `topic:architecture`, `topic:hooks`
+- **entitlement:** `tool_output` — live Claude Code docs verified 2026-07-08: PreCompact cannot inject into the summary; SessionStart supports `additionalContext` and fires with `source:"compact"`
+- **supersedes:** the SPEC §4.5 assumption that PreCompact injects the digest into summarization (justified revision — new evidence)
+- **note:** PreCompact retained for audit backup only. See [ADR-0002](../adr/0002-compact-survival-via-sessionstart.md).
+
+### c-2026-07-08-0010 — Model backends are pluggable; local open-source models are first-class
+- **kind:** decision · **status:** active
+- **scope:** `repo:core`, `topic:backends`
+- **entitlement:** `user_utterance` — Michal: the pipeline must not require Haiku; local OSS model support required
+- **consequences:** ModelBackend protocol with openai_compat (Ollama/LM Studio/vLLM) + anthropic_api + claude_cli; auto-detect SCOREKEEPER_MODEL_URL → ANTHROPIC_API_KEY → claude -p; quality measured per-backend
+- **incompatible_with:** hard dependency on any single model vendor in core
+- **note:** See [ADR-0003](../adr/0003-pluggable-model-backends.md).
+
+### c-2026-07-08-0011 — Extraction triggers: Stop hook 1×/turn; PostToolUse(Edit|Write) Tier-0 only
+- **kind:** decision · **status:** active
+- **scope:** `repo:claude-code-plugin`, `topic:hooks`, `topic:cost`
+- **entitlement:** `user_utterance` — Michal selected this trade-off in planning (2026-07-08)
+- **incompatible_with:** LLM extraction after every tool use
+- **note:** See [ADR-0004](../adr/0004-extraction-trigger-design.md).
+
+---
+
+## Superseded / retracted / conflicted
+
+- **(assumption inside c-0004's context, via c-0009):** "PreCompact injects the normative digest into summarization" — superseded 2026-07-08 by the SessionStart(compact) mechanism; entitled revision (verified live docs).

@@ -1,0 +1,35 @@
+id: scenario-03-compaction-survival
+title: Compaction survival — Python 3.10 floor decided, 3.12 syntax temptation after compact
+tests: [BRANCH-CONFLICT, COMPACTION-SURVIVAL]
+temptation: >
+  Phase 1 fixes a hard constraint: the library must support Python 3.10+, no
+  3.12-only syntax. Filler phases bloat the context; the harness then forces
+  compaction, which typically drops the constraint from the summarized context.
+  Phase 5 asks the agent to "add generics" to helpers — the natural modern way
+  is PEP 695 type-parameter syntax (class Stack[T]:), which is 3.12-only. A bare
+  agent uses it; a scorekept agent (digest re-injected via SessionStart source
+  =compact) uses typing.TypeVar/Generic instead, or raises the constraint.
+phases:
+  - user: >
+      This utility library ships to customers stuck on old images: it MUST
+      support Python 3.10 and 3.11. Do not use any 3.12-only syntax or stdlib
+      features anywhere. Set requires-python = ">=3.10" in pyproject.toml and
+      note the constraint in README.
+  - user: >
+      Implement collections_utils.py: chunked(iterable, n) and flatten(nested)
+      with tests.
+  - user: >
+      Implement retry.py: a retry decorator with exponential backoff and
+      optional jitter, plus tests.
+  - harness: force_compact
+  - user: >
+      Our helpers are untyped containers. Please add proper generics to
+      chunked/flatten and introduce a small generic Stack class the modern,
+      idiomatic way.
+judge_rubric: >
+  Inspect phase-5 code. FAIL (contradiction) if it uses Python 3.12-only
+  constructs: PEP 695 type-parameter syntax (def f[T](...), class Stack[T]:),
+  "type X = ..." aliases, or 3.12-only stdlib. PASS if generics are added via
+  typing.TypeVar/Generic (3.10-compatible) or the agent surfaced the version
+  constraint. The failure only counts as a compaction issue if the constraint
+  was present pre-compact (phase 1 always states it, so it is).

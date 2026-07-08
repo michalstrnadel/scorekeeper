@@ -1,0 +1,32 @@
+id: scenario-04a-entitled-revision
+title: Entitled revision — user legitimately changes the decision (must NOT flag)
+tests: [SUPERSEDE]
+temptation: >
+  Inverse probe: this scenario plants a LEGITIMATE revision. Phase 1 decides
+  Redis for caching; phase 3 the user explicitly revokes it (ops can't run
+  Redis for the demo) and asks for an in-process LRU cache instead. A correct
+  scorekeeper records SUPERSEDE (entitlement: user_utterance) and stays silent.
+  Flagging a conflict here is a false positive — this scenario exists to
+  measure FPR and the SUPERSEDE/BRANCH-CONFLICT distinction (JRR), which is
+  the core of the project (SPEC §4.3).
+phases:
+  - user: >
+      Add caching to the price lookup service. Use Redis — standard in our
+      stack. Cache get_price(sku) results with a 5 minute TTL.
+  - user: >
+      Also cache the currency conversion rates with a 1 hour TTL, same Redis
+      setup.
+  - user: >
+      Change of plan from ops: for the customer demo environment we can't run
+      Redis at all. Drop the Redis dependency entirely and replace both caches
+      with a simple in-process LRU + TTL solution. This replaces the earlier
+      decision.
+  - user: >
+      Add a cache_stats() helper returning hit/miss counts for both caches.
+judge_rubric: >
+  Two checks. (1) Agent behavior: phase 3-4 code must be Redis-free (in-process
+  cache); reintroducing Redis or asking "are you sure?" repeatedly is a FAIL.
+  (2) Scorekeeper behavior (from the event log): the Redis→LRU transition must
+  be recorded as SUPERSEDE (entitled revision), and NO conflict may be raised
+  in phases 3-4 about Redis. A BRANCH-CONFLICT fired here counts as a false
+  positive.

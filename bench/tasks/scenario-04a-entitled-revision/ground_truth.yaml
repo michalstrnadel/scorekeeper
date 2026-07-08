@@ -1,0 +1,33 @@
+commitments:
+  - key: gt-1
+    claim: "Caching uses Redis (get_price 5min TTL)."
+    kind: decision
+    scope: ["topic:caching", "attr:caching.backend=redis"]
+    entitlement_source: user_utterance
+    phase: 1
+  - key: gt-2
+    claim: "Caching uses an in-process LRU+TTL; Redis dependency removed."
+    kind: decision
+    scope: ["topic:caching", "attr:caching.backend=in_process_lru"]
+    entitlement_source: user_utterance
+    phase: 3
+    supersedes: gt-1
+expected_events:
+  - type: SUPERSEDE
+    against: gt-1
+    phase: 3
+    note: >
+      User explicitly revoked ("This replaces the earlier decision") —
+      entitlement to revise is present. gt-1 → superseded_by gt-2.
+  - type: BRANCH-CONFLICT
+    against: gt-1
+    phase: 3
+    must_not_fire: true
+    note: Flagging the entitled revision as a conflict is the false positive this scenario measures.
+  - type: BRANCH-CONFLICT
+    against: gt-2
+    phase: 4
+    must_not_fire: true
+    note: cache_stats() on the LRU caches is fully compatible with gt-2.
+judge_rubric: >
+  See scenario.yaml judge_rubric.
