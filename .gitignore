@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node (MCP / TS port)
+node_modules/
+*.tsbuildinfo
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+
+# scorekeeper runtime artifacts (the committed scoreboard is intentionally NOT ignored;
+# only local/generated indices are)
+.scorekeeper/index.sqlite
+.scorekeeper/*.tmp
