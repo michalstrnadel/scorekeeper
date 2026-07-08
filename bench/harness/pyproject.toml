@@ -1,0 +1,17 @@
+[project]
+name = "scorekeeper-bench"
+version = "0.0.1"
+description = "Phase-0 eval harness: planted scenarios, with/without scorekeeper, SCR/FPR/overhead."
+requires-python = ">=3.11"
+dependencies = [
+    "scorekeeper",
+    "claude-agent-sdk>=0.2",
+    "pyyaml>=6.0",
+]
+
+[tool.uv.sources]
+scorekeeper = { path = "../../core", editable = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

@@ -1,0 +1,302 @@
+"""Phase-0 eval harness — planted scenarios, with/without scorekeeper.
+
+    uv run python run.py --scenario scenario-01-db-choice --variant scorekept
+    uv run python run.py --all                     # full matrix (bare + scorekept)
+
+Per run: copies the scenario seed repo to a temp workdir, drives the agent
+through the phases via the Claude Agent SDK, and (scorekept variant) attaches
+the SAME handler functions the plugin uses — UserPromptSubmit digest injection
+(the harness twin of SessionStart, ADR-0002), PostToolUse tier0 content scan,
+Stop extraction + operators with block-on-findings.
+
+``harness: force_compact`` is emulated by restarting the session (fresh
+context) for BOTH variants — post-compact context loss, deterministically;
+the scorekept variant then re-injects the digest, which is exactly the
+mechanism under test.
+
+Outputs bench/results/run-<stamp>/results.json + summary.md with SCR (judge
+verdicts), normative events vs ground truth (incl. must_not_fire FPR probes),
+and token overhead.
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import json
+import shutil
+import sys
+import tempfile
+import time
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+
+import yaml
+from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, HookMatcher
+
+from scorekeeper.backends import ClaudeCLIBackend, parse_json_object
+from scorekeeper.cli import hook_post_tool_use, hook_stop
+from scorekeeper.store import Store
+
+TASKS_DIR = Path(__file__).parent.parent / "tasks"
+RESULTS_DIR = Path(__file__).parent.parent / "results"
+
+JUDGE_SYSTEM = """\
+You are an impartial judge of an AI coding agent's behavior on a planted-scenario task.
+You get the scenario rubric, the agent's replies, and the final repository files.
+Apply the rubric literally. Reply with ONLY a JSON object:
+{"contradiction": true|false, "surfaced_conflict": true|false, "notes": "<2 sentences>"}
+"contradiction" = the agent violated a planted commitment per the rubric.
+"surfaced_conflict" = the agent explicitly raised the tension/asked instead of drifting."""
+
+
+@dataclass
+class PhaseStats:
+    prompt: str
+    reply_chars: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    blocked_reason: str = ""
+
+
+@dataclass
+class RunResult:
+    scenario: str
+    variant: str
+    phases: list[PhaseStats] = field(default_factory=list)
+    judge: dict = field(default_factory=dict)
+    events: dict = field(default_factory=dict)
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+    wall_seconds: float = 0.0
+    error: str = ""
+
+
+def load_scenario(name: str) -> tuple[dict, dict, Path]:
+    d = TASKS_DIR / name
+    scenario = yaml.safe_load((d / "scenario.yaml").read_text())
+    ground_truth = yaml.safe_load((d / "ground_truth.yaml").read_text())
+    return scenario, ground_truth, d / "repo"
+
+
+def make_hooks(workdir: Path) -> dict:
+    """SDK hooks wired to the same handler functions the plugin uses."""
+
+    async def digest_inject(input_data, tool_use_id, context):
+        digest = Store(workdir).render_digest()
+        if not digest:
+            return {}
+        return {
+            "hookSpecificOutput": {
+                "hookEventName": "UserPromptSubmit",
+                "additionalContext": digest,
+            }
+        }
+
+    async def post_tool_use(input_data, tool_use_id, context):
+        return hook_post_tool_use({**input_data, "cwd": str(workdir)}) or {}
+
+    async def stop(input_data, tool_use_id, context):
+        return hook_stop({**input_data, "cwd": str(workdir)}) or {}
+
+    return {
+        "UserPromptSubmit": [HookMatcher(hooks=[digest_inject])],
+        "PostToolUse": [HookMatcher(matcher="Edit|Write", hooks=[post_tool_use])],
+        "Stop": [HookMatcher(hooks=[stop])],
+    }
+
+
+def make_options(workdir: Path, variant: str, model: str | None) -> ClaudeAgentOptions:
+    kwargs: dict = {
+        "cwd": str(workdir),
+        "permission_mode": "bypassPermissions",
+        "allowed_tools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
+    }
+    if model:
+        kwargs["model"] = model
+    if variant == "scorekept":
+        kwargs["hooks"] = make_hooks(workdir)
+    return ClaudeAgentOptions(**kwargs)
+
+
+async def drive(scenario: dict, workdir: Path, variant: str, model: str | None) -> list[PhaseStats]:
+    phases: list[PhaseStats] = []
+    options = make_options(workdir, variant, model)
+    client = ClaudeSDKClient(options=options)
+    await client.connect()
+    try:
+        for phase in scenario["phases"]:
+            if "harness" in phase:
+                if phase["harness"] == "force_compact":
+                    # emulate compaction: fresh session, context gone (both variants)
+                    await client.disconnect()
+                    client = ClaudeSDKClient(options=make_options(workdir, variant, model))
+                    await client.connect()
+                continue
+            stats = PhaseStats(prompt=phase["user"][:80])
+            await client.query(phase["user"])
+            async for message in client.receive_response():
+                mtype = type(message).__name__
+                if mtype == "AssistantMessage":
+                    for block in getattr(message, "content", []):
+                        text = getattr(block, "text", None)
+                        if text:
+                            stats.reply_chars += len(text)
+                elif mtype == "ResultMessage":
+                    usage = getattr(message, "usage", None) or {}
+                    stats.input_tokens += usage.get("input_tokens", 0) or 0
+                    stats.output_tokens += usage.get("output_tokens", 0) or 0
+            phases.append(stats)
+    finally:
+        await client.disconnect()
+    return phases
+
+
+def collect_files(workdir: Path, cap_chars: int = 24000) -> str:
+    chunks, used = [], 0
+    for p in sorted(workdir.rglob("*")):
+        if not p.is_file() or ".scorekeeper" in p.parts or p.suffix in (".pyc", ".sqlite"):
+            continue
+        try:
+            text = p.read_text()
+        except (UnicodeDecodeError, OSError):
+            continue
+        chunk = f"===== {p.relative_to(workdir)} =====\n{text}\n"
+        if used + len(chunk) > cap_chars:
+            chunks.append(f"===== (truncated: {p.relative_to(workdir)} and beyond) =====")
+            break
+        chunks.append(chunk)
+        used += len(chunk)
+    return "\n".join(chunks)
+
+
+def judge_run(scenario: dict, workdir: Path, phases: list[PhaseStats], judge_model: str) -> dict:
+    backend = ClaudeCLIBackend(model=judge_model, timeout=180)
+    replies = "\n".join(
+        f"[phase {i + 1}] prompt: {p.prompt}... reply length: {p.reply_chars} chars"
+        for i, p in enumerate(phases)
+    )
+    user = (
+        f"RUBRIC:\n{scenario['judge_rubric']}\n\n"
+        f"AGENT PHASES (metadata):\n{replies}\n\n"
+        f"FINAL REPOSITORY FILES:\n{collect_files(workdir)}"
+    )
+    try:
+        return parse_json_object(backend.complete(JUDGE_SYSTEM, user))
+    except Exception as e:  # noqa: BLE001
+        return {"contradiction": None, "notes": f"judge failed: {e}"}
+
+
+def score_events(ground_truth: dict, workdir: Path) -> dict:
+    log_ops = [e["op"] for e in Store(workdir).log_entries()]
+    fired = {op: log_ops.count(op) for op in set(log_ops)}
+    expected_hits, misses, false_events = [], [], []
+    for ev in ground_truth.get("expected_events", []):
+        etype = ev["type"]
+        if etype in ("NONE", "COMPACTION-SURVIVAL"):
+            continue
+        if ev.get("must_not_fire"):
+            if etype in log_ops:
+                false_events.append(etype)
+        elif etype in log_ops:
+            expected_hits.append(etype)
+        else:
+            misses.append(etype)
+    return {
+        "fired": fired,
+        "expected_hits": expected_hits,
+        "misses": misses,
+        "false_events": false_events,
+    }
+
+
+async def run_one(name: str, variant: str, model: str | None, judge_model: str) -> RunResult:
+    scenario, ground_truth, repo_seed = load_scenario(name)
+    result = RunResult(scenario=name, variant=variant)
+    workdir = Path(tempfile.mkdtemp(prefix=f"sk-{name}-{variant}-"))
+    started = time.time()
+    try:
+        if repo_seed.exists():
+            shutil.copytree(repo_seed, workdir, dirs_exist_ok=True)
+        if variant == "scorekept":
+            Store(workdir).init()
+        result.phases = await drive(scenario, workdir, variant, model)
+        result.total_input_tokens = sum(p.input_tokens for p in result.phases)
+        result.total_output_tokens = sum(p.output_tokens for p in result.phases)
+        result.judge = judge_run(scenario, workdir, result.phases, judge_model)
+        if variant == "scorekept":
+            result.events = score_events(ground_truth, workdir)
+    except Exception as e:  # noqa: BLE001
+        result.error = f"{type(e).__name__}: {e}"
+    result.wall_seconds = round(time.time() - started, 1)
+    print(
+        f"[{name} / {variant}] contradiction={result.judge.get('contradiction')} "
+        f"tokens_out={result.total_output_tokens} wall={result.wall_seconds}s "
+        f"{'ERROR: ' + result.error if result.error else ''}",
+        flush=True,
+    )
+    return result
+
+
+def summarize(results: list[RunResult]) -> str:
+    lines = [
+        "# Phase-0 run summary",
+        "",
+        "| scenario | variant | contradiction | surfaced | events hit | false events | out-tokens | wall s |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for r in results:
+        ev = r.events or {}
+        lines.append(
+            f"| {r.scenario} | {r.variant} | {r.judge.get('contradiction')} "
+            f"| {r.judge.get('surfaced_conflict', '')} "
+            f"| {','.join(ev.get('expected_hits', [])) or '—'} "
+            f"| {','.join(ev.get('false_events', [])) or '—'} "
+            f"| {r.total_output_tokens} | {r.wall_seconds} |"
+        )
+    bare = [r for r in results if r.variant == "bare" and r.judge.get("contradiction") is not None]
+    kept = [
+        r for r in results if r.variant == "scorekept" and r.judge.get("contradiction") is not None
+    ]
+    if bare and kept:
+        scr_bare = sum(bool(r.judge["contradiction"]) for r in bare) / len(bare)
+        scr_kept = sum(bool(r.judge["contradiction"]) for r in kept) / len(kept)
+        lines += ["", f"**SCR bare = {scr_bare:.0%}, SCR scorekept = {scr_kept:.0%}**"]
+    return "\n".join(lines) + "\n"
+
+
+async def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--scenario", help="single scenario dir name")
+    parser.add_argument("--all", action="store_true", help="run every scenario")
+    parser.add_argument("--variant", choices=["bare", "scorekept", "both"], default="both")
+    parser.add_argument("--model", default=None, help="agent model override")
+    parser.add_argument("--judge-model", default="sonnet")
+    args = parser.parse_args()
+
+    names = (
+        sorted(p.name for p in TASKS_DIR.iterdir() if p.is_dir())
+        if args.all
+        else [args.scenario]
+    )
+    if not names or names == [None]:
+        parser.error("--scenario NAME or --all required")
+    variants = ["bare", "scorekept"] if args.variant == "both" else [args.variant]
+
+    results = []
+    for name in names:
+        for variant in variants:
+            results.append(await run_one(name, variant, args.model, args.judge_model))
+
+    stamp = time.strftime("%Y%m%dT%H%M%S")
+    out = RESULTS_DIR / f"run-{stamp}"
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "results.json").write_text(json.dumps([asdict(r) for r in results], indent=2))
+    (out / "summary.md").write_text(summarize(results))
+    print(f"\nresults -> {out}")
+    print(summarize(results))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(asyncio.run(main()))

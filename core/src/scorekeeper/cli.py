@@ -42,68 +42,64 @@ def _emit(obj: dict) -> None:
 # -- hook handlers -------------------------------------------------------------
 
 
-def hook_session_start(payload: dict) -> None:
+def hook_session_start(payload: dict) -> dict | None:
     store = Store(_root(payload))
     digest = store.render_digest()
     if not digest:
-        return
-    _emit(
-        {
-            "hookSpecificOutput": {
-                "hookEventName": "SessionStart",
-                "additionalContext": digest,
-            }
+        return None
+    return {
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": digest,
         }
-    )
+    }
 
 
-def hook_post_tool_use(payload: dict) -> None:
+def hook_post_tool_use(payload: dict) -> dict | None:
     store = Store(_root(payload))
     if not store.exists:
-        return
+        return None
     tool_input = payload.get("tool_input") or {}
     content = " ".join(
         str(tool_input.get(k, "")) for k in ("content", "new_string", "old_string")
     ).strip()
     if not content:
-        return
+        return None
     warnings = tier0_content.scan(content, store.active())
     if not warnings:
-        return
+        return None
     for w in warnings:
         store.log(
             "TIER0-CONTENT-WARNING",
             w.commitment_id,
             f"{w.key}={w.pinned_value} vs '{w.rival_found}' in {tool_input.get('file_path', '?')}",
         )
-    _emit(
-        {
-            "hookSpecificOutput": {
-                "hookEventName": "PostToolUse",
-                "additionalContext": tier0_content.format_warnings(warnings),
-            }
+    return {
+        "hookSpecificOutput": {
+            "hookEventName": "PostToolUse",
+            "additionalContext": tier0_content.format_warnings(warnings),
         }
-    )
+    }
 
 
-def hook_stop(payload: dict) -> None:
+def hook_stop(payload: dict) -> dict | None:
     if payload.get("stop_hook_active"):
-        return  # already inside a stop-hook continuation — never loop
+        return None  # already inside a stop-hook continuation — never loop
     root = _root(payload)
     store = Store(root)
     transcript_path = payload.get("transcript_path", "")
     if not transcript_path or not Path(transcript_path).exists():
-        return
+        return None
     turn = read_last_turn(transcript_path)
     if turn.empty:
-        return
+        return None
 
     store.init()
     try:
         backend = detect_backend(root)
     except BackendError as e:
         store.log("ERROR", detail=f"stop-hook: no backend: {e}")
-        return
+        return None
 
     errors: list[str] = []
     extracted = extract_commitments(
@@ -115,13 +111,13 @@ def hook_stop(payload: dict) -> None:
     for err in errors:
         store.log("ERROR", detail=f"stop-hook extraction: {err[:300]}")
     if not extracted:
-        return
+        return None
 
     session = payload.get("session_id", "")
     result = apply(store, extracted, backend=backend, session=session, refs=[f"session:{session}"])
 
     if not result.has_findings:
-        return
+        return None
     lines: list[str] = []
     for conflict in result.conflicts:
         old = store.load(conflict.existing_id)
@@ -137,19 +133,20 @@ def hook_stop(payload: dict) -> None:
             f"UNBACKED CLAIM: '{c.claim}' ({c.id}) has no provenance — no user statement, file "
             "read, or tool output backs it. Verify it (read the source) or retract it."
         )
-    _emit({"decision": "block", "reason": "\n".join(lines)})
+    return {"decision": "block", "reason": "\n".join(lines)}
 
 
-def hook_pre_compact(payload: dict) -> None:
+def hook_pre_compact(payload: dict) -> dict | None:
     store = Store(_root(payload))
     if not store.exists:
-        return
+        return None
     backup_dir = store.dir / "backups"
     backup_dir.mkdir(exist_ok=True)
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     store.write_scoreboard()
     shutil.copy2(store.scoreboard_path, backup_dir / f"scoreboard-{stamp}.md")
     store.log("PRECOMPACT-BACKUP", detail=str(backup_dir / f"scoreboard-{stamp}.md"))
+    return None
 
 
 HOOKS = {
@@ -191,7 +188,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "hook":
         payload = _read_payload()
         try:
-            HOOKS[args.event](payload)
+            result = HOOKS[args.event](payload)
+            if result:
+                _emit(result)
         except Exception as e:  # noqa: BLE001 — a broken scorer must never break the agent
             print(f"scorekeeper {args.event} error: {e}", file=sys.stderr)
             with contextlib.suppress(Exception):
