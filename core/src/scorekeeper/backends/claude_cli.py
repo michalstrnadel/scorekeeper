@@ -38,5 +38,6 @@ class ClaudeCLIBackend:
         except subprocess.TimeoutExpired as e:
             raise BackendError(f"{self.name}: timed out after {self.timeout}s") from e
         if proc.returncode != 0:
-            raise BackendError(f"{self.name}: exit {proc.returncode}: {proc.stderr[:500]}")
+            detail = (proc.stderr.strip() or proc.stdout.strip())[:500]
+            raise BackendError(f"{self.name}: exit {proc.returncode}: {detail}")
         return proc.stdout

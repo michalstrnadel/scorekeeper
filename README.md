@@ -52,16 +52,25 @@ This is not just cleaner engineering — it is what the philosophy independently
 
 ## Status
 
-**Phase 0 — MVP.** Scaffolding only. Nothing here works yet. See [`docs/SPEC-cs.md` §7](docs/SPEC-cs.md) for the roadmap.
+**Phase 0 — MVP, functional.** The core pipeline works end-to-end: commitment
+extraction (isolated scorer, write-path validation), Tier-0 deterministic +
+Tier-1 material incompatibility detection, the seven operators
+(SUPERSEDE-vs-BRANCH-CONFLICT by entitlement), a Claude Code plugin
+(4 hooks), and an eval harness with 6 planted acceptance scenarios.
+
+First live numbers (claude_cli backend): extractor recall 70 % with 0
+over-extractions; Tier-1 detector 90 % accuracy, 0 % FPR on golden pairs.
+Full scenario matrix (SCR bare vs scorekept) in progress. Roadmap:
+[`docs/SPEC-cs.md` §7](docs/SPEC-cs.md).
 
 ## Layout
 
 | Path | What |
 |---|---|
-| `core/` | `scorekeeper-core` — storage + API, harness-agnostic (Python) |
-| `claude-code-plugin/` | Primary integration: Claude Code hooks |
-| `mcp/` | `scorekeeper-mcp` — MCP server for any harness |
-| `bench/` | `CommitBench` — tasks + eval harness (Phase 2) |
+| `core/` | model + store + backends + extractor + detectors + operators + CLI (Python) |
+| `claude-code-plugin/` | Primary integration: 4 Claude Code hooks (`claude --plugin-dir ./claude-code-plugin`) |
+| `mcp/` | `scorekeeper-mcp` — MCP server for any harness (Phase 1) |
+| `bench/` | planted acceptance scenarios + Agent-SDK eval harness; CommitBench in Phase 2 |
 | `docs/` | `theory.md`, `SPEC-cs.md`, `research/` |
 | `adr/` | Architecture Decision Records |
 | `.scorekeeper/` | The project's own scoreboard — scorekeeper dogfoods itself |

@@ -54,6 +54,7 @@ Apply the rubric literally. Reply with ONLY a JSON object:
 class PhaseStats:
     prompt: str
     reply_chars: int = 0
+    reply_tail: str = ""
     input_tokens: int = 0
     output_tokens: int = 0
     blocked_reason: str = ""
@@ -142,6 +143,7 @@ async def drive(scenario: dict, workdir: Path, variant: str, model: str | None) 
                         text = getattr(block, "text", None)
                         if text:
                             stats.reply_chars += len(text)
+                            stats.reply_tail = text[-300:]
                 elif mtype == "ResultMessage":
                     usage = getattr(message, "usage", None) or {}
                     stats.input_tokens += usage.get("input_tokens", 0) or 0
@@ -213,7 +215,7 @@ def score_events(ground_truth: dict, workdir: Path) -> dict:
 async def run_one(name: str, variant: str, model: str | None, judge_model: str) -> RunResult:
     scenario, ground_truth, repo_seed = load_scenario(name)
     result = RunResult(scenario=name, variant=variant)
-    workdir = Path(tempfile.mkdtemp(prefix=f"sk-{name}-{variant}-"))
+    workdir = Path(tempfile.mkdtemp(prefix=f"skbench-{name}-{variant}-"))
     started = time.time()
     try:
         if repo_seed.exists():
@@ -223,6 +225,9 @@ async def run_one(name: str, variant: str, model: str | None, judge_model: str) 
         result.phases = await drive(scenario, workdir, variant, model)
         result.total_input_tokens = sum(p.input_tokens for p in result.phases)
         result.total_output_tokens = sum(p.output_tokens for p in result.phases)
+        if result.total_output_tokens == 0:
+            tail = result.phases[-1].reply_tail if result.phases else ""
+            raise RuntimeError(f"agent produced no work (usage limit?): {tail!r}")
         result.judge = judge_run(scenario, workdir, result.phases, judge_model)
         if variant == "scorekept":
             result.events = score_events(ground_truth, workdir)
