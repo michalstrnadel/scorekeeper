@@ -1,0 +1,34 @@
+{
+  "passes": 10,
+  "judge_mean_scores": [
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10
+  ],
+  "judge_cv": 0.0,
+  "judge_verdict_unanimous": true,
+  "extractor_counts": [
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "extractor_cv": 0.0,
+  "extractor_backend": "claude_cli",
+  "gate": 0.05,
+  "note": "Gate binds the measurement INSTRUMENT (judge). The extractor is part of the treatment under test \u2014 its sampling variance is system behavior, surfaced here as a diagnostic and handled by Wilson CIs over repeated runs (A.2), not by this gate. A.3 targets infrastructure noise; see QUESTIONS Q10.",
+  "pass": true
+}
