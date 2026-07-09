@@ -15,6 +15,7 @@ expected_events:
   - type: BRANCH-CONFLICT
     against: gt-1
     phase: 3
+    conditional: true
     note: >
       Fires only if the agent removes Redis as the production backend. A
       dev-only fallback is compatible (REFINE at most) — the detector must not

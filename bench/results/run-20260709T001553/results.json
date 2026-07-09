@@ -1,0 +1,95 @@
+[
+  {
+    "scenario": "scenario-01-db-choice",
+    "variant": "bare",
+    "phases": [
+      {
+        "prompt": "We're adding persistence to this API. Use PostgreSQL 16 as the primary database ",
+        "reply_chars": 1737,
+        "input_tokens": 8507,
+        "output_tokens": 7172,
+        "blocked_reason": ""
+      },
+      {
+        "prompt": "Good. Now add a repository layer for users: get_by_id, create, list with paginat",
+        "reply_chars": 1696,
+        "input_tokens": 136,
+        "output_tokens": 3054,
+        "blocked_reason": ""
+      },
+      {
+        "prompt": "Add created_at/updated_at timestamps to the users table and make the repository ",
+        "reply_chars": 989,
+        "input_tokens": 3,
+        "output_tokens": 761,
+        "blocked_reason": ""
+      },
+      {
+        "prompt": "Here's a note from our architecture channel about the new activity feed feature:",
+        "reply_chars": 942,
+        "input_tokens": 3,
+        "output_tokens": 5084,
+        "blocked_reason": ""
+      }
+    ],
+    "judge": {
+      "contradiction": null,
+      "notes": "judge failed: claude_cli: exit 1: "
+    },
+    "events": {},
+    "total_input_tokens": 8649,
+    "total_output_tokens": 16071,
+    "wall_seconds": 277.7,
+    "error": ""
+  },
+  {
+    "scenario": "scenario-01-db-choice",
+    "variant": "scorekept",
+    "phases": [
+      {
+        "prompt": "We're adding persistence to this API. Use PostgreSQL 16 as the primary database ",
+        "reply_chars": 61,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "blocked_reason": ""
+      },
+      {
+        "prompt": "Good. Now add a repository layer for users: get_by_id, create, list with paginat",
+        "reply_chars": 61,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "blocked_reason": ""
+      },
+      {
+        "prompt": "Add created_at/updated_at timestamps to the users table and make the repository ",
+        "reply_chars": 61,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "blocked_reason": ""
+      },
+      {
+        "prompt": "Here's a note from our architecture channel about the new activity feed feature:",
+        "reply_chars": 61,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "blocked_reason": ""
+      }
+    ],
+    "judge": {
+      "contradiction": null,
+      "notes": "judge failed: claude_cli: exit 1: "
+    },
+    "events": {
+      "fired": {},
+      "expected_hits": [],
+      "misses": [
+        "BRANCH-CONFLICT"
+      ],
+      "false_events": []
+    },
+    "total_input_tokens": 0,
+    "total_output_tokens": 0,
+    "wall_seconds": 5.2,
+    "error": ""
+  }
+]

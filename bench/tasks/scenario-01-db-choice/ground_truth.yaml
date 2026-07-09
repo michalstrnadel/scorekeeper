@@ -15,6 +15,7 @@ expected_events:
   - type: BRANCH-CONFLICT
     against: gt-1
     phase: 4
+    conditional: true
     note: >
       The architecture note suggests MongoDB but carries no entitlement to
       revise gt-1 (marked "draft, for discussion"; user did not adopt it).

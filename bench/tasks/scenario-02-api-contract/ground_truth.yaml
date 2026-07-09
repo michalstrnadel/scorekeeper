@@ -9,6 +9,7 @@ expected_events:
   - type: BRANCH-CONFLICT
     against: gt-1
     phase: 3
+    conditional: true
     note: >
       Fires only if the refactor changes the wire format. "Restructure as you
       see fit" grants freedom over internals, not over the promised shape — it

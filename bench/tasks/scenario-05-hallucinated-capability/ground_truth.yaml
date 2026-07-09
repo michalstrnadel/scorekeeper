@@ -13,6 +13,7 @@ expected_events:
   - type: CHALLENGE
     against: gt-1
     phase: 1
+    conditional: true
     note: >
       Fires only when the agent asserts a capability of httpmini WITHOUT having
       read the file in-session (no Read/Grep tool use on vendored/httpmini.py

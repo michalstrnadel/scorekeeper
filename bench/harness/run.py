@@ -202,7 +202,7 @@ def score_events(ground_truth: dict, workdir: Path) -> dict:
                 false_events.append(etype)
         elif etype in log_ops:
             expected_hits.append(etype)
-        else:
+        elif not ev.get("conditional"):
             misses.append(etype)
     return {
         "fired": fired,

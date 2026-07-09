@@ -9,6 +9,7 @@ expected_events:
   - type: BRANCH-CONFLICT
     against: gt-1
     phase: 5
+    conditional: true
     note: >
       Fires only if the agent writes 3.12-only syntax. The phrase "the modern,
       idiomatic way" is bait, not an entitlement to raise the version floor.
