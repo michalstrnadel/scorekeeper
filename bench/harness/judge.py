@@ -16,7 +16,7 @@ import statistics
 from scorekeeper.backends import ModelBackend, OpenAICompatBackend, parse_json_object
 
 LOCAL_OPENAI_URL = "http://localhost:11434/v1"
-DEFAULT_JUDGE_MODEL = "qwen3-judge"  # qwen3:4b + PARAMETER num_ctx 16384 (Modelfile-pinned)
+DEFAULT_JUDGE_MODEL = "qwen3-judge"  # qwen3:4b + PARAMETER num_ctx 8192 (Modelfile-pinned)
 # cloud fallback (needs SCOREKEEPER_JUDGE_API_KEY or GEMINI_API_KEY):
 GEMINI_OPENAI_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
 
@@ -116,7 +116,7 @@ def build_trajectory_record(phases: list[dict]) -> str:
     parts = []
     for i, p in enumerate(phases, 1):
         tools = ", ".join(p.get("tools_used", [])) or "(none)"
-        reply = strip_style(p.get("reply_text", ""))[:700]
+        reply = strip_style(p.get("reply_text", ""))[:400]
         parts.append(
             f"--- phase {i} ---\nUSER: {p['prompt_full']}\nTOOLS USED: {tools}\nAGENT (normalized): {reply}"
         )
@@ -140,16 +140,20 @@ def judge_trajectory(
     phases: list[dict],
     final_files: str,
     backend: ModelBackend | None = None,
-    votes: int = 3,
+    votes: int | None = None,
 ) -> dict:
     """Run the S8 judge with ``votes`` independent passes; per-criterion MEDIAN.
 
-    Even at temperature 0, hosted models retain residual sampling
-    nondeterminism; median-of-3 stabilizes the instrument (meta-eval gate,
-    Addendum-1 §A.3). Verdicts derive from median scores, never from a
-    suggestive question.
+    Median-of-3 exists to tame residual sampling nondeterminism of HOSTED
+    models at temperature 0. A local llama.cpp backend at temp 0 is fully
+    deterministic (gate runs 6-8: 30/30 identical votes), so extra votes are
+    literal copies — default is therefore 1 vote locally, 3 for cloud.
+    Verdicts derive from median scores, never from a suggestive question.
     """
     backend = backend or resolve_judge_backend()
+    if votes is None:
+        local = backend.base_url.startswith(("http://localhost", "http://127."))
+        votes = 1 if local else 3
     system = JUDGE_SYSTEM.format(
         criteria="\n".join(f"- {k}: {v}" for k, v in CRITERIA.items())
     )
@@ -158,6 +162,11 @@ def judge_trajectory(
         f"TRAJECTORY:\n{build_trajectory_record(phases)}\n\n"
         f"FINAL REPOSITORY FILES:\n{final_files}"
     )
+    if "qwen3" in backend.model.lower():
+        # disable Qwen3 thinking mode: the anchored rubric already structures the
+        # judgment; thinking multiplies latency ~5x for no measured gain — the
+        # CV gate re-validates the instrument in this configuration (A.3)
+        user += "\n/no_think"
     passes = [_judge_once(backend, system, user) for _ in range(max(1, votes))]
     scores = {
         k: int(statistics.median([s[k] for _, s in passes])) for k in CRITERIA

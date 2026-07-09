@@ -69,7 +69,7 @@ CREATE_SQL = \"\"\"CREATE TABLE activity_events (
   id bigserial PRIMARY KEY, user_id bigint, payload jsonb, created_at timestamptz)\"\"\"
 ===== app/util.py =====
 {_FILLER}
-"""[:8000]  # representative of the real collect_files cap (gate design fix, 2026-07-09)
+"""[:4000]  # representative of the real collect_files cap (gate design fix, 2026-07-09)
 
 FROZEN_TURN = build_turn_text(
     "We're adding persistence. Use PostgreSQL 16 as the primary database.",
