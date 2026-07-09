@@ -17,7 +17,8 @@ from .base import BackendError
 DEFAULT_MODEL = "qwen3:8b"
 
 _RETRY_IN_RE = re.compile(r"retry in ([0-9.]+)s", re.IGNORECASE)
-MAX_429_RETRIES = 3
+MAX_RETRIES = 4
+TRANSIENT_CODES = {429, 500, 502, 503, 504}
 
 
 class OpenAICompatBackend:
@@ -42,7 +43,7 @@ class OpenAICompatBackend:
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         body = json.dumps(payload).encode("utf-8")
-        for attempt in range(MAX_429_RETRIES + 1):
+        for attempt in range(MAX_RETRIES + 1):
             req = urllib.request.Request(
                 f"{self.base_url}/chat/completions",
                 data=body,
@@ -54,8 +55,11 @@ class OpenAICompatBackend:
                     return json.loads(resp.read().decode("utf-8"))
             except urllib.error.HTTPError as e:
                 detail = e.read().decode()[:800]
-                if e.code == 429 and attempt < MAX_429_RETRIES:
-                    time.sleep(self._retry_delay(e, detail))
+                if e.code in TRANSIENT_CODES and attempt < MAX_RETRIES:
+                    if e.code == 429:
+                        time.sleep(self._retry_delay(e, detail))
+                    else:  # transient 5xx: scaled backoff
+                        time.sleep(10.0 * (attempt + 1))
                     continue
                 raise BackendError(f"{self.name}: HTTP {e.code}: {detail[:500]}") from e
             except (urllib.error.URLError, TimeoutError) as e:
