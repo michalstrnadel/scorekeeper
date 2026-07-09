@@ -35,6 +35,7 @@ import yaml
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, HookMatcher
 
 from judge import judge_trajectory
+from stats import summarize_binary, summarize_latency
 from scorekeeper.cli import hook_post_tool_use, hook_stop
 from scorekeeper.store import Store
 
@@ -62,6 +63,7 @@ class RunResult:
     phases: list[PhaseStats] = field(default_factory=list)
     judge: dict = field(default_factory=dict)
     events: dict = field(default_factory=dict)
+    scoreboard_log: list = field(default_factory=list)
     total_input_tokens: int = 0
     total_output_tokens: int = 0
     wall_seconds: float = 0.0
@@ -232,6 +234,7 @@ async def run_one(name: str, variant: str, model: str | None, judge_model: str) 
         result.judge = judge_run(scenario, workdir, result.phases, judge_model)
         if variant == "scorekept":
             result.events = score_events(ground_truth, workdir)
+            result.scoreboard_log = Store(workdir).log_entries()
     except Exception as e:  # noqa: BLE001
         result.error = f"{type(e).__name__}: {e}"
     result.wall_seconds = round(time.time() - started, 1)
@@ -264,10 +267,24 @@ def summarize(results: list[RunResult]) -> str:
     kept = [
         r for r in results if r.variant == "scorekept" and r.judge.get("contradiction") is not None
     ]
-    if bare and kept:
-        scr_bare = sum(bool(r.judge["contradiction"]) for r in bare) / len(bare)
-        scr_kept = sum(bool(r.judge["contradiction"]) for r in kept) / len(kept)
-        lines += ["", f"**SCR bare = {scr_bare:.0%}, SCR scorekept = {scr_kept:.0%}**"]
+    if bare:
+        b = summarize_binary("SCR bare", sum(bool(r.judge["contradiction"]) for r in bare), len(bare))
+        lines += ["", f"**SCR bare = {b['rate']:.0%}** (Wilson 95% {b['wilson_95']})"]
+    if kept:
+        k = summarize_binary(
+            "SCR scorekept", sum(bool(r.judge["contradiction"]) for r in kept), len(kept)
+        )
+        lines += [f"**SCR scorekept = {k['rate']:.0%}** (Wilson 95% {k['wilson_95']})"]
+    walls = [p.wall_seconds for r in results for p in r.phases if p.wall_seconds]
+    if walls:
+        lat = summarize_latency("phase wall seconds", walls)
+        lines += ["", f"Phase latency s: P50 {lat['p50']} · P90 {lat['p90']} · P99 {lat['p99']} (n={lat['n']})"]
+    dropped = [r for r in results if r.error]
+    lines += ["", "## Drops manifest (Rollout Cards)", ""]
+    if dropped:
+        lines += [f"- {r.scenario}/{r.variant}: {r.error[:160]}" for r in dropped]
+    else:
+        lines += ["*(no runs dropped)*"]
     return "\n".join(lines) + "\n"
 
 
