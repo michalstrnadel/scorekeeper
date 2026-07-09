@@ -111,3 +111,18 @@ def test_openai_compat_malformed_response(monkeypatch):
     monkeypatch.setattr(backend, "_post", lambda payload: {"error": "boom"})
     with pytest.raises(BackendError, match="malformed"):
         backend.complete("s", "u")
+
+
+def test_retry_delay_parsing():
+    import io
+    import urllib.error
+
+    def herr(headers=None):
+        return urllib.error.HTTPError("http://x", 429, "Too Many", headers or {}, io.BytesIO())
+
+    d = OpenAICompatBackend._retry_delay(herr(), 'quota... Please retry in 36.07s.')
+    assert 36 < d < 38
+    d = OpenAICompatBackend._retry_delay(herr(), "no hint here")
+    assert d == 30.0
+    d = OpenAICompatBackend._retry_delay(herr(), "retry in 500s")
+    assert d == 65.0

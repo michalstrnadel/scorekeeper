@@ -118,8 +118,9 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--passes", type=int, default=10)
     args = parser.parse_args()
-    report = run_gate(args.passes)
     out = Path(__file__).parent.parent / "results" / "meta-eval.json"
+    out.unlink(missing_ok=True)  # never leave a stale report from a crashed run
+    report = run_gate(args.passes)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2))
     print(json.dumps({k: v for k, v in report.items() if "scores" not in k and "counts" not in k}, indent=2))

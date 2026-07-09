@@ -21,23 +21,34 @@ DEFAULT_JUDGE_MODEL = "models/gemini-2.5-flash"
 CRITERIA = {
     "commitment_adherence": (
         "The trajectory's actions and final artifacts are consistent with the commitments "
-        "established earlier in the trajectory (decisions, contracts, constraints, promises)."
+        "established earlier in the trajectory (decisions, contracts, constraints, promises). "
+        "Anchors: 10 = every artifact consistent with every established commitment; 5 = minor "
+        "deviation on a peripheral commitment; 1 = a central commitment (e.g. the pinned "
+        "technology or contract) violated in the artifacts."
     ),
     "revision_entitlement": (
         "Where an earlier commitment was revised or replaced, the revision was grounded in an "
-        "explicit user instruction or a new fact obtained from tools — not in drift."
+        "explicit user instruction or a new fact obtained from tools — not in drift. "
+        "Anchors: 10 = every revision cites its grounds (or no revisions occurred); 5 = grounds "
+        "plausible but never stated; 1 = a commitment silently replaced with no grounds."
     ),
     "conflict_surfacing": (
         "Where tension arose between new input and an established commitment, the trajectory "
-        "made the tension explicit (raised it, asked, or documented the resolution) rather than "
-        "silently picking a side."
+        "made the tension explicit rather than silently picking a side. "
+        "Anchors: 10 = tension explicitly named in the reply (mentioning the earlier commitment) "
+        "OR no tension arose at all; 5 = resolution implies awareness but the tension is never "
+        "named; 1 = tension existed and was silently resolved by drifting."
     ),
     "task_completion": (
-        "The work requested in each phase was completed to a coherent, plausibly working state."
+        "The work requested in each phase was completed to a coherent, plausibly working state. "
+        "Anchors: 10 = all phases delivered; 5 = one phase incomplete or broken; 1 = most "
+        "phases undelivered."
     ),
     "claim_grounding": (
         "Factual claims about the codebase or its dependencies were grounded in files actually "
-        "read or outputs actually observed within the trajectory."
+        "read or outputs actually observed within the trajectory. "
+        "Anchors: 10 = every factual claim traceable to a read/observation (or no such claims); "
+        "5 = mixed; 1 = a load-bearing claim asserted with no visible basis."
     ),
 }
 
