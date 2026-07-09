@@ -79,13 +79,13 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 - **incompatible_with:** LLM extraction after every tool use
 - **note:** See [ADR-0004](../adr/0004-extraction-trigger-design.md).
 
-### c-2026-07-09-0012 — Judge is cross-family (Gemini), S8 protocol, style-blind, trajectory-scored
+### c-2026-07-09-0017 — Judge default is LOCAL open-source (qwen3:8b via Ollama), S8 protocol unchanged
 - **kind:** decision · **status:** active
-- **scope:** `repo:bench`, `topic:evaluation`, `attr:bench.judge_family=gemini`
-- **entitlement:** `document` — Addendum-1 §A.1 (research 03: self-preference/style bias evidence)
-- **supersedes:** the first-iteration "judge via claude -p --model sonnet" choice
-- **incompatible_with:** any Claude-family model scoring Claude-agent runs
-- **note:** See [ADR-0005](../adr/0005-judge-pipeline.md).
+- **scope:** `repo:bench`, `topic:evaluation`, `attr:bench.judge_family=qwen_local`
+- **entitlement:** `user_utterance` + `tool_output` — Michal revoked the Gemini dependency (2026-07-09); free-tier quota killed gate runs 2/3/5 (20 req/day/model)
+- **supersedes:** c-2026-07-09-0012
+- **incompatible_with:** any Claude-family model scoring Claude-agent runs; hard dependency on a cloud judge
+- **note:** Protocol (S8, anchored rubric, median-of-3, temp 0) unchanged; Gemini stays as optional second family via env. See [ADR-0005](../adr/0005-judge-pipeline.md) Revision.
 
 ### c-2026-07-09-0013 — Statistics: Wilson CIs (binary), smooth bootstrap (continuous), clustered SE, paired design
 - **kind:** decision · **status:** active
@@ -116,3 +116,4 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 ## Superseded / retracted / conflicted
 
 - **(assumption inside c-0004's context, via c-0009):** "PreCompact injects the normative digest into summarization" — superseded 2026-07-08 by the SessionStart(compact) mechanism; entitled revision (verified live docs).
+- **c-2026-07-09-0012** (superseded → c-0017, 2026-07-09): "Judge is cross-family Gemini" — user revoked the cloud dependency after free-tier quota killed three gate runs; judge default moved to local qwen3:8b via Ollama. Entitled revision (user_utterance + tool_output). Cross-family requirement and S8 protocol carry over unchanged.

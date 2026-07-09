@@ -15,8 +15,10 @@ import statistics
 
 from scorekeeper.backends import ModelBackend, OpenAICompatBackend, parse_json_object
 
+LOCAL_OPENAI_URL = "http://localhost:11434/v1"
+DEFAULT_JUDGE_MODEL = "qwen3:8b"
+# cloud fallback (needs SCOREKEEPER_JUDGE_API_KEY or GEMINI_API_KEY):
 GEMINI_OPENAI_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
-DEFAULT_JUDGE_MODEL = "models/gemini-2.5-flash"
 
 CRITERIA = {
     "commitment_adherence": (
@@ -93,16 +95,19 @@ def strip_style(text: str) -> str:
 
 
 def resolve_judge_backend() -> ModelBackend:
-    """Judge backend: env-configurable, Gemini by default. Never Claude-family."""
-    url = os.environ.get("SCOREKEEPER_JUDGE_URL", GEMINI_OPENAI_URL)
+    """Judge backend: local open-source by default (no cloud dependency),
+    env-configurable. Never Claude-family (ADR-0005)."""
+    url = os.environ.get("SCOREKEEPER_JUDGE_URL", LOCAL_OPENAI_URL)
     model = os.environ.get("SCOREKEEPER_JUDGE_MODEL", DEFAULT_JUDGE_MODEL)
-    api_key = os.environ.get("SCOREKEEPER_JUDGE_API_KEY") or os.environ.get("GEMINI_API_KEY", "")
+    api_key = os.environ.get("SCOREKEEPER_JUDGE_API_KEY", "")
+    if url == GEMINI_OPENAI_URL and not api_key:
+        api_key = os.environ.get("GEMINI_API_KEY", "")
     if "claude" in model.lower():
         raise ValueError(
             "judge must not be Claude-family while the agent runs on Claude (ADR-0005)"
         )
     return OpenAICompatBackend(
-        base_url=url, model=model, api_key=api_key, temperature=0.0, timeout=180.0
+        base_url=url, model=model, api_key=api_key, temperature=0.0, timeout=300.0
     )
 
 
