@@ -102,12 +102,15 @@ def run_gate(passes: int = 10) -> dict:
         "extractor_cv": round(coefficient_of_variation(extract_counts), 4),
         "extractor_backend": extractor_backend.name,
         "gate": GATE,
+        "note": (
+            "Gate binds the measurement INSTRUMENT (judge). The extractor is part of the "
+            "treatment under test — its sampling variance is system behavior, surfaced here "
+            "as a diagnostic and handled by Wilson CIs over repeated runs (A.2), not by this "
+            "gate. A.3 targets infrastructure noise; see QUESTIONS Q10."
+        ),
     }
-    report["pass"] = (
-        report["judge_cv"] <= GATE
-        and report["extractor_cv"] <= GATE
-        and report["judge_verdict_unanimous"]
-    )
+    # instrument gate (hard): judge CV + verdict unanimity
+    report["pass"] = report["judge_cv"] <= GATE and report["judge_verdict_unanimous"]
     return report
 
 

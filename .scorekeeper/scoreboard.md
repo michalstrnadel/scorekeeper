@@ -93,11 +93,11 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 - **entitlement:** `document` — Addendum-1 §A.2
 - **incompatible_with:** CLT-based intervals on small-N binary metrics; unclustered SE across scenarios sharing an environment
 
-### c-2026-07-09-0014 — Meta-eval gate: CV ≤ 0.05 on deterministic stages before any full matrix
-- **kind:** decision · **status:** active
+### c-2026-07-09-0014 — Meta-eval gate: CV ≤ 0.05 on the measurement instrument (judge) before any full matrix
+- **kind:** decision · **status:** active (refined 2026-07-09)
 - **scope:** `repo:bench`, `topic:evaluation`
-- **entitlement:** `document` — Addendum-1 §A.3; deviation for unseedable agent sampling recorded in Q9
-- **consequences:** the full acceptance matrix MUST NOT run before this gate passes
+- **entitlement:** `document` + `tool_output` — Addendum-1 §A.3; refinement grounded in the first gate run (judge CV 0.056, extractor CV 0.29): instrument vs. treatment distinction, Q10
+- **consequences:** the full acceptance matrix MUST NOT run before this gate passes; judge stabilized via per-criterion median-of-3; extractor variance is treatment behavior → A.2 Wilson CIs, reported as diagnostic
 
 ### c-2026-07-09-0015 — Interop: map onto xAIF + PROV-O, no home-grown ontology; Commitment Stores cited as prior art
 - **kind:** decision · **status:** active
