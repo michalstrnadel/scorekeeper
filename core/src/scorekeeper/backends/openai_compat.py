@@ -6,6 +6,7 @@ One client covers Ollama, LM Studio, and vLLM: all serve
 
 from __future__ import annotations
 
+import http.client
 import json
 import re
 import time
@@ -62,6 +63,16 @@ class OpenAICompatBackend:
                         time.sleep(10.0 * (attempt + 1))
                     continue
                 raise BackendError(f"{self.name}: HTTP {e.code}: {detail[:500]}") from e
+            except (
+                http.client.RemoteDisconnected,
+                ConnectionResetError,
+                ConnectionRefusedError,
+            ) as e:
+                # server dropped mid-request (restart, load) — transient, retry
+                if attempt < MAX_RETRIES:
+                    time.sleep(10.0 * (attempt + 1))
+                    continue
+                raise BackendError(f"{self.name}: connection dropped: {e}") from e
             except (urllib.error.URLError, TimeoutError) as e:
                 raise BackendError(f"{self.name}: {e}") from e
         raise BackendError(f"{self.name}: unreachable")  # pragma: no cover
