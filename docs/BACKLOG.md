@@ -1,4 +1,10 @@
-# Backlog (P2)
+# Backlog
+
+## P1 (Phase 1)
+
+- **Async extraction mode for the Stop hook** (runtime latency is sacred — Michal, 2026-07-09): fire extraction in the background so turn-end latency stays ~0; conflicts/challenges are delivered one turn later via the existing digest injection (UserPromptSubmit/SessionStart). Tier-0 stays synchronous (~ms) so hard collisions are still caught instantly. DCPM System-1/System-2 pattern at single-turn scale. Measure both modes in the P90/P99 report; sync remains available for max-strictness setups.
+
+## P2 (Phase 1–2)
 
 Per Addendum-1 §C; items land in Phase 1–2 unless pulled earlier.
 
