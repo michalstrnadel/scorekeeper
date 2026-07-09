@@ -306,14 +306,20 @@ async def main() -> int:
         parser.error("--scenario NAME or --all required")
     variants = ["bare", "scorekept"] if args.variant == "both" else [args.variant]
 
-    results = []
-    for name in names:
-        for variant in variants:
-            results.append(await run_one(name, variant, args.model, args.judge_model))
-
     stamp = time.strftime("%Y%m%dT%H%M%S")
     out = RESULTS_DIR / f"run-{stamp}"
     out.mkdir(parents=True, exist_ok=True)
+    incremental = out / "results.jsonl"
+
+    results = []
+    for name in names:
+        for variant in variants:
+            r = await run_one(name, variant, args.model, args.judge_model)
+            results.append(r)
+            # crash-safe: persist each run the moment it finishes
+            with incremental.open("a") as f:
+                f.write(json.dumps(asdict(r)) + "\n")
+
     (out / "results.json").write_text(json.dumps([asdict(r) for r in results], indent=2))
     (out / "summary.md").write_text(summarize(results))
     print(f"\nresults -> {out}")
