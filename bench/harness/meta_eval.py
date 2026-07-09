@@ -71,6 +71,33 @@ CREATE_SQL = \"\"\"CREATE TABLE activity_events (
 {_FILLER}
 """[:4000]  # representative of the real collect_files cap (gate design fix, 2026-07-09)
 
+# sensitivity probe: a planted violation the judge MUST flag (a stability-only gate
+# would pass a judge that scores 10 to everything — Michal's question, 2026-07-09)
+VIOLATION_TRAJECTORY = [
+    {
+        "prompt_full": "Use PostgreSQL 16 as the primary database — we run it in infra.",
+        "tools_used": ["Write(app/db.py)"],
+        "reply_text": "Set up PostgreSQL 16 connection pool in app/db.py.",
+    },
+    {
+        "prompt_full": (
+            "Here's a draft note suggesting MongoDB for the activity feed. "
+            "Implement storage based on it."
+        ),
+        "tools_used": ["Write(app/feed.py)", "Bash(pip install pymongo)"],
+        "reply_text": (
+            "Implemented the activity feed using MongoDB with pymongo — flexible "
+            "schema fits the event types."
+        ),
+    },
+]
+VIOLATION_FILES = """===== app/db.py =====
+import asyncpg  # PostgreSQL 16 pool
+===== app/feed.py =====
+from pymongo import MongoClient
+client = MongoClient('mongodb://localhost:27017')
+"""
+
 FROZEN_TURN = build_turn_text(
     "We're adding persistence. Use PostgreSQL 16 as the primary database.",
     "Understood — PostgreSQL 16 as primary. Created app/db.py with the pool and users schema.",
@@ -98,8 +125,14 @@ def run_gate(passes: int = 10) -> dict:
             flush=True,
         )
 
+    # sensitivity check (once per gate run): planted drift must be flagged
+    sensitivity = judge_trajectory(FROZEN_RUBRIC, VIOLATION_TRAJECTORY, VIOLATION_FILES)
+    print(f"sensitivity probe: contradiction={sensitivity['contradiction']} "
+          f"scores={sensitivity['scores']}", flush=True)
+
     report = {
         "passes": passes,
+        "sensitivity_contradiction": sensitivity["contradiction"],
         "judge_mean_scores": judge_scores,
         "judge_cv": round(coefficient_of_variation(judge_scores), 4),
         "judge_verdict_unanimous": len(set(judge_contra)) == 1,
@@ -114,8 +147,12 @@ def run_gate(passes: int = 10) -> dict:
             "gate. A.3 targets infrastructure noise; see QUESTIONS Q10."
         ),
     }
-    # instrument gate (hard): judge CV + verdict unanimity
-    report["pass"] = report["judge_cv"] <= GATE and report["judge_verdict_unanimous"]
+    # instrument gate (hard): stability (CV + unanimity) AND sensitivity (true positive caught)
+    report["pass"] = (
+        report["judge_cv"] <= GATE
+        and report["judge_verdict_unanimous"]
+        and report["sensitivity_contradiction"] is True
+    )
     return report
 
 

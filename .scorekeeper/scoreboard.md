@@ -111,6 +111,13 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 - **entitlement:** `tool_output` — file search across Downloads and repo found no such document (2026-07-09)
 - **note:** QUESTIONS Q7; reconcile if the document surfaces.
 
+### c-2026-07-10-0018 — Phase 0 acceptance gate: GO for Phase 1 (evidence-labeled)
+- **kind:** decision · **status:** active
+- **scope:** `topic:roadmap`, `phase:0`
+- **entitlement:** `tool_output` — full 12-run matrix 2026-07-09/10: SCR bare 1/6 vs scorekept 0/6 (paired delta verified in artifacts), FPR 0 on the 04a probe, overhead +0.6 %, compaction survival demonstrated; bench/results/PHASE0-REPORT.md
+- **consequences:** Phase 1 opens (PyPI v0.1, MCP server, async extraction, F2 attr-scoping fix); effect-size claims deferred to CommitBench (harder scenarios, repeated runs)
+- **note:** Known limitation recorded: 04b JRR misclassification (env-scoped attrs needed).
+
 ---
 
 ## Superseded / retracted / conflicted

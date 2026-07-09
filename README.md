@@ -54,16 +54,22 @@ This is not just cleaner engineering — it is what the philosophy independently
 
 ## Status
 
-**Phase 0 — MVP, functional.** The core pipeline works end-to-end: commitment
-extraction (isolated scorer, write-path validation), Tier-0 deterministic +
-Tier-1 material incompatibility detection, the seven operators
-(SUPERSEDE-vs-BRANCH-CONFLICT by entitlement), a Claude Code plugin
-(4 hooks), and an eval harness with 6 planted acceptance scenarios.
+**Phase 0 — complete, acceptance gate passed** ([full report](bench/results/PHASE0-REPORT.md)).
+The pipeline works end-to-end and the first paired evidence is in:
 
-First live numbers (claude_cli backend): extractor recall 70 % with 0
-over-extractions; Tier-1 detector 90 % accuracy, 0 % FPR on golden pairs.
-Full scenario matrix (SCR bare vs scorekept) in progress. Roadmap:
-[`docs/SPEC-cs.md` §7](docs/SPEC-cs.md).
+- **The paired delta:** on the planted db-choice scenario, the bare haiku agent
+  drifted to MongoDB against its own PostgreSQL decision (verified in
+  artifacts); the scorekept twin — same model, same scenario, only the
+  scoreboard added — held the line. SCR bare 1/6 vs scorekept **0/6** (N=6,
+  Wilson CIs overlap — effect size awaits CommitBench).
+- **0 false conflicts** on the dedicated entitled-revision probe (FPR target < 10 %).
+- **+0.6 % token overhead** (target < 10 %); commitment survived context
+  compaction via digest re-injection.
+- Instrument per Addendum-1: cross-family local judge (qwen3, S8 protocol,
+  anchored rubric), meta-eval gate CV 0.000, sensitivity-probe verified.
+
+Next: **Phase 1** — `scorekeeper-core` v0.1 on PyPI, MCP server, async
+extraction mode. Roadmap: [`docs/SPEC-cs.md` §7](docs/SPEC-cs.md).
 
 ## Layout
 
