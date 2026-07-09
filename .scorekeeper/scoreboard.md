@@ -79,10 +79,10 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 - **incompatible_with:** LLM extraction after every tool use
 - **note:** See [ADR-0004](../adr/0004-extraction-trigger-design.md).
 
-### c-2026-07-09-0017 — Judge default is LOCAL open-source (qwen3:8b via Ollama), S8 protocol unchanged
-- **kind:** decision · **status:** active
+### c-2026-07-09-0017 — Judge default is LOCAL open-source (qwen3:4b via Ollama), S8 protocol unchanged
+- **kind:** decision · **status:** active (refined 2026-07-09: 8b → 4b)
 - **scope:** `repo:bench`, `topic:evaluation`, `attr:bench.judge_family=qwen_local`
-- **entitlement:** `user_utterance` + `tool_output` — Michal revoked the Gemini dependency (2026-07-09); free-tier quota killed gate runs 2/3/5 (20 req/day/model)
+- **entitlement:** `user_utterance` + `tool_output` — Michal revoked the Gemini dependency and requested a single model; qwen3:8b failed 4 pull attempts (persistent CDN EOF), qwen3:4b pulled cleanly; A.1 explicitly endorses mid-size + strong protocol over raw model size
 - **supersedes:** c-2026-07-09-0012
 - **incompatible_with:** any Claude-family model scoring Claude-agent runs; hard dependency on a cloud judge
 - **note:** Protocol (S8, anchored rubric, median-of-3, temp 0) unchanged; Gemini stays as optional second family via env. See [ADR-0005](../adr/0005-judge-pipeline.md) Revision.

@@ -16,7 +16,7 @@ import statistics
 from scorekeeper.backends import ModelBackend, OpenAICompatBackend, parse_json_object
 
 LOCAL_OPENAI_URL = "http://localhost:11434/v1"
-DEFAULT_JUDGE_MODEL = "qwen3:8b"
+DEFAULT_JUDGE_MODEL = "qwen3:4b"
 # cloud fallback (needs SCOREKEEPER_JUDGE_API_KEY or GEMINI_API_KEY):
 GEMINI_OPENAI_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
 
