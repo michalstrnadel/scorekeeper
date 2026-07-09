@@ -162,7 +162,7 @@ async def drive(scenario: dict, workdir: Path, variant: str, model: str | None) 
     return phases
 
 
-def collect_files(workdir: Path, cap_chars: int = 24000) -> str:
+def collect_files(workdir: Path, cap_chars: int = 8000) -> str:
     chunks, used = [], 0
     for p in sorted(workdir.rglob("*")):
         if not p.is_file() or ".scorekeeper" in p.parts or p.suffix in (".pyc", ".sqlite"):

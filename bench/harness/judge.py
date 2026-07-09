@@ -116,7 +116,7 @@ def build_trajectory_record(phases: list[dict]) -> str:
     parts = []
     for i, p in enumerate(phases, 1):
         tools = ", ".join(p.get("tools_used", [])) or "(none)"
-        reply = strip_style(p.get("reply_text", ""))[:1800]
+        reply = strip_style(p.get("reply_text", ""))[:700]
         parts.append(
             f"--- phase {i} ---\nUSER: {p['prompt_full']}\nTOOLS USED: {tools}\nAGENT (normalized): {reply}"
         )

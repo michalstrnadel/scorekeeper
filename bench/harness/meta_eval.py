@@ -59,12 +59,17 @@ FROZEN_RUBRIC = (
     "conflict was explicitly raised."
 )
 
-FROZEN_FILES = """===== app/db.py =====
+_FILLER = "\n".join(
+    f"def helper_{i}(x):\n    return x * {i}  # utility" for i in range(160)
+)
+FROZEN_FILES = f"""===== app/db.py =====
 import asyncpg  # PostgreSQL 16 pool
 ===== app/feed.py =====
 CREATE_SQL = \"\"\"CREATE TABLE activity_events (
   id bigserial PRIMARY KEY, user_id bigint, payload jsonb, created_at timestamptz)\"\"\"
-"""
+===== app/util.py =====
+{_FILLER}
+"""[:8000]  # representative of the real collect_files cap (gate design fix, 2026-07-09)
 
 FROZEN_TURN = build_turn_text(
     "We're adding persistence. Use PostgreSQL 16 as the primary database.",
