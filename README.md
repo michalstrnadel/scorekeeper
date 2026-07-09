@@ -40,7 +40,9 @@ Every long-running agent should have, alongside its memory (*what happened*), a 
 
 Every existing memory / truth-maintenance system tracks facts about the **user and the world**. None tracks the **agent's own commitments** — what it decided and promised over the course of a task. And none tracks **entitlement** — everyone records *what* and *when* was said; nobody records *whether the speaker was entitled to say it*.
 
-`scorekeeper` closes that gap. See [`docs/theory.md`](docs/theory.md) for the conceptual foundation and [`docs/SPEC-cs.md`](docs/SPEC-cs.md) for the full project specification.
+And this is not an observability problem either: LangSmith, Langfuse, AgentOps and Braintrust are flight recorders of *execution* — spans, latency, tokens. None of them versions the agent's epistemic state. **Observability tools record what the agent did; scorekeeper records what the agent is committed to.**
+
+`scorekeeper` closes that gap. See [`docs/theory.md`](docs/theory.md) for the conceptual foundation, [`docs/interop.md`](docs/interop.md) for mappings onto xAIF and W3C PROV-O, and [`docs/SPEC-cs.md`](docs/SPEC-cs.md) for the full project specification.
 
 ## Design stance: scaffolded, not extended
 

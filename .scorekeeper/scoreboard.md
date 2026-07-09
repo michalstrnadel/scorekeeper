@@ -79,6 +79,38 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 - **incompatible_with:** LLM extraction after every tool use
 - **note:** See [ADR-0004](../adr/0004-extraction-trigger-design.md).
 
+### c-2026-07-09-0012 — Judge is cross-family (Gemini), S8 protocol, style-blind, trajectory-scored
+- **kind:** decision · **status:** active
+- **scope:** `repo:bench`, `topic:evaluation`, `attr:bench.judge_family=gemini`
+- **entitlement:** `document` — Addendum-1 §A.1 (research 03: self-preference/style bias evidence)
+- **supersedes:** the first-iteration "judge via claude -p --model sonnet" choice
+- **incompatible_with:** any Claude-family model scoring Claude-agent runs
+- **note:** See [ADR-0005](../adr/0005-judge-pipeline.md).
+
+### c-2026-07-09-0013 — Statistics: Wilson CIs (binary), smooth bootstrap (continuous), clustered SE, paired design
+- **kind:** decision · **status:** active
+- **scope:** `repo:bench`, `topic:evaluation`, `topic:statistics`
+- **entitlement:** `document` — Addendum-1 §A.2
+- **incompatible_with:** CLT-based intervals on small-N binary metrics; unclustered SE across scenarios sharing an environment
+
+### c-2026-07-09-0014 — Meta-eval gate: CV ≤ 0.05 on deterministic stages before any full matrix
+- **kind:** decision · **status:** active
+- **scope:** `repo:bench`, `topic:evaluation`
+- **entitlement:** `document` — Addendum-1 §A.3; deviation for unseedable agent sampling recorded in Q9
+- **consequences:** the full acceptance matrix MUST NOT run before this gate passes
+
+### c-2026-07-09-0015 — Interop: map onto xAIF + PROV-O, no home-grown ontology; Commitment Stores cited as prior art
+- **kind:** decision · **status:** active
+- **scope:** `repo:docs`, `topic:interop`, `topic:paper`
+- **entitlement:** `document` — Addendum-1 §B.1, §B.4 (research 04)
+- **note:** docs/interop.md + theory.md §6 (Hamblin/Mackenzie/DGDL-DGEP).
+
+### c-2026-07-09-0016 — ZMENY_ITERACE_1.md was never delivered; Addendum-1 applies standalone
+- **kind:** assumption · **status:** active
+- **scope:** `repo:docs`, `topic:spec`
+- **entitlement:** `tool_output` — file search across Downloads and repo found no such document (2026-07-09)
+- **note:** QUESTIONS Q7; reconcile if the document surfaces.
+
 ---
 
 ## Superseded / retracted / conflicted

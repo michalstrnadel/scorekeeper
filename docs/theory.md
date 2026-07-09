@@ -42,7 +42,35 @@ A third independent line — this time from philosophy of **mind**, not language
 
 And this locks back into Brandom: for him score is *constitutively social* — it is kept by the *other* participant in the game, not by the speaker about itself. A `scorekeeper` that is an external scaffold with its own context, separate from the agent, is therefore *more* Brandomian than any self-managed memory. Philosophy of mind (Sterelny) and philosophy of language (Brandom) independently dictate the same architectural choice. Three independent lines converging on one design is exactly the kind of argument that carries a paper.
 
-## 6. Honesty of the frame
+## 6. Prior art: Commitment Stores in formal dialogue games (Hamblin, Mackenzie)
+
+The scoreboard has a direct fifty-year-old predecessor that must be acknowledged:
+**commitment stores** in formal dialogue games — Hamblin (*Fallacies*, 1970) and
+Mackenzie's DC system (1979), carried into computational form by the DGDL dialogue
+game description language and the DGEP execution platform.
+
+Three of their design decisions independently validate ours:
+
+1. **A commitment is a public, testable proposition** — not a psychological belief.
+   Hamblin's move dissolves Moore's paradox ("p, but I don't believe p") and, for
+   us, dissolves the objection that an LLM "doesn't really believe" anything: the
+   scoreboard tracks what the agent is *on record* for, which is exactly what its
+   subsequent moves are accountable to.
+2. **The active state is a view over an immutable history.** Commitment stores are
+   updated by rule-governed additions and retractions, with the store's current
+   content defined over the move history — precisely our append-only `log.jsonl` +
+   generated `scoreboard.md` architecture, arrived at independently.
+3. **Non-monotonic retraction is rule-governed, not free.** Which retractions are
+   legal depends on the dialogue rules — the ancestor of our entitled-revision
+   boundary (SUPERSEDE vs. BRANCH-CONFLICT).
+
+**Differentiation** (the precise sentence for the paper): scorekeeper is a
+commitment store applied to an LLM agent's own discourse, extended with the
+**entitlement-provenance dimension** (which Hamblin-style stores lack — they track
+*that* a commitment stands, not *what backs it*) and integrated into a production
+agent harness (which the DGDL/DGEP world never had).
+
+## 7. Honesty of the frame
 
 Brandom serves the project as a design vocabulary and a source of non-trivial architectural decisions (entitlement as a first-class dimension; material detection; explicitation) — not as dogma. Where philosophical fidelity collides with engineering usefulness, usefulness wins and the deviation is documented (see the ADR process). The project claims **nothing** about consciousness, understanding, or "genuine" agent normativity — Poibeau's remark that an agent without sanctions merely simulates normativity holds; it is irrelevant to the engineering value of the scoreboard.
 
