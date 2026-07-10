@@ -11,3 +11,4 @@ Format: `NNNN-short-slug.md`. Status one of: Proposed · Accepted · Superseded 
 | [0003](0003-pluggable-model-backends.md) | Pluggable model backends — local OSS first-class | Accepted |
 | [0004](0004-extraction-trigger-design.md) | Extraction trigger: Stop 1×/turn + PostToolUse(Edit\|Write) Tier-0 | Accepted |
 | [0005](0005-judge-pipeline.md) | Judge pipeline: cross-family Gemini + S8 protocol | Accepted |
+| [0006](0006-async-extraction.md) | Async extraction: detached worker; findings drain on next prompt | Accepted |

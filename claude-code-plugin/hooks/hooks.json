@@ -23,12 +23,23 @@
         ]
       }
     ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" user-prompt-submit",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" stop",
+            "command": "SCOREKEEPER_EXTRACT=\"${SCOREKEEPER_EXTRACT:-async}\" \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" stop",
             "timeout": 180
           }
         ]

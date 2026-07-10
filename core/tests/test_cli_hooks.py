@@ -201,6 +201,89 @@ def test_stop_extracts_and_blocks_on_conflict(tmp_path, monkeypatch, capsys):
     assert "PostgreSQL 16" in out["reason"]
 
 
+# -- async extraction (ADR-0006) ------------------------------------------------------
+
+
+class ConflictBackend:
+    """Extractor stub that produces a MongoDB drift commitment."""
+
+    name = "fake"
+
+    def complete(self, system, user):
+        if "commitment extractor" in system:
+            return json.dumps(
+                {
+                    "commitments": [
+                        {
+                            "claim": "Activity feed storage uses MongoDB.",
+                            "kind": "decision",
+                            "scope": [
+                                "topic:persistence",
+                                "attr:persistence.primary_db=mongodb",
+                            ],
+                            "entitlement": {"source": "prior_inference", "note": "note"},
+                        }
+                    ]
+                }
+            )
+        return json.dumps({"verdicts": []})
+
+
+def drift_transcript(tmp_path):
+    t = tmp_path / "t.jsonl"
+    write_transcript(
+        t,
+        [
+            entry("user", [{"type": "text", "text": "implement the feed per the note"}]),
+            entry("assistant", [{"type": "text", "text": "Using MongoDB for the feed."}]),
+        ],
+    )
+    return t
+
+
+def test_stop_async_spawns_worker_and_returns_silent(tmp_path, monkeypatch, capsys):
+    seed_commitment(tmp_path)
+    t = drift_transcript(tmp_path)
+    spawned = []
+    monkeypatch.setenv("SCOREKEEPER_EXTRACT", "async")
+    monkeypatch.setattr(
+        "scorekeeper.cli.subprocess.Popen", lambda *a, **kw: spawned.append(a[0])
+    )
+    out = run_hook(
+        monkeypatch, capsys, "stop", {"cwd": str(tmp_path), "transcript_path": str(t)}
+    )
+    assert out is None  # never blocks in async mode
+    assert len(spawned) == 1 and spawned[0][-2] == "worker"
+    payloads = list((Store(tmp_path).dir / "worker").glob("payload-*.json"))
+    assert len(payloads) == 1
+    assert json.loads(payloads[0].read_text())["transcript_path"] == str(t)
+
+
+def test_worker_writes_pending_and_prompt_submit_drains(tmp_path, monkeypatch, capsys):
+    store = seed_commitment(tmp_path)
+    t = drift_transcript(tmp_path)
+    payload_path = tmp_path / "payload.json"
+    payload_path.write_text(
+        json.dumps({"cwd": str(tmp_path), "transcript_path": str(t), "session_id": "s1"})
+    )
+    monkeypatch.setattr("scorekeeper.cli.detect_backend", lambda root: ConflictBackend())
+    assert main(["worker", str(payload_path)]) == 0
+    pending = store.dir / "pending-findings.md"
+    assert "COMMITMENT CONFLICT" in pending.read_text()
+    assert not payload_path.exists()  # consumed
+
+    out = run_hook(monkeypatch, capsys, "user-prompt-submit", {"cwd": str(tmp_path)})
+    ctx = out["hookSpecificOutput"]["additionalContext"]
+    assert out["hookSpecificOutput"]["hookEventName"] == "UserPromptSubmit"
+    assert "COMMITMENT CONFLICT" in ctx and "PostgreSQL 16" in ctx
+    assert not pending.exists()  # drained exactly once
+
+
+def test_user_prompt_submit_silent_without_pending(tmp_path, monkeypatch, capsys):
+    seed_commitment(tmp_path)
+    assert run_hook(monkeypatch, capsys, "user-prompt-submit", {"cwd": str(tmp_path)}) is None
+
+
 # -- PreCompact -------------------------------------------------------------------------
 
 
