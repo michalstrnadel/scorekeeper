@@ -134,6 +134,68 @@ def test_refine_keeps_chain(tmp_path):
     assert store.load(old_id).superseded_by == new_id_
 
 
+def test_f2_entitled_collision_compatible_coexists(tmp_path):
+    """Phase-0 finding F2: an entitled dev-env change colliding on the attr key must
+    NOT supersede the production commitment when Tier-1 says they coexist."""
+    store = Store(tmp_path)
+    redis = ext("Caching uses Redis.", scope=["topic:caching", "attr:caching.backend=redis"])
+    apply(store, [redis])
+    dev = ext(
+        "Development environment uses an in-memory cache.",
+        scope=["topic:caching", "attr:caching.backend=memory"],
+        source="user_utterance",
+    )
+    backend = VerdictBackend("compatible", "different environments")
+    result = apply(store, [dev], backend=backend)
+    assert backend.calls == 1
+    assert result.superseded == [] and result.conflicts == []
+    assert len(store.active()) == 2
+    assert any(e["op"] == "COEXIST" for e in store.log_entries())
+
+
+def test_f2_entitled_collision_incompatible_still_supersedes(tmp_path):
+    """04a behavior preserved with a backend: a confirmed replacement supersedes."""
+    store = Store(tmp_path)
+    redis = ext("Caching uses Redis.", scope=["topic:caching", "attr:caching.backend=redis"])
+    apply(store, [redis])
+    lru = ext(
+        "Caching uses an in-process LRU.",
+        scope=["topic:caching", "attr:caching.backend=in_process_lru"],
+        source="user_utterance",
+    )
+    result = apply(store, [lru], backend=VerdictBackend("incompatible", "replaces the backend"))
+    assert len(result.superseded) == 1 and result.conflicts == []
+    assert len(store.active()) == 1
+
+
+def test_f2_entitled_collision_refines(tmp_path):
+    store = Store(tmp_path)
+    apply(store, [POSTGRES])
+    pinned = ext(
+        "The primary database is PostgreSQL 16.3.",
+        scope=["topic:persistence", "attr:persistence.primary_db=postgresql_16.3"],
+        source="user_utterance",
+    )
+    result = apply(store, [pinned], backend=VerdictBackend("refines"))
+    assert len(result.refined) == 1 and result.superseded == []
+
+
+def test_f2_unentitled_collision_still_deterministic_conflict(tmp_path):
+    """Drift stays a zero-LLM hard catch — Tier-1 must NOT be consulted for it."""
+    store = Store(tmp_path)
+    apply(store, [POSTGRES])
+    mongo = ext(
+        "Activity feed storage uses MongoDB.",
+        scope=["topic:persistence", "attr:persistence.primary_db=mongodb"],
+        source="prior_inference",
+    )
+    backend = VerdictBackend("compatible")
+    result = apply(store, [mongo], backend=backend)
+    assert len(result.conflicts) == 1
+    # the only tier1 call allowed is the general candidate pass, not a collision waiver
+    assert not any(e["op"] == "COEXIST" for e in store.log_entries())
+
+
 def test_scenario05_challenge_unbacked(tmp_path):
     store = Store(tmp_path)
     halluc = ext(

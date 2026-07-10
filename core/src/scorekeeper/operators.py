@@ -75,6 +75,15 @@ def _supersede(store: Store, old: Commitment, new: Commitment, result: ApplyResu
     result.superseded.append((old.id, new.id))
 
 
+def _refine(store: Store, old: Commitment, new: Commitment, result: ApplyResult) -> None:
+    old.status = Status.REFINED
+    old.superseded_by = new.id
+    new.supersedes = old.id
+    store.save(old)
+    store.log("REFINE", new.id, f"refines {old.id}", against=old.id)
+    result.refined.append((old.id, new.id))
+
+
 def _branch_conflict(
     store: Store, old: Commitment, new: Commitment, reason: str, result: ApplyResult
 ) -> None:
@@ -133,10 +142,24 @@ def apply(
             reason = (
                 f"tier0: {col.key} — existing '{col.existing_value}' vs new '{col.new_value}'"
             )
-            if entitled:
-                _supersede(store, col.existing, new, result)
-            else:
+            if not entitled:
                 _branch_conflict(store, col.existing, new, reason, result)
+                continue
+            # Entitled revision: a same-key collision is not yet a replacement — the
+            # pair may coexist under a non-monotonic reading (dev cache vs prod cache,
+            # Phase-0 finding F2). Confirm materially with Tier 1 before superseding;
+            # without a backend, keep the deterministic supersede.
+            verdicts = tier1.judge(backend, new.claim, [col.existing]) if backend else []
+            v = verdicts[0] if verdicts else None
+            if v is not None and v.verdict == Verdict.REFINES:
+                _refine(store, col.existing, new, result)
+            elif v is not None and v.verdict in (Verdict.COMPATIBLE, Verdict.NEEDS_CLARIFICATION):
+                store.log(
+                    "COEXIST", new.id, f"{reason} — waived by tier1: {v.rationale}",
+                    against=col.existing.id,
+                )
+            else:
+                _supersede(store, col.existing, new, result)
 
         # --- Tier 1: material incompatibility over scope candidates -----------
         if backend is not None:
@@ -155,12 +178,7 @@ def apply(
                         _branch_conflict(store, existing, new, f"tier1: {v.rationale}", result)
                 elif v.verdict == Verdict.REFINES and entitled:
                     handled.add(v.id)
-                    existing.status = Status.REFINED
-                    existing.superseded_by = new.id
-                    new.supersedes = existing.id
-                    store.save(existing)
-                    store.log("REFINE", new.id, f"refines {existing.id}", against=existing.id)
-                    result.refined.append((existing.id, new.id))
+                    _refine(store, existing, new, result)
 
         # --- write + CHALLENGE unbacked ---------------------------------------
         store.save(new)

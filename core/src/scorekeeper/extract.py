@@ -55,6 +55,10 @@ Scope rules: 1–3 "topic:" tags (lowercase, dashed). Add an "attr:key=value" en
 for hard, checkable attributes (attr:persistence.primary_db=postgresql, \
 attr:python.min_version=3.10, attr:api.users.response_shape=flat_id_name_email); \
 normalize value to lowercase snake/dotted form.
+When a commitment binds only one environment or component (dev vs prod, staging, one \
+service), suffix the attr key with that segment: attr:caching.backend.dev=memory \
+coexists with attr:caching.backend.prod=redis and supersedes NEITHER. A bare key \
+(attr:caching.backend=redis) means the project-wide / production choice.
 """
 
 
