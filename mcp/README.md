@@ -1,7 +1,14 @@
 # scorekeeper-mcp
 
-MCP server exposing the scoreboard to any harness (LangGraph, Letta, …). Tools: `assert_commitment`, `check_compatibility`, `get_scoreboard`, `challenge`, `supersede` (SPEC §4.5).
+MCP server exposing the scoreboard to any harness (LangGraph, Letta, …). Implemented in the core package — `core/src/scorekeeper/mcp_server.py`:
 
-LangGraph integration is a graph node (Hindsight pattern), not an agent-callable tool.
+```bash
+pip install "scorekeeper[mcp]"
+SCOREKEEPER_ROOT=/path/to/project scorekeeper-mcp   # stdio transport
+```
 
-Not implemented yet — Phase 1.
+Tools: `get_scoreboard`, `get_digest`, `assert_commitment`, `check_compatibility` (dry-run), `supersede`, `challenge`, `retract` (SPEC §4.5).
+
+Design constraint (c-0008, theory.md §5): this server is for **harness-level** integration — every write routes through the validated operator pipeline (Tier-0/Tier-1, the SUPERSEDE vs BRANCH-CONFLICT entitlement gate), so an agent given these tools still cannot silently rewrite its own board: an unentitled replacement comes back as a BRANCH-CONFLICT, and `supersede` refuses non-external entitlement outright.
+
+LangGraph integration as a graph node (Hindsight pattern): planned, Phase 1.

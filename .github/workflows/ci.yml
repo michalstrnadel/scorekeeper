@@ -18,7 +18,7 @@ jobs:
         with:
           enable-cache: true
       - name: Sync dependencies
-        run: uv sync --extra anthropic
+        run: uv sync --all-extras
       - name: Lint
         run: uv run ruff check src tests
       - name: Tests

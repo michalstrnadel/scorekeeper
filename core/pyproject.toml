@@ -1,28 +1,44 @@
 [project]
 name = "scorekeeper"
-version = "0.0.1"
+version = "0.1.0"
 description = "Commitment tracking for LLM agents — a deontic scoreboard of the agent's own commitments, entitlements, and incompatibilities."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 authors = [{ name = "Michal Strnadel" }]
 keywords = ["llm", "agents", "commitment-tracking", "inferentialism", "context-engineering"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "pydantic>=2.7",
     "pyyaml>=6.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/michalstrnadel/scorekeeper"
+Repository = "https://github.com/michalstrnadel/scorekeeper"
+Changelog = "https://github.com/michalstrnadel/scorekeeper/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
 anthropic = ["anthropic>=0.40"]
 openai = ["httpx>=0.27"]
+mcp = ["mcp>=1.2"]
 
 [project.scripts]
 scorekeeper = "scorekeeper.cli:main"
+scorekeeper-mcp = "scorekeeper.mcp_server:main"
 
 [dependency-groups]
 dev = [
     "pytest>=8.0",
     "ruff>=0.6",
+    "mcp>=1.2",
 ]
 
 [build-system]
