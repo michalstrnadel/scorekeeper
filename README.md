@@ -8,14 +8,21 @@
 
 **A normative overlay that gives long-running LLM agents a scoreboard of their own commitments — not just a memory of what happened.**
 
-![status: WIP — Phase 0](https://img.shields.io/badge/status-WIP%20·%20Phase%200-orange)
+![status: Phase 1](https://img.shields.io/badge/status-Phase%201%20·%20v0.1-brightgreen)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/core-Python-3776AB?logo=python&logoColor=white)
 ![Claude Code](https://img.shields.io/badge/integration-Claude%20Code%20hooks-8A63D2)
 ![MCP](https://img.shields.io/badge/protocol-MCP-000000)
 ![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
-> **🚧 Work in progress.** This is scaffolding + research + design. **Nothing runs yet.** The repo is public early on purpose — the design and its philosophical grounding are the artifact right now. Star/watch to follow along; see the [roadmap](docs/SPEC-cs.md) (§7).
+> **It runs.** Phase 0 (mechanism + first paired evidence) is complete and the acceptance gate passed — [full report](bench/results/PHASE0-REPORT.md). Phase 1 is underway: the core is packaged, the MCP server ships, extraction is async. Roadmap: [SPEC §7](docs/SPEC-cs.md).
+
+---
+
+<p align="center">
+  <img src="docs/assets/demo.gif" alt="Demo: an entitled decision is asserted; the agent's own drift to MongoDB is caught as BRANCH-CONFLICT; a user-requested change passes as a clean SUPERSEDE." width="90%">
+</p>
+<p align="center"><em>The core distinction, live: same shape of change — different provenance, different verdict.<br>Reproduce: <code>uv run --project core python demo/drift_demo.py</code></em></p>
 
 ---
 
@@ -68,16 +75,23 @@ The pipeline works end-to-end and the first paired evidence is in:
 - Instrument per Addendum-1: cross-family local judge (qwen3, S8 protocol,
   anchored rubric), meta-eval gate CV 0.000, sensitivity-probe verified.
 
-Next: **Phase 1** — `scorekeeper-core` v0.1 on PyPI, MCP server, async
-extraction mode. Roadmap: [`docs/SPEC-cs.md` §7](docs/SPEC-cs.md).
+**Phase 1 (current):** v0.1.0 is packaged (`pip install scorekeeper`, release
+workflow ready), the **MCP server** ships (`scorekeeper-mcp` — writes route
+through the same operator pipeline as the hooks), extraction is **async by
+default in the plugin** (detached worker, ~0 ms added turn latency; findings
+surface on the next prompt — [ADR-0006](adr/0006-async-extraction.md)), and
+Phase-0 finding F2 is fixed (entitled attr-collision revisions are confirmed
+materially by Tier-1 before superseding). Next: CommitBench — harder scenarios,
+repeated runs, publishable effect sizes. See [CHANGELOG](CHANGELOG.md).
 
 ## Layout
 
 | Path | What |
 |---|---|
-| `core/` | model + store + backends + extractor + detectors + operators + CLI (Python) |
-| `claude-code-plugin/` | Primary integration: 4 Claude Code hooks (`claude --plugin-dir ./claude-code-plugin`) |
-| `mcp/` | `scorekeeper-mcp` — MCP server for any harness (Phase 1) |
+| `core/` | model + store + backends + extractor + detectors + operators + CLI + MCP server (Python, [PyPI: `scorekeeper`](core/README.md)) |
+| `claude-code-plugin/` | Primary integration: 5 Claude Code hooks (`claude --plugin-dir ./claude-code-plugin`) |
+| `mcp/` | `scorekeeper-mcp` docs — the server lives in core (`pip install "scorekeeper[mcp]"`) |
+| `demo/` | 30-second mechanism demo (`drift_demo.py`) + the README GIF tape |
 | `bench/` | planted acceptance scenarios + Agent-SDK eval harness; CommitBench in Phase 2 |
 | `docs/` | `theory.md`, `SPEC-cs.md`, `research/` |
 | `adr/` | Architecture Decision Records |

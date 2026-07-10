@@ -118,6 +118,28 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 - **consequences:** Phase 1 opens (PyPI v0.1, MCP server, async extraction, F2 attr-scoping fix); effect-size claims deferred to CommitBench (harder scenarios, repeated runs)
 - **note:** Known limitation recorded: 04b JRR misclassification (env-scoped attrs needed).
 
+### c-2026-07-10-0019 — Extraction is async in the plugin, sync in the library
+- **kind:** decision · **status:** active
+- **scope:** `repo:claude-code-plugin`, `topic:hooks`, `topic:latency`, `attr:plugin.extract_mode=async`
+- **entitlement:** `user_utterance` + `tool_output` — Michal: runtime latency is a hard constraint ("nesmíme zpomalit nic"); Phase-0 finding F1 showed digest steering, not the in-turn block, is the dominant channel
+- **consequences:** Stop hook spawns a detached worker (~0 ms added); findings drain via the new UserPromptSubmit hook; library/bench default stays sync (the measured Phase-0 configuration)
+- **incompatible_with:** blocking the turn on LLM extraction in the default plugin path
+- **note:** See [ADR-0006](../adr/0006-async-extraction.md).
+
+### c-2026-07-10-0020 — MCP server ships inside the `scorekeeper` package; writes route through the operators
+- **kind:** decision · **status:** active
+- **scope:** `repo:core`, `repo:mcp`, `topic:architecture`, `attr:mcp.distribution=core_extra`
+- **entitlement:** `prior_inference` — single PyPI package with `[mcp]` extra avoids a second release pipeline; c-0008 (scaffolded-not-extended) demands every write pass the validated operator door regardless of transport
+- **consequences:** `scorekeeper-mcp` console script; `supersede` refuses non-external entitlement; unentitled `assert_commitment` comes back as BRANCH-CONFLICT
+- **incompatible_with:** MCP tools that let an agent silently edit its own board
+
+### c-2026-07-10-0021 — Entitled attr-collision revisions require Tier-1 material confirmation (F2 fix)
+- **kind:** decision · **status:** active
+- **scope:** `repo:core`, `topic:operators`, `topic:detection`
+- **entitlement:** `tool_output` — Phase-0 finding F2: 04b misrecorded a dev-cache change as superseding the production Redis commitment (bench/results/PHASE0-REPORT.md)
+- **consequences:** SUPERSEDE from a Tier-0 collision only when Tier-1 confirms replacement (compatible → COEXIST, refines → REFINE; no backend → deterministic supersede kept); extraction prompt scopes attrs by environment
+- **incompatible_with:** superseding on attr-key collision alone; consulting an LLM before flagging *unentitled* drift (that path stays zero-LLM)
+
 ---
 
 ## Superseded / retracted / conflicted
