@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1 — 2026-07-10
+
+Re-release with the sdist included. PyPI permanently retires filenames of deleted projects; a previous (unrelated, since-deleted) `scorekeeper` project had burned `scorekeeper-0.1.0.tar.gz`, so 0.1.0 shipped wheel-only. No code changes.
+
 ## 0.1.0 — 2026-07-10
 
 First packaged release (`pip install scorekeeper`). Phase 0 acceptance gate passed — see `bench/results/PHASE0-REPORT.md`.

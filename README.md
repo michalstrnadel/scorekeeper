@@ -9,6 +9,7 @@
 **A normative overlay that gives long-running LLM agents a scoreboard of their own commitments — not just a memory of what happened.**
 
 ![status: Phase 1](https://img.shields.io/badge/status-Phase%201%20·%20v0.1-brightgreen)
+[![PyPI](https://img.shields.io/pypi/v/scorekeeper)](https://pypi.org/project/scorekeeper/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/core-Python-3776AB?logo=python&logoColor=white)
 ![Claude Code](https://img.shields.io/badge/integration-Claude%20Code%20hooks-8A63D2)
@@ -75,8 +76,8 @@ The pipeline works end-to-end and the first paired evidence is in:
 - Instrument per Addendum-1: cross-family local judge (qwen3, S8 protocol,
   anchored rubric), meta-eval gate CV 0.000, sensitivity-probe verified.
 
-**Phase 1 (current):** v0.1.0 is packaged (`pip install scorekeeper`, release
-workflow ready), the **MCP server** ships (`scorekeeper-mcp` — writes route
+**Phase 1 (current):** v0.1 is [on PyPI](https://pypi.org/project/scorekeeper/)
+(`pip install scorekeeper`), the **MCP server** ships (`scorekeeper-mcp` — writes route
 through the same operator pipeline as the hooks), extraction is **async by
 default in the plugin** (detached worker, ~0 ms added turn latency; findings
 surface on the next prompt — [ADR-0006](adr/0006-async-extraction.md)), and

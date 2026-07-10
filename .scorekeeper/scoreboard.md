@@ -140,6 +140,12 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 - **consequences:** SUPERSEDE from a Tier-0 collision only when Tier-1 confirms replacement (compatible → COEXIST, refines → REFINE; no backend → deterministic supersede kept); extraction prompt scopes attrs by environment
 - **incompatible_with:** superseding on attr-key collision alone; consulting an LLM before flagging *unentitled* drift (that path stays zero-LLM)
 
+### c-2026-07-10-0022 — `scorekeeper` is published on PyPI (v0.1.x, trusted publishing)
+- **kind:** assertion · **status:** active
+- **scope:** `topic:release`, `attr:pypi.package=scorekeeper`
+- **entitlement:** `tool_output` — release run 2026-07-10: wheel for 0.1.0 accepted (pypi.org/project/scorekeeper); 0.1.1 re-released with sdist
+- **note:** PyPI retires filenames of deleted projects — a prior unrelated `scorekeeper` project burned `scorekeeper-0.1.0.tar.gz`, so 0.1.0 is wheel-only. Known constraint for future versions: if an upload 400s with "filename previously used", bump the patch version.
+
 ---
 
 ## Superseded / retracted / conflicted
