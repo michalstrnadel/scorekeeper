@@ -146,6 +146,13 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 - **entitlement:** `tool_output` — release run 2026-07-10: wheel for 0.1.0 accepted (pypi.org/project/scorekeeper); 0.1.1 re-released with sdist
 - **note:** PyPI retires filenames of deleted projects — a prior unrelated `scorekeeper` project burned `scorekeeper-0.1.0.tar.gz`, so 0.1.0 is wheel-only. Known constraint for future versions: if an upload 400s with "filename previously used", bump the patch version.
 
+### c-2026-07-10-0023 — CommitBench design: mirror-image families, full-replacement revocations, gitignored eval split
+- **kind:** decision · **status:** active
+- **scope:** `repo:bench`, `topic:evaluation`, `phase:2`
+- **entitlement:** `document` + `tool_output` — SPEC §6, Addendum-1 contamination protocol; F2 fix makes per-feature carve-outs correctly COEXIST, so `revision`-family revocations MUST be full replacements or the ground truth lies
+- **consequences:** drift/revision families share worlds+distance (paired FPR measurement); knobs = distance/compaction/distractors (findings F1/F4); dev/eval derive separate RNG streams; eval instances never inspected, `generated/` never committed
+- **incompatible_with:** committing generated eval instances; tuning prompts on the eval split; revision scenarios whose revocation is scoped to a single feature
+
 ---
 
 ## Superseded / retracted / conflicted

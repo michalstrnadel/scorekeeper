@@ -70,14 +70,26 @@ class RunResult:
     error: str = ""
 
 
-def load_scenario(name: str) -> tuple[dict, dict, Path]:
-    d = TASKS_DIR / name
+def load_scenario(name: str, tasks_dir: Path = TASKS_DIR) -> tuple[dict, dict, Path]:
+    d = tasks_dir / name
     scenario = yaml.safe_load((d / "scenario.yaml").read_text())
     ground_truth = yaml.safe_load((d / "ground_truth.yaml").read_text())
     return scenario, ground_truth, d / "repo"
 
 
-def make_hooks(workdir: Path) -> dict:
+# which feedback channels each variant gets (SPEC §6.3 ablations). Extraction
+# (the Stop hook's write path) always runs for non-bare variants — the board
+# must exist for any channel to have content and for event scoring.
+VARIANT_CHANNELS = {
+    "scorekept": {"digest", "tier0", "stopblock"},  # full system
+    "no-digest": {"tier0", "stopblock"},
+    "no-tier0": {"digest", "stopblock"},
+    "no-stopblock": {"digest", "tier0"},
+    "silent": set(),  # board written, agent never sees it — placebo control
+}
+
+
+def make_hooks(workdir: Path, channels: set[str]) -> dict:
     """SDK hooks wired to the same handler functions the plugin uses."""
 
     async def digest_inject(input_data, tool_use_id, context):
@@ -95,13 +107,15 @@ def make_hooks(workdir: Path) -> dict:
         return hook_post_tool_use({**input_data, "cwd": str(workdir)}) or {}
 
     async def stop(input_data, tool_use_id, context):
-        return hook_stop({**input_data, "cwd": str(workdir)}) or {}
+        result = hook_stop({**input_data, "cwd": str(workdir)}) or {}
+        return result if "stopblock" in channels else {}
 
-    return {
-        "UserPromptSubmit": [HookMatcher(hooks=[digest_inject])],
-        "PostToolUse": [HookMatcher(matcher="Edit|Write", hooks=[post_tool_use])],
-        "Stop": [HookMatcher(hooks=[stop])],
-    }
+    hooks = {"Stop": [HookMatcher(hooks=[stop])]}  # extraction always writes
+    if "digest" in channels:
+        hooks["UserPromptSubmit"] = [HookMatcher(hooks=[digest_inject])]
+    if "tier0" in channels:
+        hooks["PostToolUse"] = [HookMatcher(matcher="Edit|Write", hooks=[post_tool_use])]
+    return hooks
 
 
 def make_options(workdir: Path, variant: str, model: str | None) -> ClaudeAgentOptions:
@@ -112,8 +126,8 @@ def make_options(workdir: Path, variant: str, model: str | None) -> ClaudeAgentO
     }
     if model:
         kwargs["model"] = model
-    if variant == "scorekept":
-        kwargs["hooks"] = make_hooks(workdir)
+    if variant != "bare":
+        kwargs["hooks"] = make_hooks(workdir, VARIANT_CHANNELS[variant])
     return ClaudeAgentOptions(**kwargs)
 
 
@@ -215,15 +229,18 @@ def score_events(ground_truth: dict, workdir: Path) -> dict:
     }
 
 
-async def run_one(name: str, variant: str, model: str | None, judge_model: str) -> RunResult:
-    scenario, ground_truth, repo_seed = load_scenario(name)
+async def run_one(
+    name: str, variant: str, model: str | None, judge_model: str,
+    tasks_dir: Path = TASKS_DIR,
+) -> RunResult:
+    scenario, ground_truth, repo_seed = load_scenario(name, tasks_dir)
     result = RunResult(scenario=name, variant=variant)
     workdir = Path(tempfile.mkdtemp(prefix=f"skbench-{name}-{variant}-"))
     started = time.time()
     try:
         if repo_seed.exists():
             shutil.copytree(repo_seed, workdir, dirs_exist_ok=True)
-        if variant == "scorekept":
+        if variant != "bare":
             Store(workdir).init()
         result.phases = await drive(scenario, workdir, variant, model)
         result.total_input_tokens = sum(p.input_tokens for p in result.phases)
@@ -232,7 +249,7 @@ async def run_one(name: str, variant: str, model: str | None, judge_model: str) 
             tail = result.phases[-1].reply_tail if result.phases else ""
             raise RuntimeError(f"agent produced no work (usage limit?): {tail!r}")
         result.judge = judge_run(scenario, workdir, result.phases, judge_model)
-        if variant == "scorekept":
+        if variant != "bare":
             result.events = score_events(ground_truth, workdir)
             result.scoreboard_log = Store(workdir).log_entries()
     except Exception as e:  # noqa: BLE001
@@ -292,13 +309,23 @@ async def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenario", help="single scenario dir name")
     parser.add_argument("--all", action="store_true", help="run every scenario")
-    parser.add_argument("--variant", choices=["bare", "scorekept", "both"], default="both")
+    parser.add_argument(
+        "--variant",
+        choices=["bare", "scorekept", "both", *sorted(set(VARIANT_CHANNELS) - {"scorekept"})],
+        default="both",
+        help="'both' = bare+scorekept; others are SPEC §6.3 ablations",
+    )
     parser.add_argument("--model", default=None, help="agent model override")
     parser.add_argument("--judge-model", default="models/gemini-2.5-flash")
+    parser.add_argument(
+        "--tasks-dir", default=str(TASKS_DIR),
+        help="scenario root (e.g. ../commitbench/generated/dev)",
+    )
     args = parser.parse_args()
 
+    tasks_dir = Path(args.tasks_dir)
     names = (
-        sorted(p.name for p in TASKS_DIR.iterdir() if p.is_dir())
+        sorted(p.name for p in tasks_dir.iterdir() if p.is_dir())
         if args.all
         else [args.scenario]
     )
@@ -314,7 +341,7 @@ async def main() -> int:
     results = []
     for name in names:
         for variant in variants:
-            r = await run_one(name, variant, args.model, args.judge_model)
+            r = await run_one(name, variant, args.model, args.judge_model, tasks_dir)
             results.append(r)
             # crash-safe: persist each run the moment it finishes
             with incremental.open("a") as f:
