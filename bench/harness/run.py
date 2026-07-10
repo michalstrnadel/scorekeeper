@@ -23,7 +23,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -139,10 +141,16 @@ def make_hooks(workdir: Path, channels: set[str]) -> dict:
         }
 
     async def post_tool_use(input_data, tool_use_id, context):
+        # tier0 content scan is pure-Python and fast — safe inline
         return hook_post_tool_use({**input_data, "cwd": str(workdir)}) or {}
 
     async def stop(input_data, tool_use_id, context):
-        result = hook_stop({**input_data, "cwd": str(workdir)}) or {}
+        # hook_stop does a BLOCKING `claude -p` subprocess (up to 120s); running it
+        # inline would freeze the SDK's asyncio event loop and deadlock the
+        # transport (root cause of the 101-min hang, 2026-07-10). Off-load it.
+        result = await asyncio.to_thread(
+            hook_stop, {**input_data, "cwd": str(workdir)}
+        ) or {}
         return result if "stopblock" in channels else {}
 
     hooks = {"Stop": [HookMatcher(hooks=[stop])]}  # extraction always writes
@@ -166,6 +174,36 @@ def make_options(workdir: Path, variant: str, model: str | None) -> ClaudeAgentO
     return ClaudeAgentOptions(**kwargs)
 
 
+# hard ceiling per phase — a hung SDK turn (seen: same-subscription CLI
+# concurrency deadlock) must never eat the batch. On timeout the phase is
+# recorded as timed-out and the run continues.
+PHASE_TIMEOUT_S = float(os.environ.get("SCOREKEEPER_PHASE_TIMEOUT", "600"))
+
+
+async def _collect_phase(client, stats: PhaseStats) -> None:
+    async for message in client.receive_response():
+        mtype = type(message).__name__
+        if mtype == "AssistantMessage":
+            for block in getattr(message, "content", []):
+                text = getattr(block, "text", None)
+                if text:
+                    stats.reply_chars += len(text)
+                    stats.reply_tail = text[-300:]
+                    stats.reply_text += text + "\n"
+                name = getattr(block, "name", None)
+                if name and type(block).__name__ == "ToolUseBlock":
+                    inp = getattr(block, "input", {}) or {}
+                    detail = next(
+                        (str(inp[k]) for k in ("file_path", "path", "command") if k in inp),
+                        "",
+                    )
+                    stats.tools_used.append(f"{name}({detail[:80]})" if detail else name)
+        elif mtype == "ResultMessage":
+            usage = getattr(message, "usage", None) or {}
+            stats.input_tokens += usage.get("input_tokens", 0) or 0
+            stats.output_tokens += usage.get("output_tokens", 0) or 0
+
+
 async def drive(scenario: dict, workdir: Path, variant: str, model: str | None) -> list[PhaseStats]:
     phases: list[PhaseStats] = []
     options = make_options(workdir, variant, model)
@@ -183,31 +221,20 @@ async def drive(scenario: dict, workdir: Path, variant: str, model: str | None) 
             stats = PhaseStats(prompt=phase["user"][:80], prompt_full=phase["user"])
             phase_started = time.time()
             await client.query(phase["user"])
-            async for message in client.receive_response():
-                mtype = type(message).__name__
-                if mtype == "AssistantMessage":
-                    for block in getattr(message, "content", []):
-                        text = getattr(block, "text", None)
-                        if text:
-                            stats.reply_chars += len(text)
-                            stats.reply_tail = text[-300:]
-                            stats.reply_text += text + "\n"
-                        name = getattr(block, "name", None)
-                        if name and type(block).__name__ == "ToolUseBlock":
-                            inp = getattr(block, "input", {}) or {}
-                            detail = next(
-                                (str(inp[k]) for k in ("file_path", "path", "command") if k in inp),
-                                "",
-                            )
-                            stats.tools_used.append(f"{name}({detail[:80]})" if detail else name)
-                elif mtype == "ResultMessage":
-                    usage = getattr(message, "usage", None) or {}
-                    stats.input_tokens += usage.get("input_tokens", 0) or 0
-                    stats.output_tokens += usage.get("output_tokens", 0) or 0
+            try:
+                await asyncio.wait_for(_collect_phase(client, stats), timeout=PHASE_TIMEOUT_S)
+            except (TimeoutError, asyncio.TimeoutError):
+                stats.blocked_reason = f"phase timed out after {PHASE_TIMEOUT_S:.0f}s"
+                print(f"  ! phase timed out ({PHASE_TIMEOUT_S:.0f}s) — reconnecting session")
+                with contextlib.suppress(Exception):
+                    await client.disconnect()
+                client = ClaudeSDKClient(options=make_options(workdir, variant, model))
+                await client.connect()
             stats.wall_seconds = round(time.time() - phase_started, 1)
             phases.append(stats)
     finally:
-        await client.disconnect()
+        with contextlib.suppress(Exception):
+            await client.disconnect()
     return phases
 
 
