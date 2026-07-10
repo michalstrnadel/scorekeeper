@@ -34,13 +34,48 @@ from pathlib import Path
 import yaml
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, HookMatcher
 
+from datetime import UTC, datetime
+
 from judge import judge_trajectory
 from stats import summarize_binary, summarize_latency
 from scorekeeper.cli import hook_post_tool_use, hook_stop
+from scorekeeper.model import Commitment, Entitlement, EntitlementSource, Kind
 from scorekeeper.store import Store
 
 TASKS_DIR = Path(__file__).parent.parent / "tasks"
 RESULTS_DIR = Path(__file__).parent.parent / "results"
+
+def seed_board(workdir: Path, ground_truth: dict) -> int:
+    """Pre-populate the scoreboard with the scenario's ground-truth commitments.
+
+    Isolates the steering hypothesis (does a commitment ON the board prevent
+    drift?) from extraction reliability (does the Stop hook build the board?) —
+    the latter is a separate axis. Mirrors the F0 dogfood board: the commitment
+    is present by construction, exactly as if an earlier, cleanly-extracted turn
+    had recorded it. Uses the same model/store path as the operators.
+    """
+    store = Store(workdir)
+    store.init()
+    seeded = 0
+    for i, gt in enumerate(ground_truth.get("commitments", []), 1):
+        c = Commitment(
+            id=f"c-{datetime.now(UTC):%Y-%m-%d}-{i:04d}",
+            ts=datetime.now(UTC),
+            session="seed",
+            claim=gt["claim"],
+            kind=Kind(gt.get("kind", "decision")),
+            scope=gt.get("scope", []),
+            entitlement=Entitlement(
+                source=EntitlementSource(gt.get("entitlement_source", "user_utterance")),
+                note="seeded from ground truth (pre-established commitment)",
+            ),
+        )
+        store.save(c)
+        store.log("ASSERT", c.id, f"seeded: {c.claim}")
+        seeded += 1
+    store.write_scoreboard()
+    return seeded
+
 
 @dataclass
 class PhaseStats:
@@ -231,7 +266,7 @@ def score_events(ground_truth: dict, workdir: Path) -> dict:
 
 async def run_one(
     name: str, variant: str, model: str | None, judge_model: str,
-    tasks_dir: Path = TASKS_DIR,
+    tasks_dir: Path = TASKS_DIR, seed_commitments: bool = False,
 ) -> RunResult:
     scenario, ground_truth, repo_seed = load_scenario(name, tasks_dir)
     result = RunResult(scenario=name, variant=variant)
@@ -242,6 +277,9 @@ async def run_one(
             shutil.copytree(repo_seed, workdir, dirs_exist_ok=True)
         if variant != "bare":
             Store(workdir).init()
+            if seed_commitments:
+                n = seed_board(workdir, ground_truth)
+                print(f"[{name} / {variant}] seeded {n} ground-truth commitment(s)")
         result.phases = await drive(scenario, workdir, variant, model)
         result.total_input_tokens = sum(p.input_tokens for p in result.phases)
         result.total_output_tokens = sum(p.output_tokens for p in result.phases)
@@ -321,6 +359,11 @@ async def main() -> int:
         "--tasks-dir", default=str(TASKS_DIR),
         help="scenario root (e.g. ../commitbench/generated/dev)",
     )
+    parser.add_argument(
+        "--seed-commitments", action="store_true",
+        help="pre-populate the board with ground-truth commitments (non-bare variants) "
+             "— isolates steering from extraction reliability",
+    )
     args = parser.parse_args()
 
     tasks_dir = Path(args.tasks_dir)
@@ -341,7 +384,10 @@ async def main() -> int:
     results = []
     for name in names:
         for variant in variants:
-            r = await run_one(name, variant, args.model, args.judge_model, tasks_dir)
+            r = await run_one(
+                name, variant, args.model, args.judge_model, tasks_dir,
+                seed_commitments=args.seed_commitments,
+            )
             results.append(r)
             # crash-safe: persist each run the moment it finishes
             with incremental.open("a") as f:
