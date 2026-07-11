@@ -16,7 +16,7 @@
 ![MCP](https://img.shields.io/badge/protocol-MCP-000000)
 ![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
-> **It runs.** Phase 0 (mechanism + first paired evidence) is complete and the acceptance gate passed — [full report](bench/results/PHASE0-REPORT.md). Phase 1 is underway: the core is packaged, the MCP server ships, extraction is async. Roadmap: [SPEC §7](docs/SPEC-cs.md).
+> **It runs.** Phase 0 (mechanism + first paired evidence) is complete and the acceptance gate passed — [full report](bench/results/PHASE0-REPORT.md). Phase 1 is underway: the core is packaged, the MCP server ships, extraction is async. Roadmap: [ROADMAP.md](ROADMAP.md).
 
 ---
 
@@ -74,7 +74,7 @@ Every existing memory / truth-maintenance system tracks facts about the **user a
 
 And this is not an observability problem either: LangSmith, Langfuse, AgentOps and Braintrust are flight recorders of *execution* — spans, latency, tokens. None of them versions the agent's epistemic state. **Observability tools record what the agent did; scorekeeper records what the agent is committed to.**
 
-`scorekeeper` closes that gap. See [`docs/theory.md`](docs/theory.md) for the conceptual foundation, [`docs/interop.md`](docs/interop.md) for mappings onto xAIF and W3C PROV-O, and [`docs/SPEC-cs.md`](docs/SPEC-cs.md) for the full project specification.
+`scorekeeper` closes that gap. See [`docs/theory.md`](docs/theory.md) for the conceptual foundation, [`docs/interop.md`](docs/interop.md) for mappings onto xAIF and W3C PROV-O, the [ROADMAP](ROADMAP.md), and [`docs/SPEC-cs.md`](docs/SPEC-cs.md) for the full specification (Czech, source-of-record).
 
 ## Design stance: scaffolded, not extended
 
