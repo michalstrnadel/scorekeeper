@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 Discussions
+    url: https://github.com/michalstrnadel/scorekeeper/discussions
+    about: Questions, design debate, and the philosophical grounding (Brandom, Sterelny).

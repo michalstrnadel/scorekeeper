@@ -27,6 +27,29 @@
 
 ---
 
+## Try it in 60 seconds
+
+```bash
+pip install scorekeeper          # core + CLI, from PyPI
+```
+
+See the mechanism live (needs [uv](https://docs.astral.sh/uv/)):
+
+```bash
+git clone https://github.com/michalstrnadel/scorekeeper && cd scorekeeper
+uv run --project core python demo/drift_demo.py      # the ~20s demo above
+```
+
+Run it on a **real Claude Code session** — four hooks attach a live scoreboard:
+
+```bash
+claude --plugin-dir ./claude-code-plugin             # watch .scorekeeper/scoreboard.md grow
+```
+
+Tried it? A one-paragraph [experience report](https://github.com/michalstrnadel/scorekeeper/issues/new?template=experience-report.md) (what it caught, missed, or got wrong) shapes the roadmap more than anything. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
 ## The problem
 
 Long-running agents fail in a characteristic way. At step 3 they decide on Postgres; at step 47 they write MongoDB code. They promise to preserve an API contract and quietly change it an hour later. They assert something they have no basis for — and after context compaction they don't even remember asserting it.
@@ -82,8 +105,12 @@ through the same operator pipeline as the hooks), extraction is **async by
 default in the plugin** (detached worker, ~0 ms added turn latency; findings
 surface on the next prompt — [ADR-0006](adr/0006-async-extraction.md)), and
 Phase-0 finding F2 is fixed (entitled attr-collision revisions are confirmed
-materially by Tier-1 before superseding). Next: CommitBench — harder scenarios,
-repeated runs, publishable effect sizes. See [CHANGELOG](CHANGELOG.md).
+materially by Tier-1 before superseding). A first CommitBench paired run on the
+hardest condition (distance 8 + forced compaction) reproduces the effect: the
+bare agent drifted, the scorekept twin caught itself and refused
+([progress report](bench/results/COMMITBENCH-PROGRESS.md)). Rather than scale the
+numbers in-house next, **the ask is for the community to try it** — see below.
+See [CHANGELOG](CHANGELOG.md).
 
 ## Layout
 
@@ -92,11 +119,17 @@ repeated runs, publishable effect sizes. See [CHANGELOG](CHANGELOG.md).
 | `core/` | model + store + backends + extractor + detectors + operators + CLI + MCP server (Python, [PyPI: `scorekeeper`](core/README.md)) |
 | `claude-code-plugin/` | Primary integration: 5 Claude Code hooks (`claude --plugin-dir ./claude-code-plugin`) |
 | `mcp/` | `scorekeeper-mcp` docs — the server lives in core (`pip install "scorekeeper[mcp]"`) |
-| `demo/` | 30-second mechanism demo (`drift_demo.py`) + the README GIF tape |
+| `demo/` | ~20-second mechanism demo (`drift_demo.py`) + the README GIF tape |
 | `bench/` | planted acceptance scenarios + Agent-SDK eval harness; CommitBench in Phase 2 |
 | `docs/` | `theory.md`, `SPEC-cs.md`, `research/` |
 | `adr/` | Architecture Decision Records |
 | `.scorekeeper/` | The project's own scoreboard — scorekeeper dogfoods itself |
+
+## Contributing
+
+Early project, design-first — **trying it and reporting back is as valuable as code.** Start with [CONTRIBUTING.md](CONTRIBUTING.md): 60-second setup, a tour of the codebase, and good first issues (add a model backend, extend the rival-tech lexicon, write a planted scenario, or port the core to TypeScript). File an [experience report](https://github.com/michalstrnadel/scorekeeper/issues/new?template=experience-report.md) after you run it.
+
+If you use it in research, there's a [CITATION.cff](CITATION.cff).
 
 ## License
 
