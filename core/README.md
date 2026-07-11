@@ -20,7 +20,7 @@ git clone https://github.com/michalstrnadel/scorekeeper
 claude --plugin-dir ./scorekeeper/claude-code-plugin
 ```
 
-Four hooks do the work: `SessionStart` injects the normative digest (and re-injects it after context compaction — the exact place summarizers drop it), `PostToolUse(Edit|Write)` runs a millisecond content scan against pinned choices, `Stop` extracts the turn's commitments (async by default — a detached worker, zero added latency; findings surface on the next prompt), `PreCompact` backs up the board.
+Five hooks do the work: `SessionStart` injects the normative digest (and re-injects it after context compaction — the exact place summarizers drop it), `PostToolUse(Edit|Write)` runs a millisecond content scan against pinned choices, `Stop` extracts the turn's commitments (async by default — a detached worker, zero added latency), `UserPromptSubmit` surfaces those findings on the next turn, `PreCompact` backs up the board.
 
 ## MCP (any harness)
 
