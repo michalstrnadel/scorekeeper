@@ -153,6 +153,21 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 - **consequences:** drift/revision families share worlds+distance (paired FPR measurement); knobs = distance/compaction/distractors (findings F1/F4); dev/eval derive separate RNG streams; eval instances never inspected, `generated/` never committed
 - **incompatible_with:** committing generated eval instances; tuning prompts on the eval split; revision scenarios whose revocation is scoped to a single feature
 
+### c-2026-07-11-0024 — CommitBench primary metric is a deterministic artifact classifier; LLM judge is secondary
+- **kind:** decision · **status:** active
+- **scope:** `repo:bench`, `topic:evaluation`, `attr:bench.primary_metric=behavior_classifier`
+- **entitlement:** `tool_output` — the local qwen judge repeatedly failed on long CommitBench trajectories (300s timeouts; degenerate all-1s verdicts that scored a fully-worked run task_completion=1; called a clearly-drifting bare run contradiction=False)
+- **consequences:** `bench/harness/classify.py` decides drift vs held from the final reply (order of surfacing-vs-accepting) + rival code in the repo; SCR computed from it, AMBIGUOUS excluded from the denominator (declared); LLM judge kept only as a cross-check
+- **incompatible_with:** reporting SCR from the LLM judge verdict as the headline number
+- **note:** anchored on the verified 2026-07-10 s00 pair (bare DRIFTED, scorekept HELD). Supersedes reliance on c-0017's judge for the drift metric; judge protocol itself unchanged for trajectory scoring.
+
+### c-2026-07-11-0025 — Bench Stop-hook extraction must run off the SDK event loop
+- **kind:** decision · **status:** active
+- **scope:** `repo:bench`, `topic:hooks`, `topic:latency`
+- **entitlement:** `tool_output` — a 101-minute batch hang (2026-07-10) traced to the synchronous `claude -p` extraction (blocking subprocess) running inside an async SDK hook, freezing the event loop and deadlocking the transport
+- **consequences:** bench Stop hook wraps `hook_stop` in `asyncio.to_thread`; a hard per-phase timeout (SCOREKEEPER_PHASE_TIMEOUT, default 600s) records a hung turn and reconnects instead of stalling
+- **incompatible_with:** blocking subprocess calls directly inside async SDK hooks
+
 ---
 
 ## Superseded / retracted / conflicted

@@ -38,6 +38,7 @@ from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, HookMatcher
 
 from datetime import UTC, datetime
 
+from classify import classify_drift
 from judge import judge_trajectory
 from stats import summarize_binary, summarize_latency
 from scorekeeper.cli import hook_post_tool_use, hook_stop
@@ -104,6 +105,7 @@ class RunResult:
     total_input_tokens: int = 0
     total_output_tokens: int = 0
     wall_seconds: float = 0.0
+    behavior: dict = field(default_factory=dict)  # deterministic classifier (primary metric)
     error: str = ""
 
 
@@ -268,6 +270,29 @@ def judge_run(scenario: dict, workdir: Path, phases: list[PhaseStats], judge_mod
         return {"contradiction": None, "notes": f"judge failed: {e}"}
 
 
+def classify_behavior(scenario: dict, phases: list[PhaseStats], final_files: str) -> dict:
+    """Deterministic drift verdict from artifacts (primary metric; the LLM judge
+    is only a secondary cross-check). Only defined for the drift family."""
+    if scenario.get("family") != "drift":
+        return {}
+    cond = scenario.get("condition", {})
+    pair = cond.get("pair", "")
+    # committed/rival tokens from the pair key "committed-rival" via the lexicon
+    pairs = {
+        "pg-mongo": ("postgresql", "mongodb"),
+        "mysql-dynamo": ("mysql", "dynamodb"),
+        "redis-memcached": ("redis", "memcached"),
+        "fastapi-flask": ("fastapi", "flask"),
+    }
+    if pair not in pairs:
+        return {}
+    committed, rival = pairs[pair]
+    final_reply = phases[-1].reply_text if phases else ""
+    c = classify_drift(final_reply, final_files, committed, rival)
+    return {"label": c.label, "confidence": c.confidence, "signals": c.signals,
+            "committed": committed, "rival": rival}
+
+
 def score_events(ground_truth: dict, workdir: Path) -> dict:
     log_ops = [e["op"] for e in Store(workdir).log_entries()]
     fired = {op: log_ops.count(op) for op in set(log_ops)}
@@ -313,6 +338,7 @@ async def run_one(
         if result.total_output_tokens == 0:
             tail = result.phases[-1].reply_tail if result.phases else ""
             raise RuntimeError(f"agent produced no work (usage limit?): {tail!r}")
+        result.behavior = classify_behavior(scenario, result.phases, collect_files(workdir))
         result.judge = judge_run(scenario, workdir, result.phases, judge_model)
         if variant != "bare":
             result.events = score_events(ground_truth, workdir)
@@ -331,32 +357,43 @@ async def run_one(
 
 def summarize(results: list[RunResult]) -> str:
     lines = [
-        "# Phase-0 run summary",
+        "# CommitBench run summary",
         "",
-        "| scenario | variant | contradiction | surfaced | events hit | false events | out-tokens | wall s |",
-        "|---|---|---|---|---|---|---|---|",
+        "Primary metric: `behavior` (deterministic artifact classifier). "
+        "`judge` (LLM) is a secondary cross-check — known unreliable on long inputs.",
+        "",
+        "| scenario | variant | behavior | conf | judge | events hit | false events | out-tok | wall s |",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
     for r in results:
         ev = r.events or {}
+        beh = r.behavior or {}
         lines.append(
-            f"| {r.scenario} | {r.variant} | {r.judge.get('contradiction')} "
-            f"| {r.judge.get('surfaced_conflict', '')} "
+            f"| {r.scenario} | {r.variant} | {beh.get('label', '—')} "
+            f"| {beh.get('confidence', '')} "
+            f"| {r.judge.get('contradiction')} "
             f"| {','.join(ev.get('expected_hits', [])) or '—'} "
             f"| {','.join(ev.get('false_events', [])) or '—'} "
             f"| {r.total_output_tokens} | {r.wall_seconds} |"
         )
-    bare = [r for r in results if r.variant == "bare" and r.judge.get("contradiction") is not None]
-    kept = [
-        r for r in results if r.variant == "scorekept" and r.judge.get("contradiction") is not None
-    ]
-    if bare:
-        b = summarize_binary("SCR bare", sum(bool(r.judge["contradiction"]) for r in bare), len(bare))
-        lines += ["", f"**SCR bare = {b['rate']:.0%}** (Wilson 95% {b['wilson_95']})"]
-    if kept:
-        k = summarize_binary(
-            "SCR scorekept", sum(bool(r.judge["contradiction"]) for r in kept), len(kept)
+
+    # SCR from the deterministic classifier: DRIFTED counts as a self-contradiction;
+    # AMBIGUOUS is excluded from the denominator (declared), not silently dropped.
+    def scr(variant: str) -> None:
+        runs = [r for r in results if r.variant == variant and r.behavior.get("label")]
+        decided = [r for r in runs if r.behavior["label"] in ("DRIFTED", "HELD")]
+        ambiguous = [r for r in runs if r.behavior["label"] == "AMBIGUOUS"]
+        if not decided:
+            return
+        s = summarize_binary(
+            f"SCR {variant}", sum(r.behavior["label"] == "DRIFTED" for r in decided), len(decided)
         )
-        lines += [f"**SCR scorekept = {k['rate']:.0%}** (Wilson 95% {k['wilson_95']})"]
+        note = f" · {len(ambiguous)} ambiguous excluded" if ambiguous else ""
+        lines.append(f"**SCR {variant} = {s['rate']:.0%}** "
+                     f"(Wilson 95% {s['wilson_95']}, n={len(decided)}{note})")
+    lines += [""]
+    scr("bare")
+    scr("scorekept")
     walls = [p.wall_seconds for r in results for p in r.phases if p.wall_seconds]
     if walls:
         lat = summarize_latency("phase wall seconds", walls)
