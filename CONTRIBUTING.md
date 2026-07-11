@@ -22,11 +22,20 @@ You'll watch a live scoreboard reject an agent's *own* drift (BRANCH-CONFLICT) b
 
 ## Use it on a real Claude Code session
 
+Install from the marketplace (nothing to pre-install — the scorer self-fetches from PyPI):
+
+```
+/plugin marketplace add michalstrnadel/scorekeeper
+/plugin install scorekeeper@scorekeeper
+```
+
+Or, working from a clone (dev):
+
 ```bash
 claude --plugin-dir ./claude-code-plugin
 ```
 
-Four hooks attach: the digest injects your commitments each turn (and survives context compaction), a millisecond content scan flags rival-tech edits, and turn-end extraction records new commitments. Watch `.scorekeeper/scoreboard.md` grow. **This is the path we most want feedback on** — open an issue with what it caught, what it missed, and what annoyed you.
+Five hooks attach: the digest injects your commitments each turn (and survives context compaction), a millisecond content scan flags rival-tech edits, and turn-end extraction records new commitments. Watch `.scorekeeper/scoreboard.md` grow. **This is the path we most want feedback on** — open an issue with what it caught, what it missed, and what annoyed you.
 
 ## Dev setup
 

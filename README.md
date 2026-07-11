@@ -29,22 +29,23 @@
 
 ## Try it in 60 seconds
 
-```bash
-pip install scorekeeper          # core + CLI, from PyPI
+**On a real Claude Code session** — paste two lines, nothing to pre-install (the scorer self-fetches from PyPI via `uv`/`pip` on first hook):
+
+```
+/plugin marketplace add michalstrnadel/scorekeeper
+/plugin install scorekeeper@scorekeeper
 ```
 
-See the mechanism live (needs [uv](https://docs.astral.sh/uv/)):
+Five hooks attach a live scoreboard; watch `.scorekeeper/scoreboard.md` grow as you work. The extractor uses your own `claude` CLI by default — no API key needed.
+
+**Just the mechanism, no Claude Code** (needs [uv](https://docs.astral.sh/uv/)):
 
 ```bash
 git clone https://github.com/michalstrnadel/scorekeeper && cd scorekeeper
 uv run --project core python demo/drift_demo.py      # the ~20s demo above
 ```
 
-Run it on a **real Claude Code session** — four hooks attach a live scoreboard:
-
-```bash
-claude --plugin-dir ./claude-code-plugin             # watch .scorekeeper/scoreboard.md grow
-```
+**As a library / MCP server:** `pip install scorekeeper` (see [core/README](core/README.md)).
 
 Tried it? A one-paragraph [experience report](https://github.com/michalstrnadel/scorekeeper/issues/new?template=experience-report.md) (what it caught, missed, or got wrong) shapes the roadmap more than anything. See [CONTRIBUTING.md](CONTRIBUTING.md).
 

@@ -1,0 +1,17 @@
+{
+  "name": "scorekeeper",
+  "owner": {
+    "name": "Michal Strnadel",
+    "url": "https://github.com/michalstrnadel"
+  },
+  "plugins": [
+    {
+      "name": "scorekeeper",
+      "source": "./claude-code-plugin",
+      "description": "Commitment tracking for LLM agents — a deontic scoreboard of the agent's own commitments, with entitlement provenance and incompatibility detection. Attaches as Claude Code hooks; the scorer self-resolves via pip/uvx.",
+      "version": "0.1.1",
+      "homepage": "https://github.com/michalstrnadel/scorekeeper",
+      "license": "Apache-2.0"
+    }
+  ]
+}
