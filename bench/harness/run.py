@@ -240,9 +240,16 @@ async def drive(scenario: dict, workdir: Path, variant: str, model: str | None) 
     return phases
 
 
-def collect_files(workdir: Path, cap_chars: int = 4000) -> str:
-    chunks, used = [], 0
-    for p in sorted(workdir.rglob("*")):
+def collect_files(workdir: Path, cap_chars: int = 12000) -> str:
+    # code files first: rival-tech imports are the classifier's strongest signal
+    # and must not be crowded out of the cap by big docs (seen live 2026-07-13:
+    # memcached_cache.py truncated away behind .env.example + summary files,
+    # hiding an executed drift from the classifier)
+    def rank(p: Path) -> tuple[bool, str]:
+        return (p.suffix.lower() not in (".py", ".js", ".ts", ".go", ".rb", ".rs"), str(p))
+
+    chunks, used, dropped = [], 0, 0
+    for p in sorted(workdir.rglob("*"), key=rank):
         if not p.is_file() or ".scorekeeper" in p.parts or p.suffix in (".pyc", ".sqlite"):
             continue
         try:
@@ -251,10 +258,12 @@ def collect_files(workdir: Path, cap_chars: int = 4000) -> str:
             continue
         chunk = f"===== {p.relative_to(workdir)} =====\n{text}\n"
         if used + len(chunk) > cap_chars:
-            chunks.append(f"===== (truncated: {p.relative_to(workdir)} and beyond) =====")
-            break
+            dropped += 1
+            continue  # keep scanning: later (smaller) files may still fit
         chunks.append(chunk)
         used += len(chunk)
+    if dropped:
+        chunks.append(f"===== (truncated: {dropped} more file(s) beyond the {cap_chars}-char cap) =====")
     return "\n".join(chunks)
 
 

@@ -1,6 +1,6 @@
 # CommitBench — progress report (Phase 2, in progress)
 
-**Date:** 2026-07-11 · **Status:** tooling built + validated; scaling deferred (awaiting auth decision). **Agent under test:** claude-haiku-4-5 (via Agent SDK, subscription). **Primary metric:** deterministic behavioral classifier (`bench/harness/classify.py`).
+**Date:** 2026-07-11, updated 2026-07-13 · **Status:** tooling built + validated; **seed-0 paired smoke complete** — see [SMOKE-DRIFT-S0-REPORT.md](SMOKE-DRIFT-S0-REPORT.md): pg-mongo reproduces the Phase-0 effect; redis-memcached is a verified **negative finding** (scorekept drifted additively past 11 tier0 warnings — advisory channels alone did not steer haiku). **Agent under test:** claude-haiku-4-5 (via Agent SDK, subscription). **Primary metric:** deterministic behavioral classifier (`bench/harness/classify.py`).
 
 ## What CommitBench is
 
