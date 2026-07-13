@@ -31,3 +31,10 @@ bench/commitbench/generated/
 # only local/generated indices are)
 .scorekeeper/index.sqlite
 .scorekeeper/*.tmp
+
+# CommitBench raw run outputs are large and judge-noisy. Curated artifacts are
+# committed explicitly (git add -f): the *-REPORT.md / *-PROGRESS.md write-ups
+# and paired-evidence-*.json (classifier-verified). Everything else is local.
+bench/results/run-*/results.json
+bench/results/run-*/results.jsonl
+bench/results/run-*/summary.md
