@@ -8,6 +8,7 @@
 - Contributor onboarding: `CONTRIBUTING.md`, issue templates (incl. `experience-report`), PR template, `CODE_OF_CONDUCT.md`, `CITATION.cff`; README "Try it in 60 seconds".
 - CommitBench (Phase 2) tooling: procedural generator + ablation harness + deterministic behavioral classifier. See `bench/results/COMMITBENCH-PROGRESS.md`.
 - Revision-family classifier (`classify_revision`, #4): scores whether the agent executed a user-ordered, entitled migration (EXECUTED) or falsely obstructed it (REFUSED). Run summaries now report FRR (false-refusal rate) alongside SCR.
+- **Blocking Tier-0 gate** (ADR-0007, opt-in): `tier0_gate: block` in `.scorekeeper/config.yaml` (or `SCOREKEEPER_TIER0_GATE=block`) denies the *first* Write/Edit conflicting with a pinned commitment and spells out both branches — surface-and-ask if unentitled, state-it-and-retry if the user ordered the change (the retry passes; audited as `TIER0-GATE-DENY`). Born from a verified negative finding: advisory warnings alone did not stop a weaker model from drifting (`bench/results/SMOKE-DRIFT-S0-REPORT.md`). New bench variant `blocking` A/B-tests the channel.
 
 ### Fixed
 - Rebuilt the demo GIF so the drift-vs-SUPERSEDE contrast is legible in one frame.

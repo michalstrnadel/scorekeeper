@@ -168,6 +168,13 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 - **consequences:** bench Stop hook wraps `hook_stop` in `asyncio.to_thread`; a hard per-phase timeout (SCOREKEEPER_PHASE_TIMEOUT, default 600s) records a hung turn and reconnects instead of stalling
 - **incompatible_with:** blocking subprocess calls directly inside async SDK hooks
 
+### c-2026-07-13-0026 — Tier-0 gate is a one-shot speed bump, opt-in until paired evidence
+- **kind:** decision · **status:** active
+- **scope:** `repo:core`, `topic:hooks`, `attr:tier0_gate.mode=speed_bump`
+- **entitlement:** `tool_output` + `user_utterance` — seed-0 negative finding (scorekept haiku drifted past 11 advisory warnings, SMOKE-DRIFT-S0-REPORT.md); Michal directed the fix must work on weak models (2026-07-13)
+- **consequences:** PreToolUse denies the FIRST write per (commitment, rival) pair with a two-branch instruction (unentitled → surface & ask; entitled → state it & retry); retries pass (state in `.scorekeeper/tier0-gate.json`); opt-in via `SCOREKEEPER_TIER0_GATE=block` / config `tier0_gate: block`; bench variant `blocking` is the A/B acceptance test (ADR-0007)
+- **incompatible_with:** unconditional blocking (walls an entitled revision); flipping the gate on by default before the paired A/B evidence lands
+
 ---
 
 ## Superseded / retracted / conflicted

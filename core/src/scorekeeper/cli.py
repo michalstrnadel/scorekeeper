@@ -22,7 +22,7 @@ from pathlib import Path
 import yaml
 
 from .backends import BackendError, detect_backend
-from .detect import tier0_content
+from .detect import tier0_content, tier0_gate
 from .extract import build_turn_text, extract_commitments
 from .operators import apply
 from .store import Store
@@ -85,6 +85,51 @@ def hook_post_tool_use(payload: dict) -> dict | None:
             "additionalContext": tier0_content.format_warnings(warnings),
         }
     }
+
+
+def hook_pre_tool_use(payload: dict) -> dict | None:
+    """Blocking Tier-0 gate (ADR-0007): deny the FIRST rival-tech write per
+    (commitment, rival) pair with a reason that forces the conflict into the
+    agent's context; retries pass. Opt-in via SCOREKEEPER_TIER0_GATE=block
+    (env) or ``tier0_gate: block`` in .scorekeeper/config.yaml — advisory
+    PostToolUse warnings stay the default channel."""
+    store = Store(_root(payload))
+    if not store.exists or not _gate_enabled(store):
+        return None
+    tool_input = payload.get("tool_input") or {}
+    content = " ".join(
+        str(tool_input.get(k, "")) for k in ("content", "new_string")
+    ).strip()
+    if not content:
+        return None
+    decision = tier0_gate.evaluate(content, store.active(), store.dir / tier0_gate.STATE_FILENAME)
+    if decision is None:
+        return None
+    for w in decision.warnings:
+        store.log(
+            "TIER0-GATE-DENY",
+            w.commitment_id,
+            f"{w.key}={w.pinned_value} vs '{w.rival_found}' in {tool_input.get('file_path', '?')}",
+        )
+    return {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": decision.reason,
+        }
+    }
+
+
+def _gate_enabled(store: Store) -> bool:
+    mode = os.environ.get("SCOREKEEPER_TIER0_GATE", "")
+    if mode in ("block", "warn"):
+        return mode == "block"
+    cfg = store.dir / "config.yaml"
+    if cfg.exists():
+        with contextlib.suppress(Exception):
+            data = yaml.safe_load(cfg.read_text()) or {}
+            return data.get("tier0_gate") == "block"
+    return False
 
 
 def _extract_mode(root: Path) -> str:
@@ -218,6 +263,7 @@ def hook_pre_compact(payload: dict) -> dict | None:
 
 HOOKS = {
     "session-start": hook_session_start,
+    "pre-tool-use": hook_pre_tool_use,
     "post-tool-use": hook_post_tool_use,
     "user-prompt-submit": hook_user_prompt_submit,
     "stop": hook_stop,

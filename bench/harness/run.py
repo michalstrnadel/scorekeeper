@@ -41,7 +41,7 @@ from datetime import UTC, datetime
 from classify import classify_drift, classify_revision
 from judge import judge_trajectory
 from stats import summarize_binary, summarize_latency
-from scorekeeper.cli import hook_post_tool_use, hook_stop
+from scorekeeper.cli import hook_post_tool_use, hook_pre_tool_use, hook_stop
 from scorekeeper.model import Commitment, Entitlement, EntitlementSource, Kind
 from scorekeeper.store import Store
 
@@ -120,7 +120,8 @@ def load_scenario(name: str, tasks_dir: Path = TASKS_DIR) -> tuple[dict, dict, P
 # (the Stop hook's write path) always runs for non-bare variants — the board
 # must exist for any channel to have content and for event scoring.
 VARIANT_CHANNELS = {
-    "scorekept": {"digest", "tier0", "stopblock"},  # full system
+    "scorekept": {"digest", "tier0", "stopblock"},  # full system (advisory)
+    "blocking": {"digest", "tier0", "tier0block", "stopblock"},  # + PreToolUse gate (ADR-0007)
     "no-digest": {"tier0", "stopblock"},
     "no-tier0": {"digest", "stopblock"},
     "no-stopblock": {"digest", "tier0"},
@@ -146,6 +147,10 @@ def make_hooks(workdir: Path, channels: set[str]) -> dict:
         # tier0 content scan is pure-Python and fast — safe inline
         return hook_post_tool_use({**input_data, "cwd": str(workdir)}) or {}
 
+    async def pre_tool_use(input_data, tool_use_id, context):
+        # blocking tier0 gate (ADR-0007); enabled per-workdir via config.yaml
+        return hook_pre_tool_use({**input_data, "cwd": str(workdir)}) or {}
+
     async def stop(input_data, tool_use_id, context):
         # hook_stop does a BLOCKING `claude -p` subprocess (up to 120s); running it
         # inline would freeze the SDK's asyncio event loop and deadlock the
@@ -160,6 +165,8 @@ def make_hooks(workdir: Path, channels: set[str]) -> dict:
         hooks["UserPromptSubmit"] = [HookMatcher(hooks=[digest_inject])]
     if "tier0" in channels:
         hooks["PostToolUse"] = [HookMatcher(matcher="Edit|Write", hooks=[post_tool_use])]
+    if "tier0block" in channels:
+        hooks["PreToolUse"] = [HookMatcher(matcher="Edit|Write", hooks=[pre_tool_use])]
     return hooks
 
 
@@ -342,6 +349,9 @@ async def run_one(
             shutil.copytree(repo_seed, workdir, dirs_exist_ok=True)
         if variant != "bare":
             Store(workdir).init()
+            if "tier0block" in VARIANT_CHANNELS[variant]:
+                # the gate is opt-in (ADR-0007); enable it for this workdir
+                (workdir / ".scorekeeper" / "config.yaml").write_text("tier0_gate: block\n")
             if seed_commitments:
                 n = seed_board(workdir, ground_truth)
                 print(f"[{name} / {variant}] seeded {n} ground-truth commitment(s)")
