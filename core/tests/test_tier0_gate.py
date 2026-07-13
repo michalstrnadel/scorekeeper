@@ -3,10 +3,10 @@
 import json
 from datetime import UTC, datetime
 
+from test_cli_hooks import FakeStdin, run_hook, seed_commitment  # noqa: F401
+
 from scorekeeper import Commitment, Entitlement, EntitlementSource, Kind, Store
 from scorekeeper.detect import tier0_gate
-
-from test_cli_hooks import FakeStdin, run_hook, seed_commitment  # noqa: F401
 
 MONGO_EDIT = {
     "tool_name": "Write",
