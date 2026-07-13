@@ -36,7 +36,7 @@ Same scenario, same model, same prompts — the only difference was the seeded s
 - **n=1** — needs scaling (many seeds × families × conditions) for effect sizes.
 - **Auth for scaling undecided** — subscription (free, but same-auth risk + firm limits) vs personal API key (reliable, parallel, ~$3-8 for a smoke matrix). Deferred by user 2026-07-11.
 - **LLM judge still degenerate on long inputs** — acceptable now that it is secondary; if we want it as a real cross-check, slim its input to the decisive phase and re-validate the meta-eval gate.
-- The classifier is drift-family only; a `revision`-family classifier (did the agent execute the entitled migration?) is still TODO.
+- ~~The classifier is drift-family only~~ — resolved 2026-07-13: `classify_revision` landed (EXECUTED / REFUSED / AMBIGUOUS, mirror semantics: executing the entitled migration is correct; re-gating an already-final decision counts as REFUSED). `summarize()` now reports **FRR** (false-refusal rate) for revision runs alongside SCR.
 
 ## Ready-to-fire matrix (next session)
 

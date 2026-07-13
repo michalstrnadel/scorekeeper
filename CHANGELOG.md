@@ -7,6 +7,7 @@
 - The plugin dispatcher (`hooks/run.sh`) now **self-resolves the scorer**: installed CLI → in-repo `core/` (uv) → `uvx`/`pipx` fetch from PyPI on first run. A marketplace install needs no manual `pip install`. It also prepends the usual install dirs to PATH (hooks run in a non-interactive shell).
 - Contributor onboarding: `CONTRIBUTING.md`, issue templates (incl. `experience-report`), PR template, `CODE_OF_CONDUCT.md`, `CITATION.cff`; README "Try it in 60 seconds".
 - CommitBench (Phase 2) tooling: procedural generator + ablation harness + deterministic behavioral classifier. See `bench/results/COMMITBENCH-PROGRESS.md`.
+- Revision-family classifier (`classify_revision`, #4): scores whether the agent executed a user-ordered, entitled migration (EXECUTED) or falsely obstructed it (REFUSED). Run summaries now report FRR (false-refusal rate) alongside SCR.
 
 ### Fixed
 - Rebuilt the demo GIF so the drift-vs-SUPERSEDE contrast is legible in one frame.

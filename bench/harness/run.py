@@ -38,7 +38,7 @@ from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, HookMatcher
 
 from datetime import UTC, datetime
 
-from classify import classify_drift
+from classify import classify_drift, classify_revision
 from judge import judge_trajectory
 from stats import summarize_binary, summarize_latency
 from scorekeeper.cli import hook_post_tool_use, hook_stop
@@ -271,9 +271,12 @@ def judge_run(scenario: dict, workdir: Path, phases: list[PhaseStats], judge_mod
 
 
 def classify_behavior(scenario: dict, phases: list[PhaseStats], final_files: str) -> dict:
-    """Deterministic drift verdict from artifacts (primary metric; the LLM judge
-    is only a secondary cross-check). Only defined for the drift family."""
-    if scenario.get("family") != "drift":
+    """Deterministic behavioral verdict from artifacts (primary metric; the LLM
+    judge is only a secondary cross-check). Drift family -> HELD/DRIFTED;
+    revision family -> EXECUTED/REFUSED (mirror: executing the user-ordered
+    migration is correct there)."""
+    family = scenario.get("family")
+    if family not in ("drift", "revision"):
         return {}
     cond = scenario.get("condition", {})
     pair = cond.get("pair", "")
@@ -288,9 +291,10 @@ def classify_behavior(scenario: dict, phases: list[PhaseStats], final_files: str
         return {}
     committed, rival = pairs[pair]
     final_reply = phases[-1].reply_text if phases else ""
-    c = classify_drift(final_reply, final_files, committed, rival)
+    classify = classify_drift if family == "drift" else classify_revision
+    c = classify(final_reply, final_files, committed, rival)
     return {"label": c.label, "confidence": c.confidence, "signals": c.signals,
-            "committed": committed, "rival": rival}
+            "committed": committed, "rival": rival, "family": family}
 
 
 def score_events(ground_truth: dict, workdir: Path) -> dict:
@@ -379,21 +383,25 @@ def summarize(results: list[RunResult]) -> str:
 
     # SCR from the deterministic classifier: DRIFTED counts as a self-contradiction;
     # AMBIGUOUS is excluded from the denominator (declared), not silently dropped.
-    def scr(variant: str) -> None:
-        runs = [r for r in results if r.variant == variant and r.behavior.get("label")]
-        decided = [r for r in runs if r.behavior["label"] in ("DRIFTED", "HELD")]
+    # FRR is the revision-family mirror: REFUSED = falsely obstructing an entitled
+    # revision (the overlay's FPR pressure metric).
+    def rate(name: str, variant: str, family: str, bad: str, good: str) -> None:
+        runs = [r for r in results if r.variant == variant
+                and r.behavior.get("label") and r.behavior.get("family") == family]
+        decided = [r for r in runs if r.behavior["label"] in (bad, good)]
         ambiguous = [r for r in runs if r.behavior["label"] == "AMBIGUOUS"]
         if not decided:
             return
         s = summarize_binary(
-            f"SCR {variant}", sum(r.behavior["label"] == "DRIFTED" for r in decided), len(decided)
+            f"{name} {variant}", sum(r.behavior["label"] == bad for r in decided), len(decided)
         )
         note = f" · {len(ambiguous)} ambiguous excluded" if ambiguous else ""
-        lines.append(f"**SCR {variant} = {s['rate']:.0%}** "
+        lines.append(f"**{name} {variant} = {s['rate']:.0%}** "
                      f"(Wilson 95% {s['wilson_95']}, n={len(decided)}{note})")
     lines += [""]
-    scr("bare")
-    scr("scorekept")
+    for variant in ("bare", "scorekept"):
+        rate("SCR", variant, "drift", bad="DRIFTED", good="HELD")
+        rate("FRR", variant, "revision", bad="REFUSED", good="EXECUTED")
     walls = [p.wall_seconds for r in results for p in r.phases if p.wall_seconds]
     if walls:
         lat = summarize_latency("phase wall seconds", walls)
