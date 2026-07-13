@@ -40,7 +40,8 @@ Turn the qualitative result into a rate with confidence intervals.
 - ⬜ LangGraph node; Letta plugin
 - ⬜ Multi-agent shared scoreboard (social scorekeeping, literally)
 - ⬜ "Normative dream" mode — async off-hours audit of the board
-- ⬜ Paper / technical report (the philosophical grounding: Brandom's scorekeeping, Sterelny's scaffolded mind)
+- ⬜ **Rename the benchmark** — "CommitBench" collides with an established SE/NLP benchmark (commit-message generation, 1.6M commits); must rename before anything ships externally ([related-work](docs/research/related-work.md); decision pending)
+- ⬜ Paper / technical report (the philosophical grounding: Brandom's scorekeeping, Sterelny's scaffolded mind). Venue plan per the [related-work map](docs/research/related-work.md): NeurIPS-workshop short paper (~2026-08-29) as the forcing function → full paper to AAMAS 2027 (abstracts 2026-10-02), ICLR 2027 fallback
 
 ## How to help
 

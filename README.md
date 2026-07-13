@@ -71,11 +71,15 @@ Every long-running agent should have, alongside its memory (*what happened*), a 
 
 ## Why this is different
 
-Every existing memory / truth-maintenance system tracks facts about the **user and the world**. None tracks the **agent's own commitments** — what it decided and promised over the course of a task. And none tracks **entitlement** — everyone records *what* and *when* was said; nobody records *whether the speaker was entitled to say it*.
+Memory systems track facts about the **user and the world**; observability tools (LangSmith, Langfuse, AgentOps) are flight recorders of *execution* — spans, latency, tokens. Scorekeeper tracks something neither does: the **agent's own commitments** and whether whoever changes one was **entitled to**.
 
-And this is not an observability problem either: LangSmith, Langfuse, AgentOps and Braintrust are flight recorders of *execution* — spans, latency, tokens. None of them versions the agent's epistemic state. **Observability tools record what the agent did; scorekeeper records what the agent is committed to.**
+Pieces of that boundary exist elsewhere — AGM-style belief revision protects user axioms by *entrenchment*, instruction-hierarchy frameworks rank prompt sources by privilege ([honest related-work map](docs/research/related-work.md)). What doesn't exist elsewhere is the combination:
 
-`scorekeeper` closes that gap. See [`docs/theory.md`](docs/theory.md) for the conceptual foundation, [`docs/interop.md`](docs/interop.md) for mappings onto xAIF and W3C PROV-O, the [ROADMAP](ROADMAP.md), and [`docs/SPEC-cs.md`](docs/SPEC-cs.md) for the full specification (Czech, source-of-record).
+1. **A live normative lifecycle, not a static rank** — assert, challenge, supersede, conflict (Brandom's scorekeeping), running inside the agent loop.
+2. **An active channel, not a passive store** — the boundary becomes environmental *physics*: the blocking Tier-0 gate denies an unentitled rival write before it lands ([ADR-0007](adr/0007-blocking-tier0-gate.md)).
+3. **Symmetric measurement** — the benchmark penalizes both drift (SCR) *and* false refusals (FRR) at the same boundary, scored by a deterministic artifact-level classifier, not an LLM judge.
+
+See [`docs/theory.md`](docs/theory.md) for the conceptual foundation, [`docs/research/related-work.md`](docs/research/related-work.md) for positioning against the closest five systems, [`docs/interop.md`](docs/interop.md) for mappings onto xAIF and W3C PROV-O, the [ROADMAP](ROADMAP.md), and [`docs/SPEC-cs.md`](docs/SPEC-cs.md) for the full specification (Czech, source-of-record).
 
 ## Design stance: scaffolded, not extended
 
