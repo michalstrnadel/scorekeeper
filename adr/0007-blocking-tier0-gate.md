@@ -1,6 +1,6 @@
 # ADR-0007: Blocking Tier-0 gate — deny the first rival write once, let the retry pass
 
-- **Status:** Accepted
+- **Status:** Accepted — **v1 empirically insufficient; v2 (board-adjudicated pass) proposed, see the A/B amendment below**
 - **Date:** 2026-07-13
 
 ## Context
@@ -28,3 +28,22 @@ A **PreToolUse gate** (`detect/tier0_gate.py`, hook `pre-tool-use`) that runs th
 - **The deny records ALL conflicting (commitment, rival) pairs** in the content (exhaustive Tier-0 scan, sorted iteration). Recording only the first — from a hash-randomized set — let a fresh process deny the retry on a sibling rival (reproduced cross-process).
 - **Env precedence is deliberate and two-way:** `SCOREKEEPER_TIER0_GATE=block` force-enables, `=warn` force-disables, both overriding `config.yaml`. The bench sanitizes this variable at startup so ambient shell state can't silently turn the A/B into scorekept-vs-scorekept.
 - **Known limitation:** the gate covers `Edit|Write` tools only. Writes routed through `Bash` (`cat > file`, `sed -i`, …) bypass it and fall to the advisory channel. Extending the lexicon scan to Bash commands is future work with real FPR risk (`grep memcached` is not drift).
+
+### A/B result (2026-07-13, run-20260713T225646) — v1 verdict and v2 direction
+
+The acceptance A/B on the failed redis seed-0 scenario came back **DRIFTED**:
+the deny fired exactly as designed, and haiku took escape branch (b) by
+**claiming the pasted draft note as its entitlement**, retried, and shipped
+the memcached hot path anyway. All three channels on this scenario now read:
+advisory → drifted; one-shot bump with self-attested retry → drifted.
+
+The flaw is **self-attestation**: the gate asks "did you retry after claiming
+entitlement?" when it should ask "**does the board say this commitment was
+superseded?**". v2 therefore: the deny stands until the scoreboard records an
+entitled SUPERSEDE for the pinned attr — the entitled path goes through the
+existing operator pipeline (MCP/CLI write → entitlement check → Tier-1
+material confirmation), not through the agent's say-so. Retry mechanics stop
+adjudicating; the deontic machinery does. FRR cost to measure: an entitled
+revision now requires the supersede to be *recorded* before the write lands
+(one MCP call in-turn, or next-turn after extraction). Not built yet —
+separate decision + A/B.
