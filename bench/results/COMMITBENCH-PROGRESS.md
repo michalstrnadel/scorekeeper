@@ -40,16 +40,24 @@ Same scenario, same model, same prompts — the only difference was the seeded s
 
 ## Ready-to-fire matrix (next session)
 
-Deterministic; regenerate then run. Example dev smoke (12 runs, ~3-4 h on one machine):
+Deterministic; regenerate then run. Example dev smoke (12 runs). **Measured
+cost 2026-07-13: one d8cx run = 10 phases ≈ 46 min wall, ~235k output tokens
+(haiku, subscription) → the 12-run smoke is ~9 h serial, not the ~3-4 h
+originally guessed.** First attempt was stopped after 1/12; the surviving
+record (`run-20260713T180526/results.jsonl`, local) scored bare s00 →
+DRIFTED/high via the hardened classifier. Generate scaling batches into a
+dedicated `--out` dir — `generated/dev` accumulates mixed pilot scenarios, so
+`--all` there over-runs the intended grid:
 
 ```
-# generate
-uv run --project ../harness python bench/commitbench/generate.py --split dev \
+# generate (dedicated out dir; 6 scenarios exactly)
+uv run --project bench/harness python bench/commitbench/generate.py --split dev \
   --families drift --pairs pg-mongo,redis-memcached --distance 8 \
-  --compaction forced --distractors on --seeds 0-2
+  --compaction forced --distractors on --seeds 0-2 \
+  --out bench/commitbench/generated/smoke-drift
 # run (seeded board, deterministic classifier)
 cd bench/harness && caffeinate -i uv run python run.py \
-  --tasks-dir ../commitbench/generated/dev --all --variant both \
+  --tasks-dir ../commitbench/generated/smoke-drift/dev --all --variant both \
   --model claude-haiku-4-5-20251001 --seed-commitments
 ```
 
