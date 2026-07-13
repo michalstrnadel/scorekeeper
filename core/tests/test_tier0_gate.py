@@ -71,6 +71,48 @@ def test_corrupt_state_fails_open_to_a_fresh_bump(tmp_path):
     assert json.loads(state.read_text())["denied"]  # rewritten valid
 
 
+def test_wrong_shape_state_never_raises(tmp_path):
+    # hooks must never break the agent: valid JSON of the wrong shape
+    # (adversarial-review finding) fails open instead of raising
+    active = [commitment(["attr:persistence.primary_db=postgresql"])]
+    for weird in ("null", "[]", '"str"', '{"denied": null}', '{"denied": 3}'):
+        state = tmp_path / "tier0-gate.json"
+        state.write_text(weird)
+        assert tier0_gate.evaluate("import pymongo", active, state) is not None
+
+
+def test_all_rivals_recorded_on_one_deny(tmp_path):
+    # exhaustive scan: content naming TWO rivals must consume both pairs at
+    # once, or a fresh process could deny the retry on the sibling rival
+    # (adversarial-review finding: hash-randomized set iteration)
+    active = [commitment(["attr:caching.backend=redis"])]
+    state = tmp_path / "tier0-gate.json"
+    first = tier0_gate.evaluate("use memcached with valkey fallback", active, state)
+    assert first is not None and len(first.warnings) == 2
+    assert tier0_gate.evaluate("memcached only now", active, state) is None
+    assert tier0_gate.evaluate("valkey only now", active, state) is None
+
+
+def test_expired_bump_rearms(tmp_path, monkeypatch):
+    # a pair consumed long ago must bump again — otherwise a user-REJECTED
+    # change leaves that rival unguarded forever (reject-burn finding)
+    active = [commitment(["attr:persistence.primary_db=postgresql"])]
+    state = tmp_path / "tier0-gate.json"
+    assert tier0_gate.evaluate("import pymongo", active, state) is not None
+    assert tier0_gate.evaluate("import pymongo", active, state) is None  # within window
+    real_time = tier0_gate.time.time
+    monkeypatch.setattr(tier0_gate.time, "time",
+                        lambda: real_time() + tier0_gate.REARM_SECONDS + 1)
+    assert tier0_gate.evaluate("import pymongo", active, state) is not None
+
+
+def test_legacy_list_state_is_understood(tmp_path):
+    active = [commitment(["attr:persistence.primary_db=postgresql"])]
+    state = tmp_path / "tier0-gate.json"
+    state.write_text('{"denied": ["c-2026-07-13-0001:mongodb"]}')
+    assert tier0_gate.evaluate("import pymongo", active, state) is None
+
+
 # -- hook level (stdin/stdout contract) ----------------------------------------
 
 

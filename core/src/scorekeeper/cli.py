@@ -121,6 +121,8 @@ def hook_pre_tool_use(payload: dict) -> dict | None:
 
 
 def _gate_enabled(store: Store) -> bool:
+    # env OVERRIDES config in both directions: "block" force-enables,
+    # "warn" force-disables (advisory only) even if config says block.
     mode = os.environ.get("SCOREKEEPER_TIER0_GATE", "")
     if mode in ("block", "warn"):
         return mode == "block"

@@ -49,7 +49,15 @@ def reclassify_record(record: dict) -> dict | None:
         return None
     family, pair = fp
     committed, rival = PAIRS[pair]
-    workdir = find_workdir(record["scenario"], record["variant"])
+    # exact provenance first: records persist their workdir since 2026-07-14.
+    # The glob fallback picks the NEWEST sibling by mtime, which can pair this
+    # record's reply with a DIFFERENT run's files — flag it.
+    exact = Path(record["workdir"]) if record.get("workdir") else None
+    if exact is not None and exact.is_dir():
+        workdir, provenance = exact, "exact"
+    else:
+        workdir = find_workdir(record["scenario"], record["variant"])
+        provenance = "glob-newest (may be a different run!)" if workdir else "none"
     final_files = collect_files(workdir) if workdir else ""
     phases = record.get("phases") or []
     final_reply = phases[-1].get("reply_text", "") if phases else ""
@@ -63,7 +71,7 @@ def reclassify_record(record: dict) -> dict | None:
         "confidence": c.confidence,
         "signals": c.signals,
         "family": family,
-        "workdir_recovered": workdir is not None,
+        "files_provenance": provenance,
     }
 
 
@@ -84,7 +92,7 @@ def main() -> int:
         print(f"\n{path.parent.name} -> {out.name}")
         for r in rows:
             delta = "  " if r["old"] == r["new"] else "->"
-            files = "" if r["workdir_recovered"] else "  [no workdir: reply-only]"
+            files = "" if r["files_provenance"] == "exact" else f"  [files: {r['files_provenance']}]"
             print(f"  {r['scenario']} / {r['variant']}: "
                   f"{r['old']} {delta} {r['new']}/{r['confidence']}{files}")
     return 0

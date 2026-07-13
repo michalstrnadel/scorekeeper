@@ -40,8 +40,19 @@ class ContentWarning:
     rival_found: str
 
 
-def scan(content: str, active: list[Commitment]) -> list[ContentWarning]:
-    """Scan written/edited text for rivals of pinned attr values."""
+def scan(
+    content: str, active: list[Commitment], exhaustive: bool = False
+) -> list[ContentWarning]:
+    """Scan written/edited text for rivals of pinned attr values.
+
+    Default: one warning per commitment attr (enough for the advisory
+    channel). ``exhaustive=True`` reports EVERY rival found — the blocking
+    gate needs the full set, or its once-per-(commitment, rival) state would
+    depend on which rival a hash-randomized set iteration happened to find
+    first (verified live: a retry in a fresh hook process could be denied
+    again on the sibling rival). Families are iterated sorted for the same
+    reason: deterministic across processes.
+    """
     warnings: list[ContentWarning] = []
     lowered = content.lower()
     for c in active:
@@ -50,12 +61,13 @@ def scan(content: str, active: list[Commitment]) -> list[ContentWarning]:
             family = next((f for f in FAMILIES if value_c in {_canon(t) for t in f}), None)
             if family is None:
                 continue
-            for rival in family:
+            for rival in sorted(family):
                 if _canon(rival) == value_c:
                     continue
                 if re.search(rf"\b{re.escape(rival)}\b", lowered):
                     warnings.append(ContentWarning(c.id, key, value, rival))
-                    break  # one warning per commitment attr is enough
+                    if not exhaustive:
+                        break  # one warning per commitment attr is enough
     return warnings
 
 

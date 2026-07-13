@@ -107,6 +107,7 @@ class RunResult:
     wall_seconds: float = 0.0
     behavior: dict = field(default_factory=dict)  # deterministic classifier (primary metric)
     error: str = ""
+    workdir: str = ""  # exact final-files provenance for post-hoc reclassify/rejudge
 
 
 def load_scenario(name: str, tasks_dir: Path = TASKS_DIR) -> tuple[dict, dict, Path]:
@@ -132,6 +133,18 @@ VARIANT_CHANNELS = {
 def make_hooks(workdir: Path, channels: set[str]) -> dict:
     """SDK hooks wired to the same handler functions the plugin uses."""
 
+    def _never_raise(fn):
+        # the plugin path gets cli.main()'s never-raise wrapper; these in-process
+        # wrappers must match — a raising hook would kill the SDK turn
+        async def safe(input_data, tool_use_id, context):
+            try:
+                return await fn(input_data, tool_use_id, context)
+            except Exception as e:  # noqa: BLE001
+                print(f"[hook error suppressed] {type(e).__name__}: {e}", file=sys.stderr)
+                return {}
+        return safe
+
+    @_never_raise
     async def digest_inject(input_data, tool_use_id, context):
         digest = Store(workdir).render_digest()
         if not digest:
@@ -143,10 +156,12 @@ def make_hooks(workdir: Path, channels: set[str]) -> dict:
             }
         }
 
+    @_never_raise
     async def post_tool_use(input_data, tool_use_id, context):
         # tier0 content scan is pure-Python and fast — safe inline
         return hook_post_tool_use({**input_data, "cwd": str(workdir)}) or {}
 
+    @_never_raise
     async def pre_tool_use(input_data, tool_use_id, context):
         # blocking tier0 gate (ADR-0007); enabled per-workdir via config.yaml
         return hook_pre_tool_use({**input_data, "cwd": str(workdir)}) or {}
@@ -265,7 +280,15 @@ def collect_files(workdir: Path, cap_chars: int = 12000) -> str:
             continue
         chunk = f"===== {p.relative_to(workdir)} =====\n{text}\n"
         if used + len(chunk) > cap_chars:
-            dropped += 1
+            # head-slice instead of dropping: imports (the classifier's
+            # strongest signal) live at the top of the file
+            room = cap_chars - used - 200
+            if room > 400:
+                head = text[:room]
+                chunks.append(f"===== {p.relative_to(workdir)} (head, truncated) =====\n{head}\n")
+                used += len(head) + 200
+            else:
+                dropped += 1
             continue  # keep scanning: later (smaller) files may still fit
         chunks.append(chunk)
         used += len(chunk)
@@ -343,6 +366,7 @@ async def run_one(
     scenario, ground_truth, repo_seed = load_scenario(name, tasks_dir)
     result = RunResult(scenario=name, variant=variant)
     workdir = Path(tempfile.mkdtemp(prefix=f"skbench-{name}-{variant}-"))
+    result.workdir = str(workdir)
     started = time.time()
     try:
         if repo_seed.exists():
@@ -418,7 +442,9 @@ def summarize(results: list[RunResult]) -> str:
         lines.append(f"**{name} {variant} = {s['rate']:.0%}** "
                      f"(Wilson 95% {s['wilson_95']}, n={len(decided)}{note})")
     lines += [""]
-    for variant in ("bare", "scorekept"):
+    # every variant actually present — hardcoding (bare, scorekept) silently
+    # dropped ablation variants like 'blocking' from the summary
+    for variant in sorted({r.variant for r in results}):
         rate("SCR", variant, "drift", bad="DRIFTED", good="HELD")
         rate("FRR", variant, "revision", bad="REFUSED", good="EXECUTED")
     walls = [p.wall_seconds for r in results for p in r.phases if p.wall_seconds]
@@ -456,6 +482,11 @@ async def main() -> int:
              "— isolates steering from extraction reliability",
     )
     args = parser.parse_args()
+
+    # ambient env must not decide which variant gets the gate — hooks run
+    # in-process, so an exported SCOREKEEPER_TIER0_GATE would silently
+    # override every workdir's config.yaml and corrupt the A/B
+    os.environ.pop("SCOREKEEPER_TIER0_GATE", None)
 
     tasks_dir = Path(args.tasks_dir)
     names = (
