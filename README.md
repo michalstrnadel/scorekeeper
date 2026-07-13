@@ -8,7 +8,8 @@
 
 **A normative overlay that gives long-running LLM agents a scoreboard of their own commitments — not just a memory of what happened.**
 
-![status: Phase 1](https://img.shields.io/badge/status-Phase%201%20·%20v0.1-brightgreen)
+![status: Phase 2](https://img.shields.io/badge/status-Phase%202%20·%20CommitBench-brightgreen)
+![tests](https://img.shields.io/badge/tests-117%20passing-brightgreen)
 [![PyPI](https://img.shields.io/pypi/v/scorekeeper)](https://pypi.org/project/scorekeeper/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/core-Python-3776AB?logo=python&logoColor=white)
@@ -16,7 +17,7 @@
 ![MCP](https://img.shields.io/badge/protocol-MCP-000000)
 ![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
-> **It runs.** Phase 0 (mechanism + first paired evidence) is complete and the acceptance gate passed — [full report](bench/results/PHASE0-REPORT.md). Phase 1 is underway: the core is packaged, the MCP server ships, extraction is async. Roadmap: [ROADMAP.md](ROADMAP.md).
+> **It runs, and it's measured.** Phase 0 passed its acceptance gate ([report](bench/results/PHASE0-REPORT.md)); CommitBench paired runs now reproduce the effect on the hardest condition — and produced an honest negative finding that advisory warnings alone don't stop weaker models, which is why the **blocking Tier-0 gate** ([ADR-0007](adr/0007-blocking-tier0-gate.md)) exists ([seed-0 report](bench/results/SMOKE-DRIFT-S0-REPORT.md)). Roadmap: [ROADMAP.md](ROADMAP.md).
 
 ---
 
@@ -100,18 +101,38 @@ The pipeline works end-to-end and the first paired evidence is in:
 - Instrument per Addendum-1: cross-family local judge (qwen3, S8 protocol,
   anchored rubric), meta-eval gate CV 0.000, sensitivity-probe verified.
 
-**Phase 1 (current):** v0.1 is [on PyPI](https://pypi.org/project/scorekeeper/)
+**Phase 1 — shipped:** v0.1 is [on PyPI](https://pypi.org/project/scorekeeper/)
 (`pip install scorekeeper`), the **MCP server** ships (`scorekeeper-mcp` — writes route
 through the same operator pipeline as the hooks), extraction is **async by
 default in the plugin** (detached worker, ~0 ms added turn latency; findings
-surface on the next prompt — [ADR-0006](adr/0006-async-extraction.md)), and
-Phase-0 finding F2 is fixed (entitled attr-collision revisions are confirmed
-materially by Tier-1 before superseding). A first CommitBench paired run on the
-hardest condition (distance 8 + forced compaction) reproduces the effect: the
-bare agent drifted, the scorekept twin caught itself and refused
-([progress report](bench/results/COMMITBENCH-PROGRESS.md)). Rather than scale the
-numbers in-house next, **the ask is for the community to try it** — see below.
-See [CHANGELOG](CHANGELOG.md).
+surface on the next prompt — [ADR-0006](adr/0006-async-extraction.md)).
+
+**Phase 2 (current) — CommitBench evidence, including the negative kind:**
+
+- **The effect reproduces.** Two independent paired runs on the hardest
+  condition (distance 8 + forced compaction + distractors): the bare haiku
+  agent migrated to the rival tech against its own recorded decision; the
+  scorekept twin surfaced the commitment and asked instead
+  ([seed-0 report](bench/results/SMOKE-DRIFT-S0-REPORT.md)).
+- **The honest negative finding — and the fix it forced.** On a second tech
+  pair the scorekept agent drifted *anyway*: it sailed past 11 advisory
+  warnings and built the tempted Memcached hot path with a "polyglot" excuse.
+  Conclusion: context-only steering is not enough for weaker models. That
+  finding shipped the **blocking Tier-0 gate**
+  ([ADR-0007](adr/0007-blocking-tier0-gate.md)): the *first* write that
+  conflicts with a pinned commitment is denied with instructions — surface
+  and ask if unentitled, say so and retry if the user ordered it (the retry
+  passes, so an entitled change costs one extra tool call and can never
+  deadlock). Opt-in via `tier0_gate: block` in `.scorekeeper/config.yaml`.
+- **The measurement is adversarially hardened.** The deterministic behavioral
+  classifier (primary metric; the LLM judge is a known-unreliable secondary)
+  survived a 33-agent adversarial review plus a file-level audit of live runs;
+  every confirmed misfire is a regression test anchored on a verbatim reply.
+  117 tests passing across core + bench; `bench/harness/reclassify.py`
+  re-scores old runs after every classifier change.
+
+Rather than scale the numbers in-house next, **the ask is for the community
+to try it** — see below. See [CHANGELOG](CHANGELOG.md).
 
 ## Layout
 
