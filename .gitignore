@@ -38,3 +38,4 @@ bench/commitbench/generated/
 bench/results/run-*/results.json
 bench/results/run-*/results.jsonl
 bench/results/run-*/summary.md
+bench/results/*.log
