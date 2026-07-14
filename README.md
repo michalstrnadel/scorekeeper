@@ -56,7 +56,15 @@ Tried it? A one-paragraph [experience report](https://github.com/michalstrnadel/
 
 Long-running agents fail in a characteristic way. At step 3 they decide on Postgres; at step 47 they write MongoDB code. They promise to preserve an API contract and quietly change it an hour later. They assert something they have no basis for — and after context compaction they don't even remember asserting it.
 
-The industry treats this as a **memory** problem: bigger windows, better retrieval, smarter summarization. We argue it is largely a **normative** problem: the agent keeps no ledger of its own commitments.
+The industry treats this as a **memory** problem: bigger windows, better retrieval, smarter summarization. Here is the uncomfortable observation: in most of these failures, *the information was still in the context window*. The Postgres decision was right there, forty turns up. Retrieval was not the bottleneck. What was missing was that the decision had no special status — it was just more text, one token sequence among thousands, with no marker saying *this one binds you*.
+
+That is not a memory problem. It is a **normative** problem: the agent keeps a record of what happened, but no ledger of what it *committed to*. Philosophy of language has studied exactly this structure for fifty years (Brandom's deontic scorekeeping), with a precision that transfers directly into a data model:
+
+- **Hallucination = commitment without entitlement** — an assertion with no provenance is not a fuzzy quality judgment, it's a *visible hole* in a graph.
+- **Self-contradiction = an undetected incompatibility between two live commitments** — Postgres-at-step-3 and MongoDB-at-step-47 were both "active" and nobody was keeping score.
+- **Post-compaction incoherence = deletion of the scoreboard** — summarizers preserve narrative and drop exactly the normative state.
+
+**→ The full argument in accessible form: [`docs/why.md`](docs/why.md).**
 
 ## The idea
 
@@ -65,7 +73,7 @@ Every long-running agent should have, alongside its memory (*what happened*), a 
 `scorekeeper` is a lightweight overlay — it sits on top of any agent harness (Claude Code hooks first, MCP + library next) and:
 
 - **extracts commitments** from each agent turn into structured, first-class records;
-- **tracks entitlement** — the *provenance* of each commitment (did the agent read a file? did the user say so? or did it just generate this?). A commitment with no source is a first-class suspect (this is what a hallucination looks like in our vocabulary);
+- **tracks entitlement** — the *provenance* of each commitment (did the agent read a file? did the user say so? or did it just generate this?). A commitment with no source is a first-class suspect;
 - **detects incompatibility** between active commitments before it propagates into code, docs, or decisions;
 - **protects the scoreboard from context compaction** — injecting the normative state into summarization exactly where today's summarizers drop it.
 
