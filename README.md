@@ -11,6 +11,7 @@
 ![status: Phase 2](https://img.shields.io/badge/status-Phase%202%20·%20EntitleBench-brightgreen)
 ![tests](https://img.shields.io/badge/tests-126%20passing-brightgreen)
 [![PyPI](https://img.shields.io/pypi/v/scorekeeper)](https://pypi.org/project/scorekeeper/)
+[![Downloads](https://static.pepy.tech/badge/scorekeeper/month)](https://pepy.tech/project/scorekeeper)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/core-Python-3776AB?logo=python&logoColor=white)
 ![Claude Code](https://img.shields.io/badge/integration-Claude%20Code%20hooks-8A63D2)
