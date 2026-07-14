@@ -339,3 +339,66 @@ def test_tier0_content_alias():
 
 if __name__ == "__main__":
     pytest.main([__file__, "-q"])
+
+
+# -- audit 2026-07-14 regressions ------------------------------------------------
+
+
+def test_bash_post_hook_audits_shell_rivals_log_only(tmp_path, monkeypatch, capsys):
+    """Shell writes are AUDITED (the wall's deterrent sentence must be true)
+    but never warned — `grep mongodb` is not drift."""
+    seed_commitment(tmp_path)
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "Bash",
+        "tool_input": {"command": "cat > db.py <<EOF\nfrom pymongo import MongoClient\nEOF"},
+    }
+    out = run_hook(monkeypatch, capsys, "post-tool-use", payload)
+    assert out is None
+    assert any(e["op"] == "TIER0-SHELL-AUDIT" for e in Store(tmp_path).log_entries())
+
+
+def test_post_hook_silent_when_edit_removes_the_rival(tmp_path, monkeypatch, capsys):
+    """old_string is a suppressor, never a trigger: fixing drift must not warn."""
+    seed_commitment(tmp_path)
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "Edit",
+        "tool_input": {
+            "file_path": "app/db.py",
+            "old_string": "from pymongo import MongoClient",
+            "new_string": "import psycopg",
+        },
+    }
+    assert run_hook(monkeypatch, capsys, "post-tool-use", payload) is None
+
+
+def test_post_hook_scans_notebook_new_source(tmp_path, monkeypatch, capsys):
+    seed_commitment(tmp_path)
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "NotebookEdit",
+        "tool_input": {
+            "notebook_path": "nb.ipynb",
+            "new_source": "from pymongo import MongoClient",
+        },
+    }
+    out = run_hook(monkeypatch, capsys, "post-tool-use", payload)
+    assert "pymongo" in out["hookSpecificOutput"]["additionalContext"]
+
+
+def test_drain_skips_while_worker_holds_the_lock(tmp_path, monkeypatch, capsys):
+    """Unlocked read+unlink deleted findings a worker appended in between;
+    the drain now takes the worker lock, non-blocking (skip, never stall)."""
+    import fcntl
+
+    store = Store(tmp_path)
+    store.init()
+    (store.dir / "pending-findings.md").write_text("COMMITMENT CONFLICT: X\n")
+    with (store.dir / "worker.lock").open("w") as lk:
+        fcntl.flock(lk, fcntl.LOCK_EX)
+        out = run_hook(monkeypatch, capsys, "user-prompt-submit", {"cwd": str(tmp_path)})
+        assert out is None  # skipped, not stalled
+        assert (store.dir / "pending-findings.md").exists()  # nothing lost
+    out = run_hook(monkeypatch, capsys, "user-prompt-submit", {"cwd": str(tmp_path)})
+    assert "COMMITMENT CONFLICT: X" in out["hookSpecificOutput"]["additionalContext"]

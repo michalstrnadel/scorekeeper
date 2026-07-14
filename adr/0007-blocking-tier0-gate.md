@@ -53,3 +53,38 @@ branches (surface-and-ask vs. record-the-supersede-first) and warns that
 shell-write workarounds are audited. Config/env: `tier0_gate: block` = v2
 wall (recommended), `tier0_gate: bump` = v1 (ablation), `warn` force-off.
 Bench variants: `blocking` (v2) and `bump` (v1).
+
+## Amendment 3 (2026-07-14): precision fixes from the 37-agent chain audit
+
+Issue #6 (a marketplace install blocked every Edit/Write via version skew)
+triggered a full adversarial audit of the plugin→scorer chain. Four confirmed
+findings changed the gate's semantics, all regression-tested:
+
+1. **`old_string` is a suppressor, never a trigger.** The wall denied the very
+   edit that *removed* the rival (old: `import pymemcache` → new: `import
+   redis` with a "pymemcache removed" comment) — an unescapable deny for the
+   remediating agent, since the fix itself was blocked. Rivals already present
+   in an Edit's `old_string` no longer count as new conflicts
+   (`tier0_content.novel`); a rival *newly introduced* by the edit still
+   denies.
+2. **Documentation files are exempt from the wall** (`.md`/`.rst`/`.txt`).
+   "Memcached was evaluated and rejected (no persistence)" is commitment-
+   *honoring* prose, and block mode denied it statelessly — forever. The
+   advisory PostToolUse warning still covers docs; the wall gates code.
+3. **`NotebookEdit` is gated** (matcher + `new_source` field) — it was a
+   silent bypass of both channels.
+4. **Shell writes are audited, making the deny text honest.** The wall's
+   reason claimed "every workaround is audited" while no Bash hook existed. A
+   log-only `Bash` PostToolUse hook now writes `TIER0-SHELL-AUDIT` entries on
+   rival tokens in commands (no agent-facing warning — `grep memcached` is not
+   drift). The deterrent sentence is now true; EntitleBench artifact audits
+   can rely on the log.
+
+Bump mode additionally **fails open when its deny state cannot persist**
+(disk full, path shadowed): its reason text promises "the retry will not be
+blocked", and an unsaved pair would re-deny forever — a promise the gate must
+not make and then break.
+
+Wall A/B numbers from the seed-0 report are unaffected: those runs wrote
+`.py` files with freshly introduced rival imports (no baseline, no docs), so
+none of the four changes alters a decision in the recorded evidence.

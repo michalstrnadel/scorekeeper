@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 — 2026-07-14
+
+First release with the blocking Tier-0 gate. Also the first release after a
+37-agent adversarial audit of the plugin→scorer chain (triggered by #6);
+everything it confirmed is fixed below.
 
 ### Changed
 - **The benchmark is now EntitleBench** (formerly the working name CommitBench — collision with the established commit-message-generation benchmark). Module `bench/entitlebench/`, progress doc `ENTITLEBENCH-PROGRESS.md`; dated evidence artifacts keep the historical name.
@@ -16,7 +20,23 @@
 - **Blocking Tier-0 gate** (ADR-0007, opt-in): `tier0_gate: block` in `.scorekeeper/config.yaml` (or `SCOREKEEPER_TIER0_GATE=block`) denies a Write/Edit conflicting with a pinned commitment **until the scoreboard itself records an entitled revision** (supersede via the MCP tool or extraction of the user's order) — the agent's self-attested entitlement cannot lift it. A one-shot `bump` mode is kept for ablations after being measurably exploited (the agent claimed a pasted draft note as its entitlement, retried, and drifted anyway — `bench/results/SMOKE-DRIFT-S0-REPORT.md`). Denies audited as `TIER0-GATE-DENY`; bench variants `blocking` (wall) and `bump` A/B-test the channels. Born from a verified negative finding: advisory warnings alone did not stop a weaker model from drifting.
 
 ### Fixed
-- **Marketplace install no longer blocks all Edit/Write on a version-skewed scorer** (#6). The plugin's `PreToolUse` hook invokes `hook pre-tool-use`, which the published 0.1.1 CLI doesn't know; its argparse error (exit 2) propagated through `run.sh`'s `exec` and Claude Code read it as a deny. `run.sh` now treats any non-zero scorer exit as infrastructure and exits 0 — safe because a legitimate gate deny is always JSON-on-stdout with exit 0, never a non-zero exit. Until the next PyPI release, the gate degrades to a no-op on marketplace installs instead of breaking the session.
+- **Marketplace install no longer blocks all Edit/Write on a version-skewed scorer** (#6). The plugin's `PreToolUse` hook invokes `hook pre-tool-use`, which the published 0.1.1 CLI doesn't know; its argparse error (exit 2) propagated through `run.sh`'s `exec` and Claude Code read it as a deny. `run.sh` now treats any non-zero scorer exit as infrastructure and exits 0 — safe because a legitimate gate deny is always JSON-on-stdout with exit 0, never a non-zero exit.
+- **Audit fixes — gate precision** (all regression-tested):
+  - `NotebookEdit` no longer bypasses the gate and the advisory channel (matcher + the `new_source` field are now scanned).
+  - Shell writes are **audited**: a `Bash` PostToolUse hook logs `TIER0-SHELL-AUDIT` on rival tokens in commands (log-only — no warning; `grep` is not drift). The wall's "every workaround is audited" sentence is now true.
+  - An Edit's `old_string` is a **suppressor, never a trigger**: the edit that *removes* the rival (fixing drift) was warned by the advisory channel and — worse — permanently denied by the wall. Rivals already present in the replaced text no longer count as new conflicts.
+  - Documentation files (`.md`/`.rst`/`.txt`) are exempt from the blocking gate: prose arguing *about* the rival ("Memcached was evaluated and rejected") was an unescapable deny. The advisory warning still fires there.
+  - Bump mode fails **open** when its deny state cannot persist (disk full etc.) — it had promised "the retry will not be blocked" and then re-denied forever.
+- **Audit fixes — concurrency** (all regression-tested):
+  - One `Store.write_lock()` now serializes every writer: the async worker, the sync Stop hook, and the MCP write tools raced on id allocation and could silently overwrite each other's records.
+  - Commitment records and the scoreboard are written **atomically** (tmp + `os.replace`): a gate racing a worker could read a truncated YAML and silently skip its check (~10 % empty reads in the race repro).
+  - The pending-findings drain runs under the worker lock (non-blocking: skips a turn instead of stalling): findings appended between the unlocked read and unlink were deleted unread.
+- **Audit fixes — dispatcher (`run.sh`)**:
+  - A failed resolver now **falls through** to the next one instead of ending the chain — a stale `pip install scorekeeper` permanently masked a working uvx one line below.
+  - The uvx/pipx paths pin a **minimum scorer version** (`scorekeeper>=0.2.0`) released in lockstep with the plugin, so hooks.json can never again advertise an event no published scorer knows; release.yml enforces the lockstep across pyproject, `__version__`, plugin.json, marketplace.json, and the pin.
+  - PATH candidates are **appended**, not prepended — run.sh no longer shadows the user's own PATH preference with a stale `pip --user` install.
+  - A completely dead scorer announces itself once per session (SessionStart context line) instead of failing silently forever.
+- **Packaging**: wheel/sdist now ship the LICENSE file and the `py.typed` marker; `scorekeeper.__version__` (stuck at 0.0.1) is bumped and lockstep-checked at release.
 - Rebuilt the demo GIF so the drift-vs-SUPERSEDE contrast is legible in one frame.
 
 ## 0.1.1 — 2026-07-10

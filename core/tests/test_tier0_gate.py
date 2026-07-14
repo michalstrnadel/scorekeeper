@@ -220,3 +220,81 @@ def test_aligned_write_is_never_denied(tmp_path, monkeypatch, capsys):
         "tool_input": {"file_path": "app/db.py", "content": "import psycopg\n"},
     }
     assert run_hook(monkeypatch, capsys, "pre-tool-use", payload) is None
+
+
+# -- audit 2026-07-14 regressions ------------------------------------------------
+
+
+def test_wall_allows_the_edit_that_removes_the_rival(tmp_path, monkeypatch, capsys):
+    """The remediating edit (rival in old_string, mention still in new) must pass —
+    the gate once denied the very edit that fixed the drift."""
+    seed_commitment(tmp_path)
+    enable_gate(tmp_path, mode="block")
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "Edit",
+        "tool_input": {
+            "file_path": "app/db.py",
+            "old_string": "from pymongo import MongoClient\nclient = MongoClient()\n",
+            "new_string": "# pymongo removed per commitment\nimport psycopg\n",
+        },
+    }
+    assert run_hook(monkeypatch, capsys, "pre-tool-use", payload) is None
+
+
+def test_wall_still_denies_a_newly_introduced_rival_in_an_edit(tmp_path, monkeypatch, capsys):
+    seed_commitment(tmp_path)
+    enable_gate(tmp_path, mode="block")
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "Edit",
+        "tool_input": {
+            "file_path": "app/db.py",
+            "old_string": "import psycopg\n",
+            "new_string": "from pymongo import MongoClient\n",
+        },
+    }
+    out = run_hook(monkeypatch, capsys, "pre-tool-use", payload)
+    assert out["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_wall_exempts_documentation_files(tmp_path, monkeypatch, capsys):
+    """Prose arguing ABOUT the rival ('evaluated and rejected') lives in docs;
+    a hard deny there is pure FPR — the advisory channel still covers it."""
+    seed_commitment(tmp_path)
+    enable_gate(tmp_path, mode="block")
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "Write",
+        "tool_input": {
+            "file_path": "docs/adr/0003-db.md",
+            "content": "MongoDB was evaluated and rejected (no transactions).",
+        },
+    }
+    assert run_hook(monkeypatch, capsys, "pre-tool-use", payload) is None
+
+
+def test_wall_gates_notebook_writes_via_new_source(tmp_path, monkeypatch, capsys):
+    seed_commitment(tmp_path)
+    enable_gate(tmp_path, mode="block")
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "NotebookEdit",
+        "tool_input": {
+            "notebook_path": "analysis.ipynb",
+            "new_source": "from pymongo import MongoClient",
+            "edit_mode": "replace",
+        },
+    }
+    out = run_hook(monkeypatch, capsys, "pre-tool-use", payload)
+    assert out["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_bump_fails_open_when_state_cannot_be_saved(tmp_path):
+    """If the deny state can't persist, the promised passing retry would be
+    re-denied forever — so an unsaveable state must not deny at all."""
+    c = commitment(["attr:persistence.primary_db=postgresql"])
+    state = tmp_path / "tier0-gate.json"
+    state.mkdir()  # os.replace onto a directory raises OSError
+    decision = tier0_gate.evaluate("from pymongo import MongoClient", [c], state)
+    assert decision is None

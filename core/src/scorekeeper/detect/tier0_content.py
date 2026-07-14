@@ -81,6 +81,23 @@ def scan(
     return warnings
 
 
+def novel(
+    warnings: list[ContentWarning], baseline: str, active: list[Commitment]
+) -> list[ContentWarning]:
+    """Keep only warnings whose (commitment, rival) pair is NOT already present
+    in ``baseline`` (e.g. an Edit's old_string). An edit that merely keeps — or
+    removes — a rival the file already contained introduces nothing new; only
+    freshly written rivals should warn or deny (audit finding 2026-07-14: the
+    gate denied the drift-FIXING edit that replaced pymemcache with redis)."""
+    if not warnings or not baseline.strip():
+        return warnings
+    base = {
+        (w.commitment_id, _canon(w.rival_found))
+        for w in scan(baseline, active, exhaustive=True)
+    }
+    return [w for w in warnings if (w.commitment_id, _canon(w.rival_found)) not in base]
+
+
 def format_warnings(warnings: list[ContentWarning]) -> str:
     lines = [
         f"SCOREKEEPER WARNING: this edit mentions '{w.rival_found}', but active commitment "

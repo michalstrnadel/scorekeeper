@@ -1,10 +1,11 @@
 [project]
 name = "scorekeeper"
-version = "0.1.1"
+version = "0.2.0"
 description = "Commitment tracking for LLM agents — a deontic scoreboard of the agent's own commitments, entitlements, and incompatibilities."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [{ name = "Michal Strnadel" }]
 keywords = ["llm", "agents", "commitment-tracking", "inferentialism", "context-engineering"]
 classifiers = [

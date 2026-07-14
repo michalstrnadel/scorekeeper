@@ -11,7 +11,12 @@ Nothing is ever deleted (Ghost Memory protection): status transitions only.
 
 from __future__ import annotations
 
+import contextlib
+import fcntl
 import json
+import os
+import tempfile
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -20,6 +25,22 @@ import yaml
 from .model import Commitment, Status
 
 DIRNAME = ".scorekeeper"
+LOCK_FILENAME = "worker.lock"
+
+
+def _atomic_write(path: Path, text: str) -> None:
+    """tmp + os.replace — hook readers race detached workers on these files;
+    a plain write_text() truncates first, and yaml.safe_load('') -> None made
+    the gate silently skip its check (race reproduced, audit 2026-07-14)."""
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}.")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    except OSError:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+        raise
 
 
 class Store:
@@ -39,13 +60,26 @@ class Store:
     def exists(self) -> bool:
         return self.commitments_dir.is_dir()
 
+    @contextlib.contextmanager
+    def write_lock(self, blocking: bool = True) -> Iterator[None]:
+        """Serializes every writer that allocates ids or rewrites records —
+        the async worker, the sync stop hook, and the MCP write tools all
+        take THIS lock (unlocked writers allocated the same commitment id,
+        audit 2026-07-14). ``blocking=False`` raises BlockingIOError when
+        the lock is held (used by the pending-findings drain to skip a turn
+        instead of stalling a 10s hook behind a worker's LLM call)."""
+        self.dir.mkdir(parents=True, exist_ok=True)
+        with (self.dir / LOCK_FILENAME).open("w") as lk:
+            fcntl.flock(lk, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+            yield
+
     # -- records -------------------------------------------------------------
 
     def save(self, c: Commitment) -> None:
         self.init()
         data = c.model_dump(mode="json")
         path = self.commitments_dir / f"{c.id}.yaml"
-        path.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True))
+        _atomic_write(path, yaml.safe_dump(data, sort_keys=False, allow_unicode=True))
 
     def load(self, cid: str) -> Commitment:
         path = self.commitments_dir / f"{cid}.yaml"
@@ -130,7 +164,7 @@ class Store:
 
     def write_scoreboard(self) -> None:
         self.init()
-        self.scoreboard_path.write_text(self.render_scoreboard())
+        _atomic_write(self.scoreboard_path, self.render_scoreboard())
 
     def render_digest(self, max_lines: int = 50) -> str:
         """Compact normative digest for context injection (SessionStart, ADR-0002).

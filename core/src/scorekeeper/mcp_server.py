@@ -86,7 +86,8 @@ def assert_commitment(
         backend = detect_backend(store.root)
     except BackendError:
         backend = None  # Tier-0 still runs; Tier-1 needs a model
-    return _result_summary(apply_operators(store, [ext], backend=backend, refs=["mcp"]))
+    with store.write_lock():  # id allocation races detached workers otherwise
+        return _result_summary(apply_operators(store, [ext], backend=backend, refs=["mcp"]))
 
 
 @mcp.tool()
@@ -139,22 +140,23 @@ def supersede(old_id: str, claim: str, source: str = "user_utterance", note: str
                          "an unentitled replacement is drift (use assert_commitment "
                          "and let the operators flag it)")
     store = _store()
-    old = store.load(old_id)
-    new = Commitment(
-        id=new_id(store.ids()),
-        ts=datetime.now(UTC),
-        claim=claim,
-        kind=old.kind,
-        scope=old.scope,
-        entitlement=Entitlement(source=src, note=note, refs=["mcp"]),
-        supersedes=old.id,
-    )
-    old.status = Status.SUPERSEDED
-    old.superseded_by = new.id
-    store.save(old)
-    store.save(new)
-    store.log("SUPERSEDE", new.id, f"supersedes {old.id} (mcp)", against=old.id)
-    store.write_scoreboard()
+    with store.write_lock():  # id allocation races detached workers otherwise
+        old = store.load(old_id)
+        new = Commitment(
+            id=new_id(store.ids()),
+            ts=datetime.now(UTC),
+            claim=claim,
+            kind=old.kind,
+            scope=old.scope,
+            entitlement=Entitlement(source=src, note=note, refs=["mcp"]),
+            supersedes=old.id,
+        )
+        old.status = Status.SUPERSEDED
+        old.superseded_by = new.id
+        store.save(old)
+        store.save(new)
+        store.log("SUPERSEDE", new.id, f"supersedes {old.id} (mcp)", against=old.id)
+        store.write_scoreboard()
     return {"superseded": old.id, "by": new.id}
 
 
@@ -178,11 +180,12 @@ def challenge(commitment_id: str, reason: str = "") -> dict:
 def retract(commitment_id: str, reason: str = "") -> dict:
     """Retract a commitment (status transition — the record is kept)."""
     store = _store()
-    c = store.load(commitment_id)
-    c.status = Status.RETRACTED
-    store.save(c)
-    store.log("RETRACT", c.id, reason or "retracted via mcp")
-    store.write_scoreboard()
+    with store.write_lock():
+        c = store.load(commitment_id)
+        c.status = Status.RETRACTED
+        store.save(c)
+        store.log("RETRACT", c.id, reason or "retracted via mcp")
+        store.write_scoreboard()
     return {"retracted": c.id}
 
 

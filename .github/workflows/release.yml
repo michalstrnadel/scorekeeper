@@ -24,10 +24,20 @@ jobs:
           uv sync --all-extras
           uv run ruff check src tests
           uv run pytest -q
-      - name: Check tag matches package version
+      - name: Check tag matches package version (lockstep across all version strings)
         run: |
           pkg_version="$(uv run python -c 'import tomllib;print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
           test "v${pkg_version}" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != version ${pkg_version}"; exit 1; }
+          # the plugin, the marketplace entry, __version__, and run.sh's scorer
+          # floor must all release in lockstep with the package (audit 2026-07-14:
+          # an unbumped plugin shipped a hook event no published scorer knew — #6)
+          init_version="$(uv run python -c 'import re;print(re.search(r"__version__ = \"(.+?)\"", open("src/scorekeeper/__init__.py").read()).group(1))')"
+          plugin_version="$(uv run python -c 'import json;print(json.load(open("../claude-code-plugin/.claude-plugin/plugin.json"))["version"])')"
+          market_version="$(uv run python -c 'import json;print(json.load(open("../.claude-plugin/marketplace.json"))["plugins"][0]["version"])')"
+          floor="$(sed -n 's/^MIN_SCORER="scorekeeper>=\(.*\)"$/\1/p' ../claude-code-plugin/hooks/run.sh)"
+          for v in "$init_version" "$plugin_version" "$market_version" "$floor"; do
+            test "$v" = "$pkg_version" || { echo "version drift: '$v' != ${pkg_version} (init/plugin/marketplace/run.sh must match pyproject)"; exit 1; }
+          done
       - name: Build sdist + wheel
         run: uv build
       - uses: actions/upload-artifact@v4

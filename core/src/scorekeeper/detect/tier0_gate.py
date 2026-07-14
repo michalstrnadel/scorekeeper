@@ -82,17 +82,22 @@ def _load_seen(state_path: Path) -> dict[str, float]:
         return {}
 
 
-def _save_seen(state_path: Path, seen: dict[str, float]) -> None:
+def _save_seen(state_path: Path, seen: dict[str, float]) -> bool:
     """Atomic replace — a reader racing a plain write_text() sees partial JSON,
-    fails open, and re-denies every consumed pair (verified in a race repro)."""
+    fails open, and re-denies every consumed pair (verified in a race repro).
+    Returns False when persistence failed: the caller must then NOT deny,
+    because the deny reason promises a passing retry and an unsaved pair would
+    re-deny forever (audit finding 2026-07-14: ENOSPC / path-is-a-directory)."""
     fd, tmp = tempfile.mkstemp(dir=str(state_path.parent), prefix=".tier0-gate-")
     try:
         with os.fdopen(fd, "w") as f:
             json.dump({"denied": seen}, f, indent=1)
         os.replace(tmp, state_path)
+        return True
     except OSError:
         with contextlib.suppress(OSError):
             os.unlink(tmp)
+        return False
 
 
 def format_reason(warnings: list[tier0_content.ContentWarning]) -> str:
@@ -137,7 +142,9 @@ def format_wall_reason(warnings: list[tier0_content.ContentWarning]) -> str:
     )
 
 
-def evaluate_wall(content: str, active: list[Commitment]) -> GateDecision | None:
+def evaluate_wall(
+    content: str, active: list[Commitment], baseline: str = ""
+) -> GateDecision | None:
     """Gate v2 (ADR-0007 amendment): deny WHILE the pinned commitment is active.
 
     No gate-side state at all — the pass condition is the BOARD changing (an
@@ -147,14 +154,21 @@ def evaluate_wall(content: str, active: list[Commitment]) -> GateDecision | None
     empirically exploited: haiku claimed a pasted draft note as its
     entitlement, retried, and shipped the drift (run-20260713T225646). Deontic
     machinery adjudicates; retry mechanics don't.
+
+    ``baseline`` (an Edit's old_string): rivals already present there are not
+    NEW conflicts — without this, the gate denies the very edit that removes
+    the rival, an unescapable deny for the remediating agent.
     """
     warnings = tier0_content.scan(content, active, exhaustive=True)
+    warnings = tier0_content.novel(warnings, baseline, active)
     if not warnings:
         return None
     return GateDecision(reason=format_wall_reason(warnings), warnings=warnings)
 
 
-def evaluate(content: str, active: list[Commitment], state_path: Path) -> GateDecision | None:
+def evaluate(
+    content: str, active: list[Commitment], state_path: Path, baseline: str = ""
+) -> GateDecision | None:
     """Deny the FIRST write that conflicts with a pinned attr; let retries pass
     for ``REARM_SECONDS``. Returns a GateDecision to deny, or None to allow.
 
@@ -164,6 +178,7 @@ def evaluate(content: str, active: list[Commitment], state_path: Path) -> GateDe
     exclusive flock: concurrent hook processes must not lose each other's pairs.
     """
     warnings = tier0_content.scan(content, active, exhaustive=True)
+    warnings = tier0_content.novel(warnings, baseline, active)
     if not warnings:
         return None
     now = time.time()
@@ -176,5 +191,6 @@ def evaluate(content: str, active: list[Commitment], state_path: Path) -> GateDe
         if not fresh:
             return None
         seen.update({_pair_key(w): now for w in fresh})
-        _save_seen(state_path, seen)
+        if not _save_seen(state_path, seen):
+            return None  # cannot honor "the retry will not be blocked" — fail open
     return GateDecision(reason=format_reason(fresh), warnings=fresh)

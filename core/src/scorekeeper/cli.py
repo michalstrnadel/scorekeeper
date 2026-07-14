@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import fcntl
 import json
 import os
 import shutil
@@ -65,12 +64,29 @@ def hook_post_tool_use(payload: dict) -> dict | None:
     if not store.exists:
         return None
     tool_input = payload.get("tool_input") or {}
+    if payload.get("tool_name") == "Bash":
+        # log-only audit of shell writes — this is what makes the wall's
+        # "every workaround is audited" deterrent true (no warning to the
+        # agent: `grep memcached` is not drift)
+        command = str(tool_input.get("command", "")).strip()
+        if not command:
+            return None
+        for w in tier0_content.scan(command, store.active(), exhaustive=True):
+            store.log(
+                "TIER0-SHELL-AUDIT",
+                w.commitment_id,
+                f"{w.key}={w.pinned_value} vs '{w.rival_found}' in shell command",
+            )
+        return None
     content = " ".join(
-        str(tool_input.get(k, "")) for k in ("content", "new_string", "old_string")
+        str(tool_input.get(k, "")) for k in ("content", "new_string", "new_source")
     ).strip()
     if not content:
         return None
     warnings = tier0_content.scan(content, store.active())
+    # a rival already in old_string is not NEW: an edit REMOVING the rival
+    # (drift being fixed) must not warn (audit finding 2026-07-14)
+    warnings = tier0_content.novel(warnings, str(tool_input.get("old_string", "")), store.active())
     if not warnings:
         return None
     for w in warnings:
@@ -102,16 +118,22 @@ def hook_pre_tool_use(payload: dict) -> dict | None:
     if not mode:
         return None
     tool_input = payload.get("tool_input") or {}
+    # the gate blocks CODE drift; prose that argues about the rival ("Memcached
+    # was evaluated and rejected") lives in docs, where a hard deny is pure FPR
+    # (audit finding 2026-07-14) — the advisory PostToolUse warning still fires
+    if str(tool_input.get("file_path", "")).endswith(_GATE_EXEMPT_SUFFIXES):
+        return None
     content = " ".join(
-        str(tool_input.get(k, "")) for k in ("content", "new_string")
+        str(tool_input.get(k, "")) for k in ("content", "new_string", "new_source")
     ).strip()
     if not content:
         return None
+    baseline = str(tool_input.get("old_string", ""))
     if mode == "block":
-        decision = tier0_gate.evaluate_wall(content, store.active())
+        decision = tier0_gate.evaluate_wall(content, store.active(), baseline=baseline)
     else:
         decision = tier0_gate.evaluate(
-            content, store.active(), store.dir / tier0_gate.STATE_FILENAME
+            content, store.active(), store.dir / tier0_gate.STATE_FILENAME, baseline=baseline
         )
     if decision is None:
         return None
@@ -129,6 +151,10 @@ def hook_pre_tool_use(payload: dict) -> dict | None:
             "permissionDecisionReason": decision.reason,
         }
     }
+
+
+# documentation suffixes exempt from the blocking gate (advisory channel only)
+_GATE_EXEMPT_SUFFIXES = (".md", ".rst", ".txt")
 
 
 def _gate_mode(store: Store) -> str:
@@ -241,7 +267,8 @@ def hook_stop(payload: dict) -> dict | None:
         Store(root).init()
         _spawn_worker(root, payload)
         return None
-    lines = _extract_findings(root, payload)
+    with Store(root).write_lock():  # sync writers race async workers on ids
+        lines = _extract_findings(root, payload)
     if not lines:
         return None
     return {"decision": "block", "reason": "\n".join(lines)}
@@ -253,8 +280,15 @@ def hook_user_prompt_submit(payload: dict) -> dict | None:
     pending = store.dir / "pending-findings.md"
     if not pending.exists():
         return None
-    text = pending.read_text().strip()
-    pending.unlink()
+    try:
+        # same lock the worker appends under — an unlocked read+unlink deleted
+        # findings appended in between (audit 2026-07-14). Non-blocking: if a
+        # worker is mid-extraction (seconds of LLM), skip; next prompt drains.
+        with store.write_lock(blocking=False):
+            text = pending.read_text().strip()
+            pending.unlink()
+    except OSError:
+        return None
     if not text:
         return None
     return {
@@ -303,8 +337,7 @@ def cmd_worker(payload_path: Path) -> None:
     store = Store(root)
     store.init()
     try:
-        with (store.dir / "worker.lock").open("w") as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)
+        with store.write_lock():
             lines = _extract_findings(root, payload)
             if lines:
                 with (store.dir / "pending-findings.md").open("a") as f:
