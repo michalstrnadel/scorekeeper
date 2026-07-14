@@ -39,3 +39,6 @@ bench/results/run-*/results.json
 bench/results/run-*/results.jsonl
 bench/results/run-*/summary.md
 bench/results/*.log
+
+# local-only working drafts (launch copy, private notes)
+drafts/
