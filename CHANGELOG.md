@@ -16,6 +16,7 @@
 - **Blocking Tier-0 gate** (ADR-0007, opt-in): `tier0_gate: block` in `.scorekeeper/config.yaml` (or `SCOREKEEPER_TIER0_GATE=block`) denies a Write/Edit conflicting with a pinned commitment **until the scoreboard itself records an entitled revision** (supersede via the MCP tool or extraction of the user's order) — the agent's self-attested entitlement cannot lift it. A one-shot `bump` mode is kept for ablations after being measurably exploited (the agent claimed a pasted draft note as its entitlement, retried, and drifted anyway — `bench/results/SMOKE-DRIFT-S0-REPORT.md`). Denies audited as `TIER0-GATE-DENY`; bench variants `blocking` (wall) and `bump` A/B-test the channels. Born from a verified negative finding: advisory warnings alone did not stop a weaker model from drifting.
 
 ### Fixed
+- **Marketplace install no longer blocks all Edit/Write on a version-skewed scorer** (#6). The plugin's `PreToolUse` hook invokes `hook pre-tool-use`, which the published 0.1.1 CLI doesn't know; its argparse error (exit 2) propagated through `run.sh`'s `exec` and Claude Code read it as a deny. `run.sh` now treats any non-zero scorer exit as infrastructure and exits 0 — safe because a legitimate gate deny is always JSON-on-stdout with exit 0, never a non-zero exit. Until the next PyPI release, the gate degrades to a no-op on marketplace installs instead of breaking the session.
 - Rebuilt the demo GIF so the drift-vs-SUPERSEDE contrast is legible in one frame.
 
 ## 0.1.1 — 2026-07-10
