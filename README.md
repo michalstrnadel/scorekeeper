@@ -79,7 +79,7 @@ Pieces of that boundary exist elsewhere — AGM-style belief revision protects u
 2. **An active channel, not a passive store** — the boundary becomes environmental *physics*: the blocking Tier-0 gate denies an unentitled rival write before it lands ([ADR-0007](adr/0007-blocking-tier0-gate.md)).
 3. **Symmetric measurement** — the benchmark penalizes both drift (SCR) *and* false refusals (FRR) at the same boundary, scored by a deterministic artifact-level classifier, not an LLM judge.
 
-See [`docs/theory.md`](docs/theory.md) for the conceptual foundation, [`docs/research/related-work.md`](docs/research/related-work.md) for positioning against the closest five systems, [`docs/interop.md`](docs/interop.md) for mappings onto xAIF and W3C PROV-O, the [ROADMAP](ROADMAP.md), and [`docs/SPEC-cs.md`](docs/SPEC-cs.md) for the full specification (Czech, source-of-record).
+For the argument in accessible form, start with [`docs/why.md`](docs/why.md). Then see [`docs/theory.md`](docs/theory.md) for the full conceptual apparatus, [`docs/research/related-work.md`](docs/research/related-work.md) for positioning against the closest five systems, [`docs/interop.md`](docs/interop.md) for mappings onto xAIF and W3C PROV-O, the [ROADMAP](ROADMAP.md), and [`docs/SPEC-cs.md`](docs/SPEC-cs.md) for the full specification (Czech, source-of-record).
 
 ## Design stance: scaffolded, not extended
 
@@ -153,7 +153,7 @@ to try it** — see below. See [CHANGELOG](CHANGELOG.md).
 | `mcp/` | `scorekeeper-mcp` docs — the server lives in core (`pip install "scorekeeper[mcp]"`) |
 | `demo/` | ~20-second mechanism demo (`drift_demo.py`) + the README GIF tape |
 | `bench/` | planted acceptance scenarios + Agent-SDK eval harness; EntitleBench in Phase 2 |
-| `docs/` | `theory.md`, `SPEC-cs.md`, `research/` |
+| `docs/` | `why.md` (start here), `theory.md`, `SPEC-cs.md`, `research/` |
 | `adr/` | Architecture Decision Records |
 | `.scorekeeper/` | The project's own scoreboard — scorekeeper dogfoods itself |
 

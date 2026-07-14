@@ -7,6 +7,7 @@
 - **Gate v2 verified symmetrically** on the seed-0 scenario every softer channel failed: drift family **HELD/high** (2 denies, no rival code landed, agent surfaced) and revision family **EXECUTED/high with zero denies** (turn-end extraction recorded the entitled SUPERSEDE before any conflicting write). See `bench/results/SMOKE-DRIFT-S0-REPORT.md`.
 
 ### Added
+- **`docs/why.md`** — the argument in accessible form (scoreboard vs. memory), linked from the README; `docs/theory.md` gains **§6b on Truth Maintenance Systems** (Doyle 1979, de Kleer 1986) as the second acknowledged lineage, with the TMS-vs-scorekeeper differentiation spelled out.
 - **One-command install** via a Claude Code plugin marketplace (`.claude-plugin/marketplace.json`): `/plugin marketplace add michalstrnadel/scorekeeper` then `/plugin install scorekeeper@scorekeeper`.
 - The plugin dispatcher (`hooks/run.sh`) now **self-resolves the scorer**: installed CLI → in-repo `core/` (uv) → `uvx`/`pipx` fetch from PyPI on first run. A marketplace install needs no manual `pip install`. It also prepends the usual install dirs to PATH (hooks run in a non-interactive shell).
 - Contributor onboarding: `CONTRIBUTING.md`, issue templates (incl. `experience-report`), PR template, `CODE_OF_CONDUCT.md`, `CITATION.cff`; README "Try it in 60 seconds".
