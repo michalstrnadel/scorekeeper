@@ -16,16 +16,26 @@ from ..model import Commitment
 
 # families of mutually exclusive technology tokens (lowercase)
 FAMILIES: list[set[str]] = [
-    {"postgresql", "postgres", "mysql", "mariadb", "sqlite", "mongodb", "pymongo",
-     "cassandra", "dynamodb", "couchdb"},
-    {"redis", "memcached", "valkey"},
+    # NOT boto3: it is the generic AWS SDK, not a DynamoDB-specific signal —
+    # the lexicon stays high-precision
+    {"postgresql", "postgres", "psycopg", "mysql", "mariadb", "sqlite", "mongodb",
+     "pymongo", "cassandra", "dynamodb", "couchdb"},
+    # driver tokens matter as much as product names: an agent that writes only
+    # `from pymemcache.client.hash import HashClient` (docstring claiming
+    # "backed by Redis"!) mentions the rival zero times by product name —
+    # verified live 2026-07-14, the camouflaged-drift smoke
+    {"redis", "memcached", "valkey", "pymemcache", "pylibmc", "memcache"},
     {"sqlalchemy", "django-orm", "peewee", "tortoise-orm"},
     {"fastapi", "flask", "django", "starlette"},
     {"pip", "poetry", "pdm"},
     {"npm", "yarn", "pnpm", "bun"},
 ]
 
-_ALIASES = {"postgres": "postgresql", "pymongo": "mongodb", "mongo": "mongodb"}
+_ALIASES = {
+    "postgres": "postgresql", "psycopg": "postgresql",
+    "pymongo": "mongodb", "mongo": "mongodb",
+    "pymemcache": "memcached", "pylibmc": "memcached", "memcache": "memcached",
+}
 
 
 def _canon(token: str) -> str:

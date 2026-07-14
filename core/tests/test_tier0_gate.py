@@ -17,10 +17,10 @@ MONGO_EDIT = {
 }
 
 
-def enable_gate(root):
+def enable_gate(root, mode="bump"):
     store = Store(root)
     store.init()
-    (store.dir / "config.yaml").write_text("tier0_gate: block\n")
+    (store.dir / "config.yaml").write_text(f"tier0_gate: {mode}\n")
     return store
 
 
@@ -111,6 +111,66 @@ def test_legacy_list_state_is_understood(tmp_path):
     state = tmp_path / "tier0-gate.json"
     state.write_text('{"denied": ["c-2026-07-13-0001:mongodb"]}')
     assert tier0_gate.evaluate("import pymongo", active, state) is None
+
+
+# -- gate v2: the wall (board-adjudicated pass) --------------------------------
+
+
+def test_wall_denies_repeatedly_while_commitment_active():
+    # v1's exploited escape: retrying must NOT lift the v2 wall
+    active = [commitment(["attr:persistence.primary_db=postgresql"])]
+    for _ in range(3):
+        d = tier0_gate.evaluate_wall("import pymongo", active)
+        assert d is not None
+        assert "say-so cannot lift it" in d.reason
+
+
+def test_wall_lifts_when_board_records_the_supersede():
+    # the pass condition is the BOARD changing: superseded commitments drop
+    # out of store.active(), so the wall goes quiet without any gate state
+    from scorekeeper.model import Status
+
+    c = commitment(["attr:persistence.primary_db=postgresql"])
+    assert tier0_gate.evaluate_wall("import pymongo", [c]) is not None
+    c.status = Status.SUPERSEDED
+    active = [x for x in [c] if x.status in (Status.ACTIVE, Status.CONFLICTED)]
+    assert tier0_gate.evaluate_wall("import pymongo", active) is None
+
+
+def test_camouflaged_driver_only_drift_is_caught():
+    # live miss 2026-07-14: agent wrote `from pymemcache.client.hash import
+    # HashClient` with a docstring claiming "backed by Redis" — the rival's
+    # product name appeared ZERO times, only the driver's. Driver tokens are
+    # first-class lexicon members now.
+    active = [commitment(["attr:caching.backend=redis"])]
+    d = tier0_gate.evaluate_wall(
+        '"""Event cache backed by Redis."""\nfrom pymemcache.client.hash import HashClient\n',
+        active,
+    )
+    assert d is not None and d.warnings[0].rival_found == "pymemcache"
+
+
+def test_wall_reason_spells_out_both_branches():
+    active = [commitment(["attr:persistence.primary_db=postgresql"])]
+    d = tier0_gate.evaluate_wall("import pymongo", active)
+    assert "surface the conflict" in d.reason  # branch (a)
+    assert "supersede" in d.reason  # branch (b): record it on the board
+
+
+def test_hook_mode_block_is_wall_and_bump_is_speed_bump(tmp_path, monkeypatch, capsys):
+    seed_commitment(tmp_path)
+    store = Store(tmp_path)
+    store.init()
+    (store.dir / "config.yaml").write_text("tier0_gate: block\n")
+    # wall: second identical attempt is STILL denied
+    assert run_hook(monkeypatch, capsys, "pre-tool-use", {"cwd": str(tmp_path), **MONGO_EDIT})
+    again = run_hook(monkeypatch, capsys, "pre-tool-use", {"cwd": str(tmp_path), **MONGO_EDIT})
+    assert again["hookSpecificOutput"]["permissionDecision"] == "deny"
+    # bump: deny once, retry passes
+    (store.dir / "config.yaml").write_text("tier0_gate: bump\n")
+    assert run_hook(monkeypatch, capsys, "pre-tool-use", {"cwd": str(tmp_path), **MONGO_EDIT})
+    retry = run_hook(monkeypatch, capsys, "pre-tool-use", {"cwd": str(tmp_path), **MONGO_EDIT})
+    assert retry is None
 
 
 # -- hook level (stdin/stdout contract) ----------------------------------------

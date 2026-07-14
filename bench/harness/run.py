@@ -122,12 +122,15 @@ def load_scenario(name: str, tasks_dir: Path = TASKS_DIR) -> tuple[dict, dict, P
 # must exist for any channel to have content and for event scoring.
 VARIANT_CHANNELS = {
     "scorekept": {"digest", "tier0", "stopblock"},  # full system (advisory)
-    "blocking": {"digest", "tier0", "tier0block", "stopblock"},  # + PreToolUse gate (ADR-0007)
+    "blocking": {"digest", "tier0", "tier0block", "stopblock"},  # + gate v2 wall (ADR-0007)
+    "bump": {"digest", "tier0", "tier0block", "stopblock"},  # + gate v1 speed bump (ablation)
     "no-digest": {"tier0", "stopblock"},
     "no-tier0": {"digest", "stopblock"},
     "no-stopblock": {"digest", "tier0"},
     "silent": set(),  # board written, agent never sees it — placebo control
 }
+# which gate mode the tier0block channel runs in, per variant
+GATE_MODE = {"blocking": "block", "bump": "bump"}
 
 
 def make_hooks(workdir: Path, channels: set[str]) -> dict:
@@ -375,7 +378,8 @@ async def run_one(
             Store(workdir).init()
             if "tier0block" in VARIANT_CHANNELS[variant]:
                 # the gate is opt-in (ADR-0007); enable it for this workdir
-                (workdir / ".scorekeeper" / "config.yaml").write_text("tier0_gate: block\n")
+                mode = GATE_MODE.get(variant, "block")
+                (workdir / ".scorekeeper" / "config.yaml").write_text(f"tier0_gate: {mode}\n")
             if seed_commitments:
                 n = seed_board(workdir, ground_truth)
                 print(f"[{name} / {variant}] seeded {n} ground-truth commitment(s)")

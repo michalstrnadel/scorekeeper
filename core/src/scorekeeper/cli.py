@@ -88,13 +88,18 @@ def hook_post_tool_use(payload: dict) -> dict | None:
 
 
 def hook_pre_tool_use(payload: dict) -> dict | None:
-    """Blocking Tier-0 gate (ADR-0007): deny the FIRST rival-tech write per
-    (commitment, rival) pair with a reason that forces the conflict into the
-    agent's context; retries pass. Opt-in via SCOREKEEPER_TIER0_GATE=block
-    (env) or ``tier0_gate: block`` in .scorekeeper/config.yaml — advisory
-    PostToolUse warnings stay the default channel."""
+    """Blocking Tier-0 gate (ADR-0007). Mode ``block`` (v2): the deny stands
+    while the pinned commitment is active — only the board recording an
+    entitled SUPERSEDE lifts it. Mode ``bump`` (v1 ablation): deny once per
+    (commitment, rival) pair, instructed retry passes. Opt-in via
+    SCOREKEEPER_TIER0_GATE=block|bump (env) or ``tier0_gate: block|bump`` in
+    .scorekeeper/config.yaml — advisory PostToolUse warnings stay the
+    default channel."""
     store = Store(_root(payload))
-    if not store.exists or not _gate_enabled(store):
+    if not store.exists:
+        return None
+    mode = _gate_mode(store)
+    if not mode:
         return None
     tool_input = payload.get("tool_input") or {}
     content = " ".join(
@@ -102,7 +107,12 @@ def hook_pre_tool_use(payload: dict) -> dict | None:
     ).strip()
     if not content:
         return None
-    decision = tier0_gate.evaluate(content, store.active(), store.dir / tier0_gate.STATE_FILENAME)
+    if mode == "block":
+        decision = tier0_gate.evaluate_wall(content, store.active())
+    else:
+        decision = tier0_gate.evaluate(
+            content, store.active(), store.dir / tier0_gate.STATE_FILENAME
+        )
     if decision is None:
         return None
     for w in decision.warnings:
@@ -110,6 +120,7 @@ def hook_pre_tool_use(payload: dict) -> dict | None:
             "TIER0-GATE-DENY",
             w.commitment_id,
             f"{w.key}={w.pinned_value} vs '{w.rival_found}' in {tool_input.get('file_path', '?')}",
+            mode=mode,
         )
     return {
         "hookSpecificOutput": {
@@ -120,18 +131,22 @@ def hook_pre_tool_use(payload: dict) -> dict | None:
     }
 
 
-def _gate_enabled(store: Store) -> bool:
-    # env OVERRIDES config in both directions: "block" force-enables,
-    # "warn" force-disables (advisory only) even if config says block.
+def _gate_mode(store: Store) -> str:
+    """'' (off) | 'block' (v2 wall) | 'bump' (v1 speed bump). Env OVERRIDES
+    config in both directions: block/bump force-enable that mode, "warn"
+    force-disables (advisory only) even if config enables the gate."""
     mode = os.environ.get("SCOREKEEPER_TIER0_GATE", "")
-    if mode in ("block", "warn"):
-        return mode == "block"
+    if mode in ("block", "bump"):
+        return mode
+    if mode == "warn":
+        return ""
     cfg = store.dir / "config.yaml"
     if cfg.exists():
         with contextlib.suppress(Exception):
             data = yaml.safe_load(cfg.read_text()) or {}
-            return data.get("tier0_gate") == "block"
-    return False
+            if data.get("tier0_gate") in ("block", "bump"):
+                return data["tier0_gate"]
+    return ""
 
 
 def _extract_mode(root: Path) -> str:

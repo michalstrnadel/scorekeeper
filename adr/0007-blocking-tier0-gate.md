@@ -1,7 +1,7 @@
 # ADR-0007: Blocking Tier-0 gate — deny the first rival write once, let the retry pass
 
-- **Status:** Accepted — **v1 empirically insufficient; v2 (board-adjudicated pass) proposed, see the A/B amendment below**
-- **Date:** 2026-07-13
+- **Status:** Accepted — **v2 (board-adjudicated wall, `tier0_gate: block`) is the recommended mode; v1 speed bump kept as `tier0_gate: bump` for ablations after being empirically exploited (see the A/B amendment)**
+- **Date:** 2026-07-13 (v2: 2026-07-14)
 
 ## Context
 
@@ -45,5 +45,11 @@ existing operator pipeline (MCP/CLI write → entitlement check → Tier-1
 material confirmation), not through the agent's say-so. Retry mechanics stop
 adjudicating; the deontic machinery does. FRR cost to measure: an entitled
 revision now requires the supersede to be *recorded* before the write lands
-(one MCP call in-turn, or next-turn after extraction). Not built yet —
-separate decision + A/B.
+(one MCP call in-turn, or next-turn after extraction).
+
+**v2 built 2026-07-14** (user go): `evaluate_wall` — stateless; denies while
+the pinned commitment is in `store.active()`; the deny reason spells out both
+branches (surface-and-ask vs. record-the-supersede-first) and warns that
+shell-write workarounds are audited. Config/env: `tier0_gate: block` = v2
+wall (recommended), `tier0_gate: bump` = v1 (ablation), `warn` force-off.
+Bench variants: `blocking` (v2) and `bump` (v1).
