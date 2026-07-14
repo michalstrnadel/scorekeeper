@@ -9,7 +9,7 @@
 **A normative overlay that gives long-running LLM agents a scoreboard of their own commitments — not just a memory of what happened.**
 
 ![status: Phase 2](https://img.shields.io/badge/status-Phase%202%20·%20EntitleBench-brightgreen)
-![tests](https://img.shields.io/badge/tests-117%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-126%20passing-brightgreen)
 [![PyPI](https://img.shields.io/pypi/v/scorekeeper)](https://pypi.org/project/scorekeeper/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/core-Python-3776AB?logo=python&logoColor=white)
@@ -17,7 +17,7 @@
 ![MCP](https://img.shields.io/badge/protocol-MCP-000000)
 ![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
-> **It runs, and it's measured.** Phase 0 passed its acceptance gate ([report](bench/results/PHASE0-REPORT.md)); EntitleBench paired runs now reproduce the effect on the hardest condition — and produced an honest negative finding that advisory warnings alone don't stop weaker models, which is why the **blocking Tier-0 gate** ([ADR-0007](adr/0007-blocking-tier0-gate.md)) exists ([seed-0 report](bench/results/SMOKE-DRIFT-S0-REPORT.md)). Roadmap: [ROADMAP.md](ROADMAP.md).
+> **It runs, and it's measured — negative results included.** On EntitleBench's hardest condition, a weak agent drifted past *advisory warnings*, then exploited a *one-shot blocking bump* by simply claiming entitlement it didn't have. What held was the **board-adjudicated wall** ([ADR-0007](adr/0007-blocking-tier0-gate.md)): the write stays denied until the scoreboard itself records an entitled revision — verified symmetrically (drift **HELD**, entitled revision **EXECUTED with zero denies**). Full evidence: [seed-0 report](bench/results/SMOKE-DRIFT-S0-REPORT.md). Roadmap: [ROADMAP.md](ROADMAP.md).
 
 ---
 
@@ -118,21 +118,27 @@ surface on the next prompt — [ADR-0006](adr/0006-async-extraction.md)).
   agent migrated to the rival tech against its own recorded decision; the
   scorekept twin surfaced the commitment and asked instead
   ([seed-0 report](bench/results/SMOKE-DRIFT-S0-REPORT.md)).
-- **The honest negative finding — and the fix it forced.** On a second tech
-  pair the scorekept agent drifted *anyway*: it sailed past 11 advisory
-  warnings and built the tempted Memcached hot path with a "polyglot" excuse.
-  Conclusion: context-only steering is not enough for weaker models. That
-  finding shipped the **blocking Tier-0 gate**
-  ([ADR-0007](adr/0007-blocking-tier0-gate.md)): the *first* write that
-  conflicts with a pinned commitment is denied with instructions — surface
-  and ask if unentitled, say so and retry if the user ordered it (the retry
-  passes, so an entitled change costs one extra tool call and can never
-  deadlock). Opt-in via `tier0_gate: block` in `.scorekeeper/config.yaml`.
+- **Two honest negative findings — and the mechanism they forced.** On a
+  second tech pair the scorekept agent drifted *anyway*: it sailed past 11
+  advisory warnings and built the tempted Memcached hot path with a
+  "polyglot" excuse (it even camouflaged the drift — a docstring claiming
+  "backed by Redis" over a `pymemcache` import). A one-shot blocking *speed
+  bump* failed next: told "if the user ordered this, say so and retry", the
+  agent simply **claimed entitlement it didn't have** and retried.
+- **What held: the board-adjudicated wall**
+  ([ADR-0007](adr/0007-blocking-tier0-gate.md), `tier0_gate: block`). A
+  conflicting write stays denied until the *scoreboard itself* records an
+  entitled revision through the operator pipeline — the agent's say-so can't
+  lift it. Verified symmetrically on the same scenario: drift family
+  **HELD/high** (2 denies, zero rival code landed, the agent surfaced and
+  asked) and revision family **EXECUTED/high with zero denies** (turn-end
+  extraction recorded the user's supersede before any conflicting write —
+  the entitled path cost nothing).
 - **The measurement is adversarially hardened.** The deterministic behavioral
   classifier (primary metric; the LLM judge is a known-unreliable secondary)
   survived a 33-agent adversarial review plus a file-level audit of live runs;
   every confirmed misfire is a regression test anchored on a verbatim reply.
-  117 tests passing across core + bench; `bench/harness/reclassify.py`
+  126 tests passing across core + bench; `bench/harness/reclassify.py`
   re-scores old runs after every classifier change.
 
 Rather than scale the numbers in-house next, **the ask is for the community
