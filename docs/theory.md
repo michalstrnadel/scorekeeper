@@ -70,6 +70,43 @@ commitment store applied to an LLM agent's own discourse, extended with the
 *that* a commitment stands, not *what backs it*) and integrated into a production
 agent harness (which the DGDL/DGEP world never had).
 
+## 6b. Prior art: Truth Maintenance Systems (Doyle, de Kleer)
+
+The second lineage that must be acknowledged — the repo already carries the
+`truth-maintenance` topic tag, so silence here would be indefensible — is
+**truth maintenance systems** from classical symbolic AI: Doyle's
+justification-based TMS (*A Truth Maintenance System*, AIJ 1979) and de
+Kleer's assumption-based ATMS (*An Assumption-based TMS*, AIJ 1986).
+
+Three of their moves anticipate ours directly:
+
+1. **Beliefs carry justifications.** In a JTMS no node is held bare; each is
+   *in* or *out* according to the justification structure supporting it. This
+   is entitlement-as-provenance in 1980s dress: a node without support is
+   exactly our `entitlement.source == none` suspect.
+2. **Non-monotonic retraction is propagated, not forgotten.** When a premise
+   falls, the TMS traces dependents and re-labels them — the ancestor of our
+   SUPERSEDE chain semantics (a superseded commitment does not vanish; its
+   dependents become challengeable).
+3. **The TMS is an overlay on the problem solver.** Doyle's architecture
+   deliberately separates the reasoner from the bookkeeper: the problem solver
+   proposes, the TMS maintains consistency of the dependency network. The
+   separation of authority we defend in §5 (scaffolded, not extended) has a
+   direct structural precedent here.
+
+**Differentiation** (the precise sentences for the paper): a TMS maintains
+consistency over a *formal dependency network* whose nodes and justifications
+are supplied in a machine-usable calculus by the problem solver itself; its
+notion of conflict is logical (a *nogood*). scorekeeper operates over the
+*natural-language discourse of an LLM agent*, where commitments must first be
+**extracted** (they are never handed over as structured nodes), incompatibility
+is judged **materially** by a language model over conceptual content (§2)
+rather than detected as formal contradiction, and the status being maintained
+is **normative** (committed/entitled/challenged — deontic score in Brandom's
+sense, §1), not the alethic *in/out* of a dependency net. TMS solves belief
+revision for a reasoner that already speaks logic; scorekeeper solves
+scorekeeping for a reasoner that speaks language.
+
 ## 7. Honesty of the frame
 
 Brandom serves the project as a design vocabulary and a source of non-trivial architectural decisions (entitlement as a first-class dimension; material detection; explicitation) — not as dogma. Where philosophical fidelity collides with engineering usefulness, usefulness wins and the deviation is documented (see the ADR process). The project claims **nothing** about consciousness, understanding, or "genuine" agent normativity — Poibeau's remark that an agent without sanctions merely simulates normativity holds; it is irrelevant to the engineering value of the scoreboard.
