@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/og-image.png" alt="scorekeeper — commitment tracking for LLM agents. A night sky with soft aurora ribbons; one constellation drawn in luminous lines: a golden star (entitlement) grounding a commitment, which collides with a second commitment at a red ✗ (incompatibility)." width="100%">
+  <img src="docs/assets/og-image.png" alt="scorekeeper — commitment tracking for LLM agents. A fresh pastel holographic field with a pixel-dither texture; the deontic constellation drawn in dark ink: a golden star (entitlement) grounding a commitment, which collides with a second commitment at a red ✗ (incompatibility)." width="100%">
 </p>
 
 # scorekeeper
