@@ -1,4 +1,4 @@
-"""Deterministic behavioral classifier for CommitBench drift & revision runs.
+"""Deterministic behavioral classifier for EntitleBench drift & revision runs.
 
 The LLM judge proved unreliable on long trajectories (timeouts; degenerate
 all-1s verdicts that even called a fully-worked run task_completion=1). For both

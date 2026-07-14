@@ -8,7 +8,7 @@
 
 **A normative overlay that gives long-running LLM agents a scoreboard of their own commitments — not just a memory of what happened.**
 
-![status: Phase 2](https://img.shields.io/badge/status-Phase%202%20·%20CommitBench-brightgreen)
+![status: Phase 2](https://img.shields.io/badge/status-Phase%202%20·%20EntitleBench-brightgreen)
 ![tests](https://img.shields.io/badge/tests-117%20passing-brightgreen)
 [![PyPI](https://img.shields.io/pypi/v/scorekeeper)](https://pypi.org/project/scorekeeper/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
@@ -17,7 +17,7 @@
 ![MCP](https://img.shields.io/badge/protocol-MCP-000000)
 ![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
-> **It runs, and it's measured.** Phase 0 passed its acceptance gate ([report](bench/results/PHASE0-REPORT.md)); CommitBench paired runs now reproduce the effect on the hardest condition — and produced an honest negative finding that advisory warnings alone don't stop weaker models, which is why the **blocking Tier-0 gate** ([ADR-0007](adr/0007-blocking-tier0-gate.md)) exists ([seed-0 report](bench/results/SMOKE-DRIFT-S0-REPORT.md)). Roadmap: [ROADMAP.md](ROADMAP.md).
+> **It runs, and it's measured.** Phase 0 passed its acceptance gate ([report](bench/results/PHASE0-REPORT.md)); EntitleBench paired runs now reproduce the effect on the hardest condition — and produced an honest negative finding that advisory warnings alone don't stop weaker models, which is why the **blocking Tier-0 gate** ([ADR-0007](adr/0007-blocking-tier0-gate.md)) exists ([seed-0 report](bench/results/SMOKE-DRIFT-S0-REPORT.md)). Roadmap: [ROADMAP.md](ROADMAP.md).
 
 ---
 
@@ -98,7 +98,7 @@ The pipeline works end-to-end and the first paired evidence is in:
   drifted to MongoDB against its own PostgreSQL decision (verified in
   artifacts); the scorekept twin — same model, same scenario, only the
   scoreboard added — held the line. SCR bare 1/6 vs scorekept **0/6** (N=6,
-  Wilson CIs overlap — effect size awaits CommitBench).
+  Wilson CIs overlap — effect size awaits EntitleBench).
 - **0 false conflicts** on the dedicated entitled-revision probe (FPR target < 10 %).
 - **+0.6 % token overhead** (target < 10 %); commitment survived context
   compaction via digest re-injection.
@@ -111,7 +111,7 @@ through the same operator pipeline as the hooks), extraction is **async by
 default in the plugin** (detached worker, ~0 ms added turn latency; findings
 surface on the next prompt — [ADR-0006](adr/0006-async-extraction.md)).
 
-**Phase 2 (current) — CommitBench evidence, including the negative kind:**
+**Phase 2 (current) — EntitleBench evidence, including the negative kind:**
 
 - **The effect reproduces.** Two independent paired runs on the hardest
   condition (distance 8 + forced compaction + distractors): the bare haiku
@@ -146,7 +146,7 @@ to try it** — see below. See [CHANGELOG](CHANGELOG.md).
 | `claude-code-plugin/` | Primary integration: 5 Claude Code hooks (`claude --plugin-dir ./claude-code-plugin`) |
 | `mcp/` | `scorekeeper-mcp` docs — the server lives in core (`pip install "scorekeeper[mcp]"`) |
 | `demo/` | ~20-second mechanism demo (`drift_demo.py`) + the README GIF tape |
-| `bench/` | planted acceptance scenarios + Agent-SDK eval harness; CommitBench in Phase 2 |
+| `bench/` | planted acceptance scenarios + Agent-SDK eval harness; EntitleBench in Phase 2 |
 | `docs/` | `theory.md`, `SPEC-cs.md`, `research/` |
 | `adr/` | Architecture Decision Records |
 | `.scorekeeper/` | The project's own scoreboard — scorekeeper dogfoods itself |

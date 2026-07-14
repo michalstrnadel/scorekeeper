@@ -23,13 +23,13 @@ Make it installable and usable by anyone.
 - ✅ Async extraction (detached worker, ~0 ms added turn latency; [ADR-0006](adr/0006-async-extraction.md))
 - ✅ Environment-scoped attributes (Phase-0 finding F2 fix)
 
-## Phase 2 — CommitBench & evidence 🚧
+## Phase 2 — EntitleBench & evidence 🚧
 
 Turn the qualitative result into a rate with confidence intervals.
 
 - ✅ Procedural benchmark generator (drift & revision families; distance / compaction / distractor knobs; dev/eval split)
 - ✅ Ablation harness (digest-only, tier0-only, silent placebo) + deterministic behavioral classifier
-- ✅ First verified paired run on the hardest condition reproduces the effect ([progress report](bench/results/COMMITBENCH-PROGRESS.md))
+- ✅ First verified paired run on the hardest condition reproduces the effect ([progress report](bench/results/ENTITLEBENCH-PROGRESS.md))
 - 🚧 **Scale it** — many seeds × conditions × families for effect sizes. *We'd rather the community run this than scale it in-house* — see [How to help](#how-to-help).
 - ✅ Revision-family classifier ([#4](https://github.com/michalstrnadel/scorekeeper/issues/4)) — `classify_revision` + FRR (false-refusal rate) in run summaries
 - ⬜ Public dataset + leaderboard
@@ -40,7 +40,7 @@ Turn the qualitative result into a rate with confidence intervals.
 - ⬜ LangGraph node; Letta plugin
 - ⬜ Multi-agent shared scoreboard (social scorekeeping, literally)
 - ⬜ "Normative dream" mode — async off-hours audit of the board
-- ⬜ **Rename the benchmark** — "CommitBench" collides with an established SE/NLP benchmark (commit-message generation, 1.6M commits); must rename before anything ships externally ([related-work](docs/research/related-work.md); decision pending)
+- ⬜ **Rename the benchmark** — "EntitleBench" collides with an established SE/NLP benchmark (commit-message generation, 1.6M commits); must rename before anything ships externally ([related-work](docs/research/related-work.md); decision pending)
 - ⬜ Paper / technical report (the philosophical grounding: Brandom's scorekeeping, Sterelny's scaffolded mind). Venue plan per the [related-work map](docs/research/related-work.md): NeurIPS-workshop short paper (~2026-08-29) as the forcing function → full paper to AAMAS 2027 (abstracts 2026-10-02), ICLR 2027 fallback
 
 ## How to help

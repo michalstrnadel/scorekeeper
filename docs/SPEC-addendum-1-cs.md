@@ -27,11 +27,11 @@ Paušální bootstrap byl špatný pokyn pro náš režim. Závazná tabulka:
 Než se měří cokoliv: 10 identických průchodů se zafixovaným seedem a teplotou 0; koeficient variace ≤ 0.05. Pokud vyšší, měříš infrastrukturní šum (kontejnery, timeouty parserů), ne efekt scoreboardu. Bez splnění tohoto kroku se plná matice nespouští.
 
 ### A.4 Reprodukovatelnost — Rollout Cards standard (rozšiřuje §3)
-Změna reporting rules dokáže pohnout skóre o ~20 p.b. Pro CommitBench proto adoptuj Rollout Cards: ukládej (1) rollout record — surové logy, přesná pozorování, volání nástrojů, časování; (2) views — skripty extrakce hodnocených částí trajektorie; (3) reporting rules + drops manifest — agregační kód a deklaraci zahozených běhů. Vše verzované v `bench/`.
+Změna reporting rules dokáže pohnout skóre o ~20 p.b. Pro EntitleBench proto adoptuj Rollout Cards: ukládej (1) rollout record — surové logy, přesná pozorování, volání nástrojů, časování; (2) views — skripty extrakce hodnocených částí trajektorie; (3) reporting rules + drops manifest — agregační kód a deklaraci zahozených běhů. Vše verzované v `bench/`.
 
-### A.5 Kontaminace — design CommitBench (rozšiřuje §3.2 held-out disciplínu)
+### A.5 Kontaminace — design EntitleBench (rozšiřuje §3.2 held-out disciplínu)
 - **Search-Time Contamination:** eval běhy v sandboxu s denylistem (HuggingFace, GitHub, fóra) — agent s web přístupem by mohl dohledat scénáře benchmarku. Pro fázi 2 povinné.
-- **Game Engine Separation** (TCG-Bench vzor) pro publikaci: engine, pravidla a generátor scénářů CommitBench jsou veřejné; konkrétní held-out instance eval setu zůstávají privátní (serverové/na vyžádání). Řeší napětí „open source benchmark" vs. „nekontaminovaný benchmark".
+- **Game Engine Separation** (TCG-Bench vzor) pro publikaci: engine, pravidla a generátor scénářů EntitleBench jsou veřejné; konkrétní held-out instance eval setu zůstávají privátní (serverové/na vyžádání). Řeší napětí „open source benchmark" vs. „nekontaminovaný benchmark".
 - **Concept drift audit:** API modely se tiše mění; fixní zlatá sada se přeběhne při každém minor release a před každým publikovaným číslem.
 
 ### A.6 Náklady — REFINE §3.4
@@ -59,7 +59,7 @@ Převezmi ověřené vzory:
 Hamblin/Mackenzie **Commitment Stores** z formálních dialogových her (+ DGDL/DGEP platforma) jsou přímý předchůdce scoreboardu: závazek jako veřejná, testovatelná propozice (ne psychologické přesvědčení — řeší i Mooreův paradox), nemonotónní aktivní stav definovaný jako view nad immutable historií. To (a) validuje naši architekturu append-only log + generovaný scoreboard.md, (b) musí být citováno, jinak recenzent oprávněně namítne ignoranci 50 let literatury, (c) dává přesnou formulaci diferenciace: Scorekeeper = commitment store aplikovaný na LLM agenta, s dimenzí entitlement provenance a integrací do produkčního harnessu, což DGEP svět nemá.
 
 ## C. Backlog (P2) — nové položky
-xAIF export, PROV-JSON export, OTel emitter, Sankey pohled, Game Engine Separation infrastruktura pro publikaci CommitBench.
+xAIF export, PROV-JSON export, OTel emitter, Sankey pohled, Game Engine Separation infrastruktura pro publikaci EntitleBench.
 
 ## D. Akceptační kritéria — doplnění k §6
 7. Judge pipeline implementuje A.1 (cizí rodina, S8, style-blind, trajektoriální rubrika); volba judge modelu zapsána jako ADR.

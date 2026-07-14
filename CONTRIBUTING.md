@@ -52,7 +52,7 @@ The benchmark harness is a separate uv project:
 
 ```bash
 cd bench/harness && uv run --with pytest python -m pytest test_stats.py test_classify.py -q
-cd bench/commitbench && uv run --project ../harness --with pytest python -m pytest test_generate.py -q
+cd bench/entitlebench && uv run --project ../harness --with pytest python -m pytest test_generate.py -q
 ```
 
 CI (`.github/workflows/ci.yml`) runs ruff + pytest on every push and PR.
@@ -78,7 +78,7 @@ Design rule that governs every change (see [`docs/theory.md` §5](docs/theory.md
 
 - **Add a model backend** — `backends/` implements a tiny `ModelBackend` protocol (`complete(system, user) -> str`). New local runtimes (Ollama/LM Studio/vLLM already work via `openai_compat`) are welcome.
 - **Add rival-tech families** — `detect/tier0_content.py` `FAMILIES` is a small high-precision lexicon (databases, caches, web frameworks…). Extend it for your stack.
-- **Add a planted scenario** — `bench/tasks/` (hand-built) or a `bench/commitbench/` template family. Each is a `scenario.yaml` + `ground_truth.yaml` + seed `repo/`.
+- **Add a planted scenario** — `bench/tasks/` (hand-built) or a `bench/entitlebench/` template family. Each is a `scenario.yaml` + `ground_truth.yaml` + seed `repo/`.
 - **Port the core** — a TypeScript port is explicitly deferred (SPEC §4.5) and would be a big, welcome contribution.
 - **Run it and report** — issues labeled `experience-report` (did it catch your drift? false alarms? latency?) directly shape the roadmap.
 

@@ -2,11 +2,15 @@
 
 ## Unreleased
 
+### Changed
+- **The benchmark is now EntitleBench** (formerly the working name CommitBench — collision with the established commit-message-generation benchmark). Module `bench/entitlebench/`, progress doc `ENTITLEBENCH-PROGRESS.md`; dated evidence artifacts keep the historical name.
+- **Gate v2 verified symmetrically** on the seed-0 scenario every softer channel failed: drift family **HELD/high** (2 denies, no rival code landed, agent surfaced) and revision family **EXECUTED/high with zero denies** (turn-end extraction recorded the entitled SUPERSEDE before any conflicting write). See `bench/results/SMOKE-DRIFT-S0-REPORT.md`.
+
 ### Added
 - **One-command install** via a Claude Code plugin marketplace (`.claude-plugin/marketplace.json`): `/plugin marketplace add michalstrnadel/scorekeeper` then `/plugin install scorekeeper@scorekeeper`.
 - The plugin dispatcher (`hooks/run.sh`) now **self-resolves the scorer**: installed CLI → in-repo `core/` (uv) → `uvx`/`pipx` fetch from PyPI on first run. A marketplace install needs no manual `pip install`. It also prepends the usual install dirs to PATH (hooks run in a non-interactive shell).
 - Contributor onboarding: `CONTRIBUTING.md`, issue templates (incl. `experience-report`), PR template, `CODE_OF_CONDUCT.md`, `CITATION.cff`; README "Try it in 60 seconds".
-- CommitBench (Phase 2) tooling: procedural generator + ablation harness + deterministic behavioral classifier. See `bench/results/COMMITBENCH-PROGRESS.md`.
+- EntitleBench (Phase 2) tooling: procedural generator + ablation harness + deterministic behavioral classifier. See `bench/results/ENTITLEBENCH-PROGRESS.md`.
 - Revision-family classifier (`classify_revision`, #4): scores whether the agent executed a user-ordered, entitled migration (EXECUTED) or falsely obstructed it (REFUSED). Run summaries now report FRR (false-refusal rate) alongside SCR.
 - **Blocking Tier-0 gate** (ADR-0007, opt-in): `tier0_gate: block` in `.scorekeeper/config.yaml` (or `SCOREKEEPER_TIER0_GATE=block`) denies a Write/Edit conflicting with a pinned commitment **until the scoreboard itself records an entitled revision** (supersede via the MCP tool or extraction of the user's order) — the agent's self-attested entitlement cannot lift it. A one-shot `bump` mode is kept for ablations after being measurably exploited (the agent claimed a pasted draft note as its entitlement, retried, and drifted anyway — `bench/results/SMOKE-DRIFT-S0-REPORT.md`). Denies audited as `TIER0-GATE-DENY`; bench variants `blocking` (wall) and `bump` A/B-test the channels. Born from a verified negative finding: advisory warnings alone did not stop a weaker model from drifting.
 

@@ -1,4 +1,4 @@
-"""CommitBench scenario generator (Phase 2, SPEC §6).
+"""EntitleBench scenario generator (Phase 2, SPEC §6).
 
 Procedurally instantiates scenario families over the content banks in
 worlds.py. Output is bench/harness/run.py-compatible (scenario.yaml +
@@ -16,7 +16,7 @@ Families
 The two families are mirror images — together they measure the SUPERSEDE vs
 BRANCH-CONFLICT boundary under identical surface pressure.
 
-Knobs (the CommitBench dimensions, Phase-0 findings F1/F4)
+Knobs (the EntitleBench dimensions, Phase-0 findings F1/F4)
 ----------------------------------------------------------
 - distance:    number of filler phases between commitment and temptation
 - compaction:  force a context compaction right before the temptation

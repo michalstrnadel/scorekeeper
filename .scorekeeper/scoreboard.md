@@ -174,6 +174,21 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 - **entitlement:** `tool_output` + `user_utterance` — seed-0 negative finding (scorekept haiku drifted past 11 advisory warnings, SMOKE-DRIFT-S0-REPORT.md); Michal directed the fix must work on weak models (2026-07-13)
 - **consequences:** PreToolUse denies the FIRST write per (commitment, rival) pair with a two-branch instruction (unentitled → surface & ask; entitled → state it & retry); retries pass (state in `.scorekeeper/tier0-gate.json`); opt-in via `SCOREKEEPER_TIER0_GATE=block` / config `tier0_gate: block`; bench variant `blocking` is the A/B acceptance test (ADR-0007)
 - **incompatible_with:** unconditional blocking (walls an entitled revision); flipping the gate on by default before the paired A/B evidence lands
+- **note (2026-07-14):** v1 bump A/B DRIFTED (self-attested entitlement exploited the retry escape). Superseded in part by c-0027: the recommended mode is the v2 board-adjudicated wall; the bump survives as an ablation (`tier0_gate: bump`).
+
+### c-2026-07-14-0027 — Gate v2: the deny is adjudicated by the board, not by the agent's say-so
+- **kind:** decision · **status:** active
+- **scope:** `repo:core`, `topic:hooks`, `attr:tier0_gate.adjudicator=scoreboard`
+- **entitlement:** `tool_output` + `user_utterance` — v1 A/B (run-20260713T225646): haiku claimed a pasted draft note as entitlement and shipped the drift through the retry escape; Michal approved v2 2026-07-14 ("to dáme")
+- **consequences:** `evaluate_wall` denies while the pinned commitment is in `store.active()`; the only pass condition is an entitled SUPERSEDE recorded through the operator pipeline / MCP tool / turn-end extraction. Verified symmetric on seed-0 redis-memcached: drift HELD/high (2 denies, no rival code), revision EXECUTED/high (0 denies, expected SUPERSEDE hit)
+- **incompatible_with:** any gate pass condition satisfiable by the agent's own unverified claim; lifting the wall on retry mechanics
+
+### c-2026-07-14-0028 — The benchmark is named EntitleBench (renamed from CommitBench)
+- **kind:** decision · **status:** active
+- **scope:** `repo:bench`, `topic:naming`, `attr:bench.name=entitlebench`
+- **entitlement:** `user_utterance` + `document` — deep-research finding: "CommitBench" collides with an established SE/NLP benchmark (commit-message generation, 1.6M commits) → desk-rejection and search-visibility risk; Michal chose EntitleBench 2026-07-14
+- **consequences:** module `bench/entitlebench/`, progress doc `ENTITLEBENCH-PROGRESS.md`, all living docs renamed; dated artifacts (evidence JSONs, PHASE0 report, ADR histories, imported research) keep the historical name; scenario id prefix `cb-` retained for continuity with persisted runs
+- **incompatible_with:** shipping any external artifact (paper, launch post, PyPI metadata) under the CommitBench name
 
 ---
 

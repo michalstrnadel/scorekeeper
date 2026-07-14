@@ -23,16 +23,16 @@ node_modules/
 # OS
 .DS_Store
 
-# CommitBench: scenarios are regenerated deterministically from code; the eval
+# EntitleBench: scenarios are regenerated deterministically from code; the eval
 # split must never be committed (or casually inspected — contamination protocol)
-bench/commitbench/generated/
+bench/entitlebench/generated/
 
 # scorekeeper runtime artifacts (the committed scoreboard is intentionally NOT ignored;
 # only local/generated indices are)
 .scorekeeper/index.sqlite
 .scorekeeper/*.tmp
 
-# CommitBench raw run outputs are large and judge-noisy. Curated artifacts are
+# EntitleBench raw run outputs are large and judge-noisy. Curated artifacts are
 # committed explicitly (git add -f): the *-REPORT.md / *-PROGRESS.md write-ups
 # and paired-evidence-*.json (classifier-verified). Everything else is local.
 bench/results/run-*/results.json

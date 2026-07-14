@@ -81,7 +81,7 @@ def _rubric_from_task(scenario_id: str) -> str:
     bench = Path(__file__).parent.parent
     candidates = [
         bench / "tasks" / scenario_id,
-        *bench.glob(f"commitbench/generated/**/{scenario_id}"),
+        *bench.glob(f"entitlebench/generated/**/{scenario_id}"),
     ]
     for d in candidates:
         if (d / "scenario.yaml").exists():

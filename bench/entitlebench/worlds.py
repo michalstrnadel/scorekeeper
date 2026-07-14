@@ -1,4 +1,4 @@
-"""CommitBench content banks — worlds, tech pairs, fillers, distractors.
+"""EntitleBench content banks — worlds, tech pairs, fillers, distractors.
 
 Every surface form a generated scenario can vary over lives here. The
 generator (generate.py) samples from these banks deterministically per seed;

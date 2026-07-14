@@ -66,7 +66,7 @@ blocking channel, measured symmetrically.**
 
 ## Benchmark naming — action required
 
-**"CommitBench" collides with an established benchmark** (commit-message
+**"EntitleBench" collides with an established benchmark** (commit-message
 generation, 1.6 M commits, heavily cited in SE/NLP). Publishing under the same
 name invites desk rejection and kills search visibility. **Rename before any
 external artifact ships.** Candidates from the research: NormBench, ScoreEval,
