@@ -9,7 +9,7 @@
 **A normative overlay that gives long-running LLM agents a scoreboard of their own commitments — not just a memory of what happened.**
 
 ![status: Phase 2](https://img.shields.io/badge/status-Phase%202%20·%20DeonticBench-brightgreen)
-![tests](https://img.shields.io/badge/tests-126%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-155%20passing-brightgreen)
 [![PyPI](https://img.shields.io/pypi/v/scorekeeper)](https://pypi.org/project/scorekeeper/)
 [![Downloads](https://static.pepy.tech/badge/scorekeeper/month)](https://pepy.tech/project/scorekeeper)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
@@ -38,7 +38,7 @@
 /plugin install scorekeeper@scorekeeper
 ```
 
-Five hooks attach a live scoreboard; watch `.scorekeeper/scoreboard.md` grow as you work. The extractor uses your own `claude` CLI by default — no API key needed.
+Six hooks attach a live scoreboard; watch `.scorekeeper/scoreboard.md` grow as you work. The extractor uses your own `claude` CLI by default — no API key needed.
 
 **Just the mechanism, no Claude Code** (needs [uv](https://docs.astral.sh/uv/)):
 
@@ -158,7 +158,7 @@ to try it** — see below. See [CHANGELOG](CHANGELOG.md).
 | Path | What |
 |---|---|
 | `core/` | model + store + backends + extractor + detectors + operators + CLI + MCP server (Python, [PyPI: `scorekeeper`](core/README.md)) |
-| `claude-code-plugin/` | Primary integration: 5 Claude Code hooks (`claude --plugin-dir ./claude-code-plugin`) |
+| `claude-code-plugin/` | Primary integration: 6 Claude Code hooks (`claude --plugin-dir ./claude-code-plugin`) |
 | `mcp/` | `scorekeeper-mcp` docs — the server lives in core (`pip install "scorekeeper[mcp]"`) |
 | `demo/` | ~20-second mechanism demo (`drift_demo.py`) + the README GIF tape |
 | `bench/` | planted acceptance scenarios + Agent-SDK eval harness; DeonticBench in Phase 2 |

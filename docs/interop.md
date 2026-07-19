@@ -2,8 +2,9 @@
 
 > Addendum-1 §B.1. The commitment model has precise counterparts in two mature
 > standards — we map onto them instead of inventing an ontology. This document is
-> the P1 deliverable; the exporters (`scorekeeper export --format xaif|prov-json`)
-> land in Phase 1–2.
+> the mapping deliverable; the exporters (`scorekeeper export --format xaif|prov-json`)
+> are **not implemented yet** — they sit in the backlog (Addendum-1 §C) and no
+> `export` subcommand exists in the CLI today.
 
 ## 1. xAIF (Argument Interchange Format, JSON serialization)
 

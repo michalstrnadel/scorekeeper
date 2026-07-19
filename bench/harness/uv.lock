@@ -736,7 +736,7 @@ wheels = [
 
 [[package]]
 name = "scorekeeper"
-version = "0.1.1"
+version = "0.2.0"
 source = { editable = "../../core" }
 dependencies = [
     { name = "pydantic" },
@@ -746,18 +746,20 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", marker = "extra == 'anthropic'", specifier = ">=0.40" },
-    { name = "httpx", marker = "extra == 'openai'", specifier = ">=0.27" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.2" },
     { name = "pydantic", specifier = ">=2.7" },
     { name = "pyyaml", specifier = ">=6.0" },
 ]
-provides-extras = ["anthropic", "openai", "mcp"]
+provides-extras = ["anthropic", "mcp"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "mcp", specifier = ">=1.2" },
+    { name = "mypy", specifier = ">=1.10" },
     { name = "pytest", specifier = ">=8.0" },
+    { name = "pytest-cov", specifier = ">=5.0" },
     { name = "ruff", specifier = ">=0.6" },
+    { name = "types-pyyaml", specifier = ">=6.0" },
 ]
 
 [[package]]

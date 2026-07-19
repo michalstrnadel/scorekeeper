@@ -31,10 +31,11 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 - **scope:** `repo:claude-code-plugin`, `topic:architecture`
 - **entitlement:** `document` — SPEC §4.1.1, §4.5
 
-### c-2026-07-08-0005 — Storage is transparent: Markdown + YAML records + SQLite index, git-committable
+### c-2026-07-08-0005 — Storage is transparent: Markdown + YAML records, git-committable (refined 2026-07-19)
 - **kind:** decision · **status:** active
 - **scope:** `topic:storage`
 - **entitlement:** `document` — SPEC §4.1.5, §4.6
+- **refinement (2026-07-19):** the SQLite index named in the original claim was never built (audit finding — an unbacked sub-claim on our own board); YAML-glob reads are ~ms at current scale. The index stays a possible optimization (`.gitignore` already reserves `index.sqlite`), not a commitment.
 - **incompatible_with:** an opaque/binary-only store
 
 ### c-2026-07-08-0006 — Phase 0 scope is decisions in coding tasks only

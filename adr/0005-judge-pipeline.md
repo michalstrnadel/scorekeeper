@@ -60,3 +60,14 @@ recorded as scoreboard c-0017 superseding c-0012.
   not the model's brand, is the quality criterion. Evidence so far: the anchored rubric
   scored mean=10.0 identically on all 4 completed passes across two Gemini models;
   the local judge must clear the same bar.
+
+## Amendment (2026-07-19)
+
+Two deployment defaults moved after the revision above, protocol unchanged:
+
+- Default judge model is `qwen3-judge` — a qwen3:**4b** Modelfile tuned for the
+  rubric (`bench/harness/judge.py:DEFAULT_JUDGE_MODEL`) — not `qwen3:8b`;
+  8b remains a supported override via `SCOREKEEPER_JUDGE_MODEL`.
+- Votes default to **1 for local backends** (deterministic at temp 0) and 3
+  (median) for cloud backends (`judge.py`), so "median-of-3" applies to the
+  cloud path only.

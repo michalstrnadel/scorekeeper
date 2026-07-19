@@ -25,3 +25,13 @@ Extraction recall and detector FPR are **measured per-backend** and reported per
 
 - Reference local model chosen empirically in Phase 0 (candidates: Qwen3-8B, Llama-3.1-8B via Ollama).
 - The backend abstraction is also what makes the eval harness's judge model swappable.
+
+## Amendment (2026-07-19)
+
+Shipped protocol differs from the sketch above: `complete(system, user) -> str`
+returning raw model text, with JSON parsing + schema validation (and the
+one-shot repair retry) in the callers (`backends/base.py`, `extract.py`,
+`detect/tier1.py`) — not a `schema` parameter on the protocol. Keeping the
+protocol surface minimal is what lets a backend be four lines; validation is
+policy, so it lives with the call sites. `docs/api.md` documents the shipped
+signature.

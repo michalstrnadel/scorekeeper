@@ -35,7 +35,7 @@ Or, working from a clone (dev):
 claude --plugin-dir ./claude-code-plugin
 ```
 
-Five hooks attach: the digest injects your commitments each turn (and survives context compaction), a millisecond content scan flags rival-tech edits, and turn-end extraction records new commitments. Watch `.scorekeeper/scoreboard.md` grow. **This is the path we most want feedback on** — open an issue with what it caught, what it missed, and what annoyed you.
+Six hooks attach: the digest injects your commitments at session start (and survives context compaction), a millisecond content scan flags rival-tech edits, the opt-in Tier-0 gate can block unentitled rival writes outright, and turn-end extraction records new commitments. Watch `.scorekeeper/scoreboard.md` grow. **This is the path we most want feedback on** — open an issue with what it caught, what it missed, and what annoyed you.
 
 ## Dev setup
 
@@ -69,7 +69,8 @@ scripts/e2e.sh live` runs the live extractor/detector evals against it.
 
 CI (`.github/workflows/ci.yml`) runs the same stages as jobs: `core` on a
 3.11/3.12/3.13 matrix (ruff + mypy + pytest with a coverage floor), plus `docs`,
-`plugin`, `bench`, and `smoke` — each invoking one `scripts/e2e.sh` stage. Note
+`plugin`, `bench`, and `smoke` — each a single `scripts/e2e.sh` invocation
+(`smoke` runs the `demo` and `build` stages together). Note
 the docs job checks internal links against **git-tracked** files: a link to
 something untracked (e.g. `drafts/`) works locally but 404s on GitHub, so it
 fails the check.
@@ -82,14 +83,14 @@ core/src/scorekeeper/
   store.py       transparent storage: YAML records + log.jsonl + scoreboard.md + digest
   extract.py     turn -> commitments (isolated LLM call, narrow schema)
   detect/        tier0.py (attr collisions, no LLM) · tier1.py (material incompatibility, LLM)
-                 tier0_content.py (mid-turn rival-tech scan)
+                 tier0_content.py (mid-turn rival-tech scan) · tier0_gate.py (blocking gate, ADR-0007)
   operators.py   ASSERT/SUPPORT/REFINE/SUPERSEDE/BRANCH-CONFLICT/CHALLENGE — the core distinction
   backends/      pluggable ModelBackend: openai_compat (local OSS) · anthropic_api · claude_cli
-  cli.py         hook handlers (SessionStart/PostToolUse/Stop/UserPromptSubmit/PreCompact) + commands
+  cli.py         hook handlers (SessionStart/PreToolUse/PostToolUse/Stop/UserPromptSubmit/PreCompact) + commands
   mcp_server.py  MCP tools over the store
 ```
 
-Design rule that governs every change (see [`docs/theory.md` §5](docs/theory.md) and [ADR-0001…0006](adr/)): the scoreboard is **scaffolded, not extended** — maintained by deterministic hooks and an isolated scorer *outside the agent's authority*. The agent never edits its own board at runtime. A PR that lets it do so won't be merged; that's the thesis.
+Design rule that governs every change (see [`docs/theory.md` §5](docs/theory.md) and [ADR-0001…0007](adr/)): the scoreboard is **scaffolded, not extended** — maintained by deterministic hooks and an isolated scorer *outside the agent's authority*. The agent never edits its own board at runtime. A PR that lets it do so won't be merged; that's the thesis.
 
 ## Good places to start
 
