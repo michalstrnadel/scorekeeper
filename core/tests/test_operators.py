@@ -230,3 +230,52 @@ def test_tier0_agreement_supports(tmp_path):
     assert result.conflicts == []
     assert len(result.supported) == 1
     assert len(store.active()) == 2
+
+
+def test_tier0_multi_key_agreement_supports_once(tmp_path):
+    """Regression: agreement on N keys of the same commitment logged N SUPPORTs
+    (the dedup guard tested a set nothing had been added to)."""
+    store = Store(tmp_path)
+    stack = ext(
+        "Stack: PostgreSQL 16 with Redis caching.",
+        scope=["attr:persistence.primary_db=postgresql", "attr:caching.backend=redis"],
+    )
+    apply(store, [stack])
+    restack = ext(
+        "Sticking with PostgreSQL and Redis.",
+        scope=["attr:persistence.primary_db=postgresql", "attr:caching.backend=redis"],
+    )
+    result = apply(store, [restack])
+    assert len(result.supported) == 1  # one SUPPORT per commitment, not per key
+
+
+def test_agreement_on_one_key_does_not_mask_collision_on_another(tmp_path):
+    store = Store(tmp_path)
+    stack = ext(
+        "Stack: PostgreSQL 16 with Redis caching.",
+        scope=["attr:persistence.primary_db=postgresql", "attr:caching.backend=redis"],
+    )
+    apply(store, [stack])
+    half_drift = ext(
+        "Keep PostgreSQL; cache in Memcached.",
+        scope=["attr:persistence.primary_db=postgresql", "attr:caching.backend=memcached"],
+        source="prior_inference",
+    )
+    result = apply(store, [half_drift])
+    assert len(result.supported) == 1
+    assert len(result.conflicts) == 1
+
+
+def test_extractor_refs_survive_materialization(tmp_path):
+    """Regression: _materialize overwrote extractor-provided refs with the
+    caller's refs instead of merging."""
+    store = Store(tmp_path)
+    e = ExtractedCommitment(
+        claim="The primary database is PostgreSQL 16.",
+        kind="decision",
+        scope=["topic:persistence"],
+        entitlement={"source": "document", "note": "t", "refs": ["adr/0001-db.md"]},
+    )
+    result = apply(store, [e], refs=["transcript:msg-3"])
+    refs = store.load(result.asserted[0]).entitlement.refs
+    assert refs == ["adr/0001-db.md", "transcript:msg-3"]

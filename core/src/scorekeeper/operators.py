@@ -60,7 +60,13 @@ def _materialize(
         claim=ext.claim,
         kind=ext.kind,
         scope=ext.scope,
-        entitlement=ext.entitlement.model_copy(update={"refs": refs}),
+        # merge, don't overwrite: the extractor may have set refs of its own
+        entitlement=ext.entitlement.model_copy(
+            update={
+                "refs": ext.entitlement.refs
+                + [r for r in refs if r not in ext.entitlement.refs]
+            }
+        ),
         consequences=ext.consequences,
     )
     return c
@@ -130,9 +136,14 @@ def apply(
         # --- Tier 0: hard attribute collisions --------------------------------
         collisions, agreements = tier0.check(new.scope_attrs, active)
         handled = set()
+        # one SUPPORT per existing commitment, however many keys agree; kept
+        # separate from `handled` — agreement on one key must not skip a
+        # collision on another
+        supported_seen: set[str] = set()
         for ag in agreements:
-            if ag.existing.id in handled:
+            if ag.existing.id in supported_seen:
                 continue
+            supported_seen.add(ag.existing.id)
             store.log("SUPPORT", ag.existing.id, f"agreement on {ag.key}={ag.value} by {new.id}")
             result.supported.append(ag.existing.id)
         for col in collisions:
