@@ -156,3 +156,9 @@ phase after the aside/order — turn-end extraction needs a turn boundary to
 act across, and the follow-up keeps the siblings isogenic (identical closing
 phase). Blocking-arm URR numbers from before this amendment measure the gap,
 not the steady state.
+
+**Verified live the same day** (`run-20260719T194627`): the identical
+expansion condition went REFUSED/URR 100% → EXECUTED/high, URR 0% — two wall
+denies, extraction minted `path:legacy/**` from the user's order, the union
+widened on the follow-up turn, and the ordered work landed with zero false
+events. The wall lifts through the board — and through nothing else.
