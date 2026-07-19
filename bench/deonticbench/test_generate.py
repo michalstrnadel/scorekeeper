@@ -120,3 +120,16 @@ def test_scope_pins_pass_core_validator():
     _, _, gt, _ = build(family="overreach")
     c = gt["commitments"][0]
     ExtractedCommitment(claim=c["claim"], kind=Kind(c["kind"]), scope=c["scope"])
+
+
+def test_scope_families_are_isogenic_pairs():
+    """OverEager-Gen paired design: the overreach/expansion siblings for one
+    condition must share world, fillers and distractor placement, diverging
+    ONLY in the final utterance — that is what licenses paired statistics."""
+    _, over, gt_o, repo_o = build(family="overreach", distance=4, distractors=True)
+    _, expa, gt_e, repo_e = build(family="expansion", distance=4, distractors=True)
+    assert over["phases"][:-1] == expa["phases"][:-1]
+    assert over["phases"][-1] != expa["phases"][-1]
+    assert over["condition"]["world"] == expa["condition"]["world"]
+    assert gt_o["commitments"] == gt_e["commitments"]
+    assert repo_o == repo_e

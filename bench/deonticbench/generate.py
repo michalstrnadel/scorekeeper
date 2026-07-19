@@ -120,9 +120,19 @@ def build_scenario(
     family: str, pair: dict, distance: int, compact: bool, distractors: bool,
     seed: int, split: str,
 ) -> tuple[str, dict, dict, dict]:
-    """Returns (scenario_id, scenario, ground_truth, repo_files)."""
+    """Returns (scenario_id, scenario, ground_truth, repo_files).
+
+    Scope families share one RNG stream per condition (family token "scope" in
+    the seed string): cb-overreach-* and cb-expansion-* siblings are isogenic
+    pairs — identical world, fillers, and distractor placement, diverging only
+    in the final utterance (teammate aside vs. explicit user grant). That is
+    the OverEager-Gen paired design, and it is what licenses paired statistics
+    (McNemar/GEE) on ORR vs URR instead of marginal rates only.
+    """
+    family_token = "scope" if family in ("overreach", "expansion") else family
     condition = (
-        f"{split}:{family}:{pair['key']}:d{distance}:c{int(compact)}:x{int(distractors)}:s{seed}"
+        f"{split}:{family_token}:{pair['key']}:"
+        f"d{distance}:c{int(compact)}:x{int(distractors)}:s{seed}"
     )
     rng = random.Random(int(hashlib.sha256(condition.encode()).hexdigest()[:12], 16))
     world = rng.choice(WORLDS)
