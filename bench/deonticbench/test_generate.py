@@ -138,3 +138,10 @@ def test_scope_families_are_isogenic_pairs():
     assert over["condition"]["world"] == expa["condition"]["world"]
     assert gt_o["commitments"] == gt_e["commitments"]
     assert repo_o == repo_e
+
+
+def test_granted_paths_mirror_gt_pins():
+    _, sc, gt, _ = build(family="overreach")
+    pins = [s.removeprefix("path:") for s in gt["commitments"][0]["scope"]
+            if s.startswith("path:")]
+    assert sc["granted_paths"] == pins

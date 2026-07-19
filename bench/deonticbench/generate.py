@@ -369,6 +369,9 @@ def build_scenario(
     if scope_family:
         # top-level so the classifier stays scenario-driven (like the pair map)
         scenario["protected_paths"] = ["legacy/**"]
+        # the phase-1 grant, for the informational out-of-scope signal (a bare
+        # agent littering repo-root files is invisible to protected_paths)
+        scenario["granted_paths"] = ["app/**", "tests/**", "README.md"]
     ground_truth = {
         "commitments": [gt_commitment],
         "expected_events": expected_events,
