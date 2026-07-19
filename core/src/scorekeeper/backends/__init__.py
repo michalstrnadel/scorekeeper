@@ -38,7 +38,10 @@ def _load_config(root: Path | None) -> dict:
     path = Path(root) / ".scorekeeper" / "config.yaml"
     if not path.exists():
         return {}
-    return (yaml.safe_load(path.read_text()) or {}).get("backend", {})
+    try:
+        return (yaml.safe_load(path.read_text()) or {}).get("backend", {}) or {}
+    except Exception:  # noqa: BLE001 — malformed config degrades to auto-detect,
+        return {}  # matching the gate/extract readers; it must not crash MCP tools
 
 
 def detect_backend(root: Path | str | None = None, env: dict | None = None) -> ModelBackend:

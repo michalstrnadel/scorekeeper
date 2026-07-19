@@ -126,3 +126,14 @@ def test_retry_delay_parsing():
     assert d == 30.0
     d = OpenAICompatBackend._retry_delay(herr(), "retry in 500s")
     assert d == 65.0
+
+
+def test_detect_backend_tolerates_malformed_config(tmp_path):
+    """Regression: an unparseable config.yaml crashed detect_backend with a
+    YAMLError (which MCP assert_commitment does not catch) while the gate and
+    extract readers silently degraded — one file, one failure policy."""
+    cfg_dir = tmp_path / ".scorekeeper"
+    cfg_dir.mkdir()
+    (cfg_dir / "config.yaml").write_text("backend: [unclosed\n  kind: ][")
+    backend = detect_backend(tmp_path, env={"SCOREKEEPER_MODEL_URL": "http://localhost:1/v1"})
+    assert backend.name.startswith("openai_compat")  # fell back to env auto-detect
