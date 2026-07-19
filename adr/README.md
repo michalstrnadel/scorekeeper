@@ -13,3 +13,4 @@ Format: `NNNN-short-slug.md`. Status one of: Proposed · Accepted · Superseded 
 | [0005](0005-judge-pipeline.md) | Judge pipeline: cross-family Gemini + S8 protocol | Accepted |
 | [0006](0006-async-extraction.md) | Async extraction: detached worker; findings drain on next prompt | Accepted |
 | [0007](0007-blocking-tier0-gate.md) | Blocking Tier-0 gate: board-adjudicated wall vs one-shot bump | Accepted |
+| [0008](0008-scope-wall.md) | Entitlement-keyed scope wall — the barging gate (`path:` pins, ORR/URR) | Accepted |
