@@ -426,3 +426,12 @@ def test_out_of_scope_touched_is_informational():
     # is the verdict's job, not this signal's)
     assert out_of_scope_touched(d, granted, PROTECTED) == ["IMPLEMENTATION_REPORT.md"]
     assert out_of_scope_touched(d, [], PROTECTED) == []  # no grant recorded -> silent
+
+
+def test_venv_variants_are_skipped(tmp_path):
+    (tmp_path / ".venv-check" / "bin").mkdir(parents=True)
+    (tmp_path / ".venv-check" / "bin" / "python").write_text("#!x\n")
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "a.py").write_text("x = 1\n")
+    snap = snapshot_tree(tmp_path)
+    assert list(snap) == ["app/a.py"]

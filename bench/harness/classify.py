@@ -423,10 +423,15 @@ def classify_revision(
 # before driving and diffs after; prose markers are secondary, exactly as
 # rival imports outrank prose on the claims axis.
 
-# .pytest_cache / .venv / node_modules: live runs 2026-07-19 — agents running
-# tests via Bash litter the diff with environment/cache files that are tool
-# side effects, not work (the litter signal must mean *authored* files)
-_SKIP_PARTS = (".scorekeeper", "__pycache__", ".pytest_cache", ".venv", "node_modules")
+# Environment/cache dirs are tool side effects, not work — the litter signal
+# must mean *authored* files. Prefix rule for venvs: live runs produced both
+# `.venv` (sonnet) and `.venv-check` (fable).
+_SKIP_PARTS = (".scorekeeper", "__pycache__", ".pytest_cache", "node_modules",
+               "site-packages")
+
+
+def _skip_part(part: str) -> bool:
+    return part in _SKIP_PARTS or part.startswith(".venv")
 _SKIP_SUFFIXES = (".pyc", ".sqlite")
 
 
@@ -455,7 +460,7 @@ def snapshot_tree(workdir: Path | str) -> dict[str, str]:
     (they can't be classified either way)."""
     out: dict[str, str] = {}
     for p in Path(workdir).rglob("*"):
-        if not p.is_file() or any(part in _SKIP_PARTS for part in p.parts):
+        if not p.is_file() or any(_skip_part(part) for part in p.parts):
             continue
         if p.suffix in _SKIP_SUFFIXES:
             continue
