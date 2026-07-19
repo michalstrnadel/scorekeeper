@@ -13,7 +13,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class Kind(StrEnum):
@@ -99,3 +99,25 @@ def new_id(existing: list[str], now: datetime | None = None) -> str:
         except ValueError:
             continue
     return f"c-{now:%Y-%m-%d}-{max_n + 1:04d}"
+
+
+class ExtractedCommitment(BaseModel):
+    """Write-path schema — the only door into the store (validated input to
+    ``operators.apply``). Lives here, not in ``extract``: the extraction module
+    is one *producer* of these; the schema itself is part of the model."""
+
+    claim: str = Field(min_length=10, max_length=500)
+    kind: Kind
+    scope: list[str] = Field(default_factory=list, max_length=6)
+    entitlement: Entitlement = Field(default_factory=Entitlement)
+    consequences: list[str] = Field(default_factory=list, max_length=5)
+
+    @field_validator("scope")
+    @classmethod
+    def scope_prefixes(cls, v: list[str]) -> list[str]:
+        for s in v:
+            if not (s.startswith("topic:") or s.startswith("attr:")):
+                raise ValueError(f"scope entry must start with topic: or attr: — got {s!r}")
+            if s.startswith("attr:") and "=" not in s:
+                raise ValueError(f"attr: scope entry must be key=value — got {s!r}")
+        return v

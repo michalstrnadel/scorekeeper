@@ -10,10 +10,10 @@ logged, never crashes the hook).
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, ValidationError
 
 from .backends.base import BackendError, JSONParseError, ModelBackend, parse_json_object
-from .model import Entitlement, EntitlementSource, Kind
+from .model import EntitlementSource, ExtractedCommitment  # re-export: historical import site
 
 EXTRACTION_SYSTEM = """\
 You are a commitment extractor for a coding agent's deontic scoreboard. You read one \
@@ -60,26 +60,6 @@ service), suffix the attr key with that segment: attr:caching.backend.dev=memory
 coexists with attr:caching.backend.prod=redis and supersedes NEITHER. A bare key \
 (attr:caching.backend=redis) means the project-wide / production choice.
 """
-
-
-class ExtractedCommitment(BaseModel):
-    """Write-path schema — the only door into the store."""
-
-    claim: str = Field(min_length=10, max_length=500)
-    kind: Kind
-    scope: list[str] = Field(default_factory=list, max_length=6)
-    entitlement: Entitlement = Field(default_factory=Entitlement)
-    consequences: list[str] = Field(default_factory=list, max_length=5)
-
-    @field_validator("scope")
-    @classmethod
-    def scope_prefixes(cls, v: list[str]) -> list[str]:
-        for s in v:
-            if not (s.startswith("topic:") or s.startswith("attr:")):
-                raise ValueError(f"scope entry must start with topic: or attr: — got {s!r}")
-            if s.startswith("attr:") and "=" not in s:
-                raise ValueError(f"attr: scope entry must be key=value — got {s!r}")
-        return v
 
 
 class ExtractionResult(BaseModel):

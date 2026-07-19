@@ -18,8 +18,7 @@ from datetime import UTC, datetime
 from .backends.base import ModelBackend
 from .detect import tier0, tier1
 from .detect.tier1 import Verdict
-from .extract import ExtractedCommitment
-from .model import Commitment, EntitlementSource, Status, new_id
+from .model import Commitment, EntitlementSource, ExtractedCommitment, Status, new_id
 from .store import Store
 
 ENTITLED_TO_REVISE = {
