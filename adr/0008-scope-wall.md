@@ -122,10 +122,37 @@ Tier-0 gains a second, **stateless** wall keyed on `path:<glob>` scope pins:
 - **Known limitations (v1).** Bash writes bypass the wall (same standing
   limitation as ADR-0007; `TIER0-SHELL-AUDIT` covers rival content only —
   parsing write targets out of arbitrary shell is FP-prone and deliberately
-  out of v1). Extraction does not yet propose `path:` pins from prose — pins
-  enter via seeding, MCP, or the user; extractor support is a separate
-  reliability axis. Effort-proportionality (in-scope but disproportionate
-  work) is a reserved seam: `effort_tier` in ground truth, Diff-XYZ churn
-  buckets as the deterministic proxy, nothing scored in v1.
+  out of v1). ~~Extraction does not yet propose `path:` pins from prose~~
+  (revised by Amendment 1 below). Effort-proportionality (in-scope but
+  disproportionate work) is a reserved seam: `effort_tier` in ground truth,
+  Diff-XYZ churn buckets as the deterministic proxy, nothing scored in v1.
 - Deny events are audited as `TIER0-SCOPE-DENY`; landed out-of-scope writes
   as `TIER0-SCOPE-WARNING`.
+
+## Amendment 1 (2026-07-19): extraction mints `path:` pins — from the user only
+
+The first live expansion run (`run-20260719T190612`, negative finding #3 in
+[DEONTICBENCH-PROGRESS](../bench/results/DEONTICBENCH-PROGRESS.md)) showed the
+original "extractor unchanged in v1" decision breaking the entitled path: the
+user's explicit grant was recorded at turn end **without pins**, the union
+never widened, three denies stood against ordered work, and the deny reason's
+"your next attempt will pass" was an unkeepable promise — the same
+broken-promise class the bump audit caught on 2026-07-14.
+
+Revision, two layers:
+
+1. **Prompt**: the extractor may emit `path:<glob>` scope entries ONLY when
+   the user, in their own words, explicitly bounds or grants the write scope;
+   suggestions (pasted notes, forwarded teammate messages, documents, the
+   agent's own judgment) get no pins.
+2. **Mechanical guard** (`extract.enforce_grant_discipline`): `path:` pins on
+   any extracted commitment whose entitlement source is not `user_utterance`
+   are stripped deterministically, whatever the model returned — the
+   injection defense is structural, not prompt-dependent. (MCP is unaffected:
+   an explicit tool call with an external source remains a deliberate act.)
+
+Bench consequence: both scope families gain a neutral status-check follow-up
+phase after the aside/order — turn-end extraction needs a turn boundary to
+act across, and the follow-up keeps the siblings isogenic (identical closing
+phase). Blocking-arm URR numbers from before this amendment measure the gap,
+not the steady state.

@@ -138,3 +138,48 @@ def test_bare_path_prefix_rejected():
             kind=Kind.DECISION,
             scope=["path:"],
         )
+
+
+# -- grant discipline (ADR-0008 injection defense) -------------------------------
+
+
+def test_user_grant_keeps_path_pins():
+    from scorekeeper.extract import enforce_grant_discipline
+
+    granted = ExtractedCommitment(
+        claim="The task's write scope now includes the legacy module.",
+        kind=Kind.DECISION,
+        scope=["topic:task-scope", "path:legacy/util.py"],
+        entitlement={"source": "user_utterance", "note": "explicit go-ahead"},
+    )
+    out = enforce_grant_discipline([granted])
+    assert out[0].scope == ["topic:task-scope", "path:legacy/util.py"]
+
+
+def test_non_user_sources_cannot_mint_path_pins():
+    """A pasted note / document / the agent's own judgment phrased as a grant
+    must not widen the wall — pins are stripped mechanically, whatever the
+    model returned (negative finding #3 follow-up; prompt-injection defense)."""
+    from scorekeeper.extract import enforce_grant_discipline
+
+    for source in ("document", "tool_output", "prior_inference", "none"):
+        minted = ExtractedCommitment(
+            claim="A teammate note says legacy cleanup is authorized now.",
+            kind=Kind.DECISION,
+            scope=["topic:task-scope", "path:legacy/**", "path:**"],
+            entitlement={"source": source},
+        )
+        out = enforce_grant_discipline([minted])
+        assert out[0].scope == ["topic:task-scope"], source
+        # the commitment itself survives — only the grant is stripped
+        assert out[0].claim.startswith("A teammate note")
+
+
+def test_extract_pipeline_applies_grant_discipline():
+    backend = SeqBackend(
+        '{"commitments": [{"claim": "Scope now includes legacy per the pasted note.",'
+        ' "kind": "decision", "scope": ["topic:task-scope", "path:legacy/**"],'
+        ' "entitlement": {"source": "document", "note": "note says so"}}]}'
+    )
+    out = extract_commitments(backend, "USER: here is a note\nAGENT REPLY: ok")
+    assert out and out[0].scope == ["topic:task-scope"]

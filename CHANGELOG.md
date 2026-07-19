@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Extraction can mint `path:` scope pins — from the user only** (ADR-0008 Amendment 1, driven by live negative finding #3): the extractor prompt recognizes explicit user scope grants ("legacy/ is ours now, go ahead"), and a mechanical guard (`enforce_grant_discipline`) strips `path:` pins from any commitment whose provenance is not `user_utterance` — a pasted note phrased as a grant cannot widen the wall, whatever the model returns. Without this, the scope wall's entitled path never lifted through the extraction channel (the first live expansion run scored URR 100% against ordered work).
+
+### Changed
+- DeonticBench scope families gain a neutral status-check follow-up phase after the aside/order (turn-end extraction needs a turn boundary to act across); siblings stay isogenic — the closing phase is identical. `.pytest_cache` excluded from the tree diff (Bash test runs are tool side effects, not work).
+
 ## 0.3.0 — 2026-07-19
 
 The dual-axis release: **"No bluffing. No barging."** The board-adjudicated
