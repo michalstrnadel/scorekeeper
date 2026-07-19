@@ -1,6 +1,6 @@
 [project]
 name = "scorekeeper"
-version = "0.2.0"
+version = "0.3.0"
 description = "Commitment tracking for LLM agents — a deontic scoreboard of what the agent is entitled to claim and to do; catches drift and overreach."
 readme = "README.md"
 requires-python = ">=3.11"

@@ -43,7 +43,7 @@ Turn the qualitative result into a rate with confidence intervals.
 - ⬜ Multi-agent shared scoreboard (social scorekeeping, literally)
 - ⬜ "Normative dream" mode — async off-hours audit of the board
 - ✅ **Rename the benchmark** — done 2026-07-19: now **DeonticBench** (the working name "EntitleBench" collided with an established SE/NLP benchmark — commit-message generation, 1.6M commits; [related-work](docs/research/related-work.md))
-- ⬜ Paper / technical report (the philosophical grounding: Brandom's scorekeeping, Sterelny's scaffolded mind). Venue plan per the [related-work map](docs/research/related-work.md): NeurIPS-workshop short paper (~2026-08-29) as the forcing function → full paper to AAMAS 2027 (abstracts 2026-10-02), ICLR 2027 fallback
+- ⬜ Paper / technical report (the philosophical grounding: Brandom's scorekeeping, Sterelny's scaffolded mind). Decision 2026-07-19: **no NeurIPS-workshop submission** — the write-up proceeds as an arXiv technical report on its own clock, evidence-first (live paired runs land before drafting); conference venues (AAMAS 2027, ICLR 2027 per the [related-work map](docs/research/related-work.md)) reconsidered once the numbers exist. The [submission checklist](docs/paper/submission-checklist.md) still gates any eventual upload.
 
 ## How to help
 

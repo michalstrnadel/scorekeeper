@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 — 2026-07-19
+
+The dual-axis release: **"No bluffing. No barging."** The board-adjudicated
+wall now guards *actions* as well as claims — acting without entitlement
+(overreach) is gated and measured as the mirror of claiming without
+entitlement (drift). Also carries the 2026-07-19 architecture-audit
+follow-ups and the production E2E infrastructure.
 
 ### Added ("No bluffing. No barging." — the second axis, 2026-07-19)
 - **Entitlement-keyed Tier-0 scope wall** ([ADR-0008](adr/0008-scope-wall.md)): a new `path:<glob>` scope-pin prefix; while a commitment with *externally-entitled* path pins is active, Edit/Write/NotebookEdit targets outside the union of grants are denied until the board records an entitled widening — the exact mirror of the claims wall, applied to deeds. Realpath symlink resolution, traversal/case normalization, fail-open with no pins; docs are NOT scope-exempt (a drive-by README edit is still barging). Rides `tier0_gate`, with an independent `scope_gate: off` / `SCOREKEEPER_SCOPE_GATE` kill switch. Advisory `TIER0-SCOPE-WARNING` twin in PostToolUse. 20+ gate tests plus a subprocess chain test (deny → wall → entitled grant → pass).

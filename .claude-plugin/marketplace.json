@@ -9,7 +9,7 @@
       "name": "scorekeeper",
       "source": "./claude-code-plugin",
       "description": "Commitment tracking for LLM agents — a deontic scoreboard of what the agent is entitled to claim and to do; catches drift and overreach. Attaches as Claude Code hooks; the scorer self-resolves via pip/uvx.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "homepage": "https://github.com/michalstrnadel/scorekeeper",
       "license": "Apache-2.0"
     }
