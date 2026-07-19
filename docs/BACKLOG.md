@@ -43,16 +43,28 @@ total retry `budget` (180s default, matching the Stop-hook deadline) and
   protected grader = the scoreboard and operator pipeline, which the loop must never
   edit. Every accepted change logged with the weakness it addressed and its regression
   test. Not before Phase-2 evidence ships.
-- **Scope entitlement — "the second failure mode" (Michal, 2026-07-19; exploratory).**
-  V1 of the thesis catches *claiming without entitlement* (hallucination/drift —
-  "you're bluffing"); the symmetric failure is *acting without entitlement* —
-  over-eager agents doing large amounts of unrequested work (subagent fleets, drive-by
-  refactors, burned usage — "slow down"). Same Brandomian structure applied to deeds:
-  the user's request + chosen effort level entitles a bounded scope of action; work
-  outside it is unentitled. Deterministically checkable proxies exist: files touched
-  outside a scope pin (`attr:task.scope=...`), subagent spawns / tool-call counts vs.
-  an effort commitment. Candidate DeonticBench family: "overreach" — planted temptation
-  to over-scope, ground truth = the set of files that must NOT change; symmetric
-  metrics carry over (over-blocking eagerness = the FRR analog). Needs a dedicated
-  related-work pass before any design commitment (does anyone benchmark agent
-  over-scoping?).
+- **Scope entitlement — "the second failure mode" (Michal, 2026-07-19).
+  PROMOTED to Phase 2 and SHIPPED 2026-07-19** — the "needs a dedicated
+  related-work pass" precondition was satisfied by the overreach landscape sweep
+  ([overreach-landscape](research/overreach-landscape.md)); the design landed as
+  the entitlement-keyed scope wall (`path:` pins, ADR-0008) + DeonticBench
+  `overreach`/`expansion` families with ORR/URR. Residue stays below.
+- **Effort proportionality & subagent-fleet accounting (reserved axis-2
+  extensions, 2026-07-19).** In-scope but *disproportionate* work (excessive
+  churn for a trivial request; subagent fleets burning usage) is not scored in
+  v1. Concrete design seed: the `effort_tier` field already reserved in
+  DeonticBench ground truth + Diff-XYZ churn stratification (small <7 / medium
+  8–24 / large >24 changed lines; >70% of SWE-bench fixes fit <100 lines) as
+  the deterministic proxy, plugged into the existing TreeDiff; fleet accounting
+  would key on SubagentStart-style events and Agent Contracts-style budget
+  conservation — orchestrator-layer, so likely a separate surface. See
+  QUESTIONS Q11.
+- **AST-level scope pins (tree-sitter / ast-grep) — v2 refinement per
+  ADR-0008.** Symbol-level scope (function/class nodes instead of path globs):
+  whitespace-immune, semantically precise, ~66 languages — but a heavy
+  per-language dependency against the stdlib-only core. Revisit if glob-level
+  pins produce measurable FRR on real tasks.
+- **Cross-harness ports of the scope wall.** The interception points map
+  cleanly: LangGraph `__interrupt__` middleware, OpenAI Agents SDK tool
+  guardrails, Cursor `preToolUse` hooks (deny without updatedInput), MCP
+  gateway layer. Same board, same pins; only the deny plumbing differs.

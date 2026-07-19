@@ -13,20 +13,33 @@ promises to keep an API contract stable, and an hour later quietly renames two
 fields. Or: it states, with total fluency, a fact it never read anywhere — and
 after context compaction it doesn't even remember having stated it.
 
-Every practitioner running long-horizon agents has a version of this story. The
-industry's standard diagnosis is **memory failure**, and the standard
-prescriptions follow: bigger context windows, better retrieval, smarter
-summarization, self-editing memory blocks.
+There is a second version of the story, and it is the mirror image. You ask
+the agent to fix a typo in a docstring. Twenty minutes later it has refactored
+three modules, "modernized" the test helpers, and dispatched a fleet of
+subagents to update every call site — none of which you asked for, all of
+which you now have to review, and all of which burned an afternoon of usage.
+Nothing it did was malicious, and some of it may even be good. But the request
+entitled it to a one-line edit, and it barged past that boundary the same way
+the drifting agent bluffed past its Postgres decision. One failure is
+**claiming without entitlement**; the other is **acting without entitlement**.
+
+Every practitioner running long-horizon agents has a version of both stories.
+The industry's standard diagnosis for the first is **memory failure** (bigger
+context windows, better retrieval, smarter summarization), and for the second
+**permissions failure** (sandboxes, allowlists, approval prompts).
 
 Here is the uncomfortable observation: in most of these failures, *the
-information was still in the context window*. The Postgres decision was right
-there, forty turns up. The agent could have attended to it. Retrieval was not
-the bottleneck. What was missing was not access to the past but something else
-entirely: the decision at step 3 had no special status. It was just more text —
-one token sequence among thousands, with no marker saying *this one binds you*.
+information was still in the context window and the action was inside the
+sandbox*. The Postgres decision was right there, forty turns up; the typo
+request was the first line of the conversation. The agent could have attended
+to either. Retrieval was not the bottleneck and neither was access control.
+What was missing was that neither had special status. Each was just more
+text — one token sequence among thousands, with no marker saying *this one
+binds you*, and none saying *this one bounds you*.
 
-That is not a memory problem. It is a **normative** problem. The agent keeps a
-record of what happened, but no ledger of what it *committed to*.
+That is not a memory problem or a permissions problem. It is a **normative**
+problem. The agent keeps a record of what happened, but no ledger of what it
+*committed to* — or of what it was *entitled to do*.
 
 ## A fifty-year-old vocabulary for exactly this
 
@@ -56,6 +69,15 @@ materially incompatible with *p*. No formal logic needed — the incompatibility
 follows from the content of the concepts, the way "the block is ice" is
 incompatible with "the block is liquid."
 
+So far this sounds like a theory of assertion only. It isn't. Brandom draws
+the same structure through **practical commitments** — commitments to act,
+undertaken in intending and discharged in doing (*Making It Explicit*, ch. 4).
+A doxastic commitment answers "why do you say that?"; a practical commitment
+answers "why are you doing that?" — and both can be challenged, both require
+entitlement, both can collide with other live commitments. Entitlement to act
+is not an extension we bolted on; it is the other half of the textbook
+([theory.md §1b](theory.md)).
+
 Now translate:
 
 - **Hallucination = commitment without entitlement.** The agent asserts
@@ -68,6 +90,9 @@ Now translate:
 - **Post-compaction incoherence = deletion of the scoreboard.** Summarizers
   preserve narrative ("the user asked X, the agent did Y") and drop exactly
   the normative state — what still binds the agent going forward.
+- **Overreach = action without entitlement.** The agent does work no request
+  licensed — a practical commitment with no provenance. Same hole, same
+  graph, on the doing side.
 
 We want to insist on the word *literal*. This is not "philosophy as
 inspiration." Commitment, entitlement, and incompatibility map one-to-one onto
@@ -90,7 +115,13 @@ commitment, and what conflicts with what*):
 - it **detects material incompatibility** between live commitments, before the
   conflict propagates into code or docs;
 - it **survives compaction** by injecting normative state into summarization
-  exactly where today's summarizers drop it.
+  exactly where today's summarizers drop it;
+- it **pins action scope** — the request in force entitles a bounded scope of
+  work (`path:` pins on a commitment), and the Tier-0 wall denies writes
+  outside it until the board records an entitled widening
+  ([ADR-0008](../adr/0008-scope-wall.md)). Mechanism shipped and unit-tested;
+  measurement instrument ready; live paired runs pending — no rates implied
+  until they land.
 
 Two design decisions fall directly out of the theory, and neither is obvious
 from an engineering-only starting point.
@@ -168,6 +199,13 @@ past 11 warnings and camouflaged the drift), and a one-shot blocking bump was
 defeated by self-attestation, as described above. What held, symmetrically,
 was the board-adjudicated wall. Full evidence, negative findings included:
 [seed-0 report](../bench/results/SMOKE-DRIFT-S0-REPORT.md).
+
+The actions axis now has the same machinery: the scope wall and a mirrored
+DeonticBench family pair (overreach vs. entitled expansion, ORR vs. URR). To
+state its evidence status precisely: the mechanism is implemented and
+unit-tested, the measurement instrument is ready, and live paired runs are
+pending — the claims axis has measured evidence; the actions axis has a tested
+mechanism and a ready instrument, and until runs land we claim exactly that.
 
 If the failure mode at the top of this page is one you recognize, the repo is
 open, the spec is public, and the scoreboard tracking this very project's

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added ("No bluffing. No barging." — the second axis, 2026-07-19)
+- **Entitlement-keyed Tier-0 scope wall** ([ADR-0008](adr/0008-scope-wall.md)): a new `path:<glob>` scope-pin prefix; while a commitment with *externally-entitled* path pins is active, Edit/Write/NotebookEdit targets outside the union of grants are denied until the board records an entitled widening — the exact mirror of the claims wall, applied to deeds. Realpath symlink resolution, traversal/case normalization, fail-open with no pins; docs are NOT scope-exempt (a drive-by README edit is still barging). Rides `tier0_gate`, with an independent `scope_gate: off` / `SCOREKEEPER_SCOPE_GATE` kill switch. Advisory `TIER0-SCOPE-WARNING` twin in PostToolUse. 20+ gate tests plus a subprocess chain test (deny → wall → entitled grant → pass).
+- **DeonticBench `overreach`/`expansion` families + ORR/URR** — the actions axis measured symmetrically: a teammate ping baiting a drive-by edit of a protected module (correct = HELD) mirrored by the user's explicit grant ordering the same work (correct = EXECUTED). Scored by a new seed-vs-final tree diff (`snapshot_tree`/`diff_tree`) on protected paths — artifact beats prose; an empty diff is never HELD (task-success precondition). Sibling pairs are isogenic (shared RNG stream, only the final utterance differs) for paired statistics. New `blocking-claims-only` ablation variant isolates the scope wall's contribution. *Mechanism shipped and unit-tested; instrument ready; live paired runs pending — no rates implied until they land.*
+- **`docs/research/overreach-landscape.md`** — the July-2026 overreach landscape (OverEager-Bench, SNARE, UnderSpecBench, FixedBench, AgentAbstain, ClawsBench; Progent/Agent Contracts enforcement; METR's Overreach axis), the three steelmen with answers, metric-collision guard, and the binding run-design (fixed allocation, GEE/cluster-aware statistics). Docs repositioned around the dual axis: README, why.md, theory.md §1b (practical commitments), SPEC §2/§4/§6 (Czech + English), paper outline, related-work.
+
+### Changed
+- **MCP `supersede` default-drops `path:` pins along with `attr:` pins** — pins encode the replaced claim's grant; pass explicit `path:` pins to keep the new scope walled (behavior change only for boards that use path pins).
+
 ### Changed (architecture follow-ups, audit 2026-07-19)
 - **Backend selection is now env-over-config, like every other setting** — an explicit `SCOREKEEPER_MODEL_URL` wins over a config-pinned `backend.kind` (config still fills `model`/`api_key` gaps; passive auto-detect — `ANTHROPIC_API_KEY`, claude CLI — stays below config). Previously the env var was silently ignored when config pinned a kind.
 - **`extract:` in config works under the plugin again** — hooks.json now sets `SCOREKEEPER_EXTRACT_DEFAULT=async` instead of injecting `SCOREKEEPER_EXTRACT`, so the precedence is: user env > config `extract:` > surface default > `sync`.

@@ -32,6 +32,8 @@ Turn the qualitative result into a rate with confidence intervals.
 - ✅ First verified paired run on the hardest condition reproduces the effect ([progress report](bench/results/DEONTICBENCH-PROGRESS.md))
 - 🚧 **Scale it** — many seeds × conditions × families for effect sizes. *We'd rather the community run this than scale it in-house* — see [How to help](#how-to-help).
 - ✅ Revision-family classifier ([#4](https://github.com/michalstrnadel/scorekeeper/issues/4)) — `classify_revision` + FRR (false-refusal rate) in run summaries
+- ✅ **The second axis — "No barging" (ADR-0008, 2026-07-19):** entitlement-keyed Tier-0 scope wall (`path:` pins; out-of-scope writes denied until the board records an entitled widening) + DeonticBench `overreach`/`expansion` families with the ORR/URR metric pair (isogenic sibling pairs, seed-vs-final tree-diff classifier). *Mechanism shipped and unit-tested; measurement instrument ready; live paired runs pending — no rates implied until they land.*
+- 🚧 Live paired runs for the actions axis (bare vs `blocking-claims-only` vs `blocking`; run design per [overreach-landscape §6](docs/research/overreach-landscape.md))
 - ⬜ Public dataset + leaderboard
 
 ## Phase 3 — Broader integrations & write-up ⬜

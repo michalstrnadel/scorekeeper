@@ -6,10 +6,10 @@
 
 ### Commitment tracking for LLM agents
 
-**A normative overlay that gives long-running LLM agents a scoreboard of their own commitments — not just a memory of what happened.**
+**No bluffing. No barging.** A normative overlay that keeps score of what a long-running LLM agent is entitled to *claim* and entitled to *do* — not just a memory of what happened.
 
 ![status: Phase 2](https://img.shields.io/badge/status-Phase%202%20·%20DeonticBench-brightgreen)
-![tests](https://img.shields.io/badge/tests-161%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-209%20passing-brightgreen)
 [![PyPI](https://img.shields.io/pypi/v/scorekeeper)](https://pypi.org/project/scorekeeper/)
 [![Downloads](https://static.pepy.tech/badge/scorekeeper/month)](https://pepy.tech/project/scorekeeper)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
@@ -55,27 +55,33 @@ Tried it? A one-paragraph [experience report](https://github.com/michalstrnadel/
 
 ## The problem
 
-Long-running agents fail in a characteristic way. At step 3 they decide on Postgres; at step 47 they write MongoDB code. They promise to preserve an API contract and quietly change it an hour later. They assert something they have no basis for — and after context compaction they don't even remember asserting it.
+Long-running agents fail in two characteristic directions.
 
-The industry treats this as a **memory** problem: bigger windows, better retrieval, smarter summarization. Here is the uncomfortable observation: in most of these failures, *the information was still in the context window*. The Postgres decision was right there, forty turns up. Retrieval was not the bottleneck. What was missing was that the decision had no special status — it was just more text, one token sequence among thousands, with no marker saying *this one binds you*.
+They **bluff**: at step 3 they decide on Postgres; at step 47 they write MongoDB code. They promise to preserve an API contract and quietly change it an hour later. They assert something they have no basis for — and after context compaction they don't even remember asserting it.
 
-That is not a memory problem. It is a **normative** problem: the agent keeps a record of what happened, but no ledger of what it *committed to*. Philosophy of language has studied exactly this structure for fifty years (Brandom's deontic scorekeeping), with a precision that transfers directly into a data model:
+And they **barge**: asked to fix a typo, the agent refactors three modules, "modernizes" the test helpers, and spins up a subagent fleet that burns an afternoon of usage on work nobody asked for — every edit locally defensible, none of it entitled, all of it now yours to review.
+
+The industry treats the first as a **memory** problem (bigger windows, better retrieval) and the second as a **permissions** problem (sandboxes, approval prompts). Here is the uncomfortable observation: in most of these failures, the information was still in the context window *and the action was inside the sandbox*. The Postgres decision was right there, forty turns up; the typo request was the first line of the conversation. What was missing was that neither had special status — no marker saying *this one binds you*, none saying *this one bounds you*.
+
+That is not a memory problem or a permissions problem. It is a **normative** problem: the agent keeps a record of what happened, but no ledger of what it committed to or was entitled to do. Philosophy of language has studied exactly this structure for fifty years (Brandom's deontic scorekeeping), for claims *and* for deeds, with a precision that transfers directly into a data model:
 
 - **Hallucination = commitment without entitlement** — an assertion with no provenance is not a fuzzy quality judgment, it's a *visible hole* in a graph.
 - **Self-contradiction = an undetected incompatibility between two live commitments** — Postgres-at-step-3 and MongoDB-at-step-47 were both "active" and nobody was keeping score.
 - **Post-compaction incoherence = deletion of the scoreboard** — summarizers preserve narrative and drop exactly the normative state.
+- **Overreach = action without entitlement** — work no request licensed is the practical twin of an assertion with no provenance.
 
 **→ The full argument in accessible form: [`docs/why.md`](docs/why.md).**
 
 ## The idea
 
-Every long-running agent should have, alongside its memory (*what happened*), a **scoreboard** (*what it committed to, what backs that commitment, and what is incompatible with it*).
+Every long-running agent should have, alongside its memory (*what happened*), a **scoreboard** answering two questions: *what am I entitled to say?* and *what am I entitled to do?*
 
 `scorekeeper` is a lightweight overlay — it sits on top of any agent harness (Claude Code hooks first, MCP + library next) and:
 
 - **extracts commitments** from each agent turn into structured, first-class records;
 - **tracks entitlement** — the *provenance* of each commitment (did the agent read a file? did the user say so? or did it just generate this?). A commitment with no source is a first-class suspect;
 - **detects incompatibility** between active commitments before it propagates into code, docs, or decisions;
+- **pins action scope** — the request in force entitles a bounded scope of work (`path:` pins), and the Tier-0 wall denies writes outside it until the board records an entitled widening ([ADR-0008](adr/0008-scope-wall.md));
 - **protects the scoreboard from context compaction** — injecting the normative state into summarization exactly where today's summarizers drop it.
 
 ## Why this is different
@@ -84,9 +90,16 @@ Memory systems track facts about the **user and the world**; observability tools
 
 Pieces of that boundary exist elsewhere — AGM-style belief revision protects user axioms by *entrenchment*, instruction-hierarchy frameworks rank prompt sources by privilege ([honest related-work map](docs/research/related-work.md)). What doesn't exist elsewhere is the combination:
 
-1. **A live normative lifecycle, not a static rank** — assert, challenge, supersede, conflict (Brandom's scorekeeping), running inside the agent loop.
-2. **An active channel, not a passive store** — the boundary becomes environmental *physics*: the blocking Tier-0 gate denies an unentitled rival write before it lands ([ADR-0007](adr/0007-blocking-tier0-gate.md)).
-3. **Symmetric measurement** — the benchmark penalizes both drift (SCR) *and* false refusals (FRR) at the same boundary, scored by a deterministic artifact-level classifier, not an LLM judge.
+1. **A live normative lifecycle, not a static rank** — assert, challenge, supersede, conflict (Brandom's scorekeeping), running inside the agent loop — over claims *and* deeds.
+2. **An active channel, not a passive store** — the boundary becomes environmental *physics*: the Tier-0 wall denies an unentitled rival write ([ADR-0007](adr/0007-blocking-tier0-gate.md)) and an out-of-scope write ([ADR-0008](adr/0008-scope-wall.md)) before it lands; enforcement is keyed on *entitlement* (who granted what), not on resources (which files are allowed).
+3. **Symmetric measurement, on both axes** — each axis is measured symmetrically (the too-eager failure and its too-timid shadow, at the same boundary), and the two axes are twins — the same entitlement structure over claims and over actions:
+
+| | **Too eager** (unentitled move lands) | **Too timid** (entitled move blocked) |
+|---|---|---|
+| **Claims** — *no bluffing* | drift / hallucination — **SCR** (wall verified: HELD) | false refusal — **FRR** (verified: EXECUTED, zero denies) |
+| **Actions** — *no barging* | overreach — **ORR** (wall shipped + tested; runs pending) | underreach — **URR** (instrument ready; runs pending) |
+
+All four scored by a deterministic artifact-level classifier, not an LLM judge.
 
 For the argument in accessible form, start with [`docs/why.md`](docs/why.md). Then see [`docs/theory.md`](docs/theory.md) for the full conceptual apparatus, [`docs/research/related-work.md`](docs/research/related-work.md) for positioning against the closest five systems, [`docs/interop.md`](docs/interop.md) for mappings onto xAIF and W3C PROV-O, the [ROADMAP](ROADMAP.md), and [`docs/SPEC.md`](docs/SPEC.md) for the full specification (English translation; the Czech [`SPEC-cs.md`](docs/SPEC-cs.md) is source-of-record). The public API, CLI, and MCP tools are documented in [`docs/api.md`](docs/api.md).
 
@@ -149,6 +162,21 @@ surface on the next prompt — [ADR-0006](adr/0006-async-extraction.md)).
   every confirmed misfire is a regression test anchored on a verbatim reply.
   126 tests passing across core + bench; `bench/harness/reclassify.py`
   re-scores old runs after every classifier change.
+
+**Phase 2b — the second axis, stated precisely.** The same board-adjudicated
+wall now guards *actions*: a scope pin (`path:app/**` on a task-scope
+commitment) records what the current request entitles the agent to touch, and
+out-of-scope writes stay denied until the board records an entitled
+scope-widening grant — the same wall → surface → entitle → pass flow, applied
+to deeds ([ADR-0008](adr/0008-scope-wall.md); landscape:
+[overreach-landscape](docs/research/overreach-landscape.md)). Where the
+evidence stands: **the mechanism is implemented and unit-tested in this
+release (including a subprocess chain test: deny → wall → entitled grant →
+pass), and the DeonticBench overreach/expansion families (ORR vs. URR) are
+built on the same deterministic-classifier pattern — but no live paired
+numbers exist yet.** The claims axis has measured evidence; the actions axis
+has a tested mechanism and a ready instrument. Until runs land, we claim
+exactly that and nothing more.
 
 Rather than scale the numbers in-house next, **the ask is for the community
 to try it** — see below. See [CHANGELOG](CHANGELOG.md).

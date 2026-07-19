@@ -12,6 +12,18 @@ Robert Brandom (*Making It Explicit*, 1994; *Articulating Reasons*, 2000) explai
 
 **Application to agents.** Agent hallucination and inconsistency can be described precisely in this vocabulary. *Hallucination = commitment without entitlement* (the agent asserts something for which it has no reason-provenance). *Self-contradiction = an undetected incompatibility between active commitments.* *Loss of consistency after context compaction = deletion of the scoreboard.* This is not an analogy — it is a literal description that can be implemented.
 
+## 1b. Practical commitments: entitlement to act
+
+So far §1 reads as a theory of assertion. It isn't only that. Brandom draws the same normative structure through **practical commitments** — commitments to *do*, undertaken in intending and discharged in acting (*Making It Explicit*, ch. 4: practical commitments stand in the same web of entitlement and incompatibility as doxastic ones). "Why do you say that?" and "why are you doing that?" are the same move in GOGAR: a challenge to entitlement. Entitlement-to-act is not an extension bolted onto the framework; it is the other half of the textbook.
+
+**Direction of fit makes the practical side the more expensive failure.** A doxastic commitment answers to the world (word-to-world): a bluffed claim can be challenged before it does harm. A practical commitment makes the world answer to it (world-to-word): by the time an unentitled action is challenged, the artifact has already changed. This asymmetry is why the actions axis needs a *pre*-execution gate where the claims axis could start with advisory warnings.
+
+**Application to agents.** *Overreach = practical commitment without entitlement* — the agent does work no request licensed: a drive-by refactor, an unrequested "modernization," a subagent fleet burning usage on tasks nobody set. Each edit may be locally competent; the *move* is defective, exactly as a fluent hallucination is. The user's request in force entitles a bounded scope of action; the fourth translation joins the three above: *unrequested work = action without entitlement.*
+
+**Mechanism.** Scope pins (`path:<glob>` entries in a commitment's scope) make the practical entitlement explicit — logical expressivism again (§2): the implicit boundary of the request becomes a first-class, challengeable object. The Tier-0 scope wall (ADR-0008) denies writes outside the union of *externally-entitled* pins until the board records an entitled widening — the same operator pipeline, the same SUPERSEDE-vs-BRANCH-CONFLICT provenance boundary as §6, applied to deeds. A self-asserted pin cannot widen the agent's own scope, for the same reason a self-attested entitlement could not lift the claims wall.
+
+**Honesty of frame** (mirrors §7): we take from Brandom the commitment/entitlement structure over deeds — not his full theory of agency or intention. Where implementation forces a choice the philosophy leaves open (glob-level scope rather than act-descriptions; union of grants rather than lattice of norms), the ADRs record it.
+
 ## 2. Material vs. formal inference (Sellars, Brandom, Peregrin)
 
 Formal inference holds in virtue of syntactic form (the syllogism); **material inference** holds in virtue of the content of concepts ("the block is ice → it is solid") and is naturally **non-monotonic** (adding "we are in a vacuum" invalidates "I strike the match → it lights"). LLMs demonstrably reason materially, not formally — they have internalized statistical webs of non-monotonic semantic dependencies (Arai & Tsugawa 2024). Two design consequences:

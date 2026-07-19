@@ -344,6 +344,37 @@ def evaluate(content: str, active: list[Commitment], state_path: Path,
 Both return `None` to allow. `baseline` is the edit's `old_string`: rivals already present there
 are not new conflicts.
 
+#### Scope wall — also in `scorekeeper.detect.tier0_gate` (ADR-0008)
+
+The actions-axis twin: denies writes whose *target* falls outside the union of
+`path:<glob>` pins on active commitments with **external** entitlement
+(user_utterance / tool_output / document) — a self-asserted pin cannot widen
+the agent's own scope. Stateless; inert when no entitled pins exist.
+
+```python
+@dataclass
+class ScopePin:      commitment_id: str; pattern: str
+
+@dataclass
+class ScopeDecision: reason: str; target: str; pins: list[ScopePin]
+
+def collect_scope_pins(active: list[Commitment]) -> list[ScopePin]
+    # entitled path: pins only, deterministic order
+
+def normalize_target(file_path: str, root: Path) -> str | None
+    # realpath (symlink evasion) -> root-relative posix, casefolded; None = escapes root
+
+def path_in_scope(rel: str, patterns: list[str]) -> bool
+    # fnmatch + explicit "dir/**" / "dir/" subtree rule; malformed pins skipped
+
+def evaluate_scope(file_path: str, active: list[Commitment],
+                   root: Path) -> ScopeDecision | None
+    # None = allow (in scope, or no entitled pins active)
+
+def format_scope_warning(target: str, pins: list[ScopePin]) -> str
+    # advisory PostToolUse twin (TIER0-SCOPE-WARNING)
+```
+
 #### Tier 1 — `scorekeeper.detect.tier1`
 
 Material incompatibility judged by an isolated, context-poor LLM call. Precision beats recall:
@@ -421,8 +452,8 @@ Events (payload fields used → output):
 | Event | Behavior |
 |---|---|
 | `session-start` | Renders the digest. Output: `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": <digest>}}`, or nothing when empty. |
-| `pre-tool-use` | Blocking Tier-0 gate, **opt-in** via `SCOREKEEPER_TIER0_GATE=block\|bump` or `tier0_gate:` in config. Scans `tool_input.content` / `new_string` / `new_source` (baseline: `old_string`); files ending in `.md`/`.rst`/`.txt` are exempt. On conflict: `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": ...}}` and a `TIER0-GATE-DENY` audit entry. |
-| `post-tool-use` | Advisory channel. For `Bash`, rival mentions in the command are logged (`TIER0-SHELL-AUDIT`), no output. For edits, novel rival warnings are logged (`TIER0-CONTENT-WARNING`) and returned as `{"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": ...}}`. |
+| `pre-tool-use` | **Scope wall first (ADR-0008):** when the gate is enabled and entitled `path:` pins are active, a `file_path`/`notebook_path` outside their union is denied (`TIER0-SCOPE-DENY`) — runs before the doc exemption (a drive-by `.md` edit outside scope is still barging) and before the empty-content bail. Kill switch: `scope_gate: off` / `SCOREKEEPER_SCOPE_GATE=off`; `=block` force-enables the scope wall alone. **Then the claims gate (ADR-0007)**, opt-in via `SCOREKEEPER_TIER0_GATE=block\|bump` or `tier0_gate:` in config: scans `tool_input.content` / `new_string` / `new_source` (baseline: `old_string`); files ending in `.md`/`.rst`/`.txt` are exempt from the claims gate only. On conflict: `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": ...}}` and a `TIER0-GATE-DENY` audit entry. |
+| `post-tool-use` | Advisory channel. For `Bash`, rival mentions in the command are logged (`TIER0-SHELL-AUDIT`), no output. For edits: a landed write outside the entitled scope logs `TIER0-SCOPE-WARNING` (fires regardless of gate mode — the audit floor under the wall), and novel rival warnings are logged (`TIER0-CONTENT-WARNING`); both are returned via `{"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": ...}}`. |
 | `stop` | Turn-end extraction. Reads the last turn from `transcript_path`, extracts commitments, runs `apply()`. Mode `sync` (default): findings block the turn — `{"decision": "block", "reason": <findings>}`. Mode `async` (`SCOREKEEPER_EXTRACT=async` or `extract:` in config): spawns a detached worker and returns immediately. No-op when `stop_hook_active` is set (never loop). |
 | `user-prompt-submit` | Drains `.scorekeeper/pending-findings.md` (written by async workers) into `{"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": ...}}`. Skips (non-blocking lock) while a worker is mid-extraction. |
 | `pre-compact` | Backs up the scoreboard to `.scorekeeper/backups/scoreboard-<stamp>.md`. No output. |
@@ -509,6 +540,7 @@ Retract a commitment — a status transition, the record is kept. Returns `{"ret
 | `SCOREKEEPER_MODEL_API_KEY` | backend auto-detect | Bearer token for the OpenAI-compat endpoint (optional). |
 | `ANTHROPIC_API_KEY` | backend auto-detect | Enables the Anthropic API backend (Haiku-class default) when no local URL is set. |
 | `SCOREKEEPER_TIER0_GATE` | `hook pre-tool-use` | `block` (board-adjudicated wall, recommended) \| `bump` (one-shot deny, ablation) \| `warn` (force-disable the gate, advisory only). Overrides `tier0_gate:` in config in both directions. Unset: config decides; default off. |
+| `SCOREKEEPER_SCOPE_GATE` | `hook pre-tool-use` | `off` (disable just the scope wall — claims-only ablation/emergency) \| `block` (force-enable the scope wall even with the claims gate off). Unset: the scope wall rides `tier0_gate` (active whenever the gate is enabled). Overrides `scope_gate:` in config. |
 | `SCOREKEEPER_EXTRACT` | `hook stop` | `sync` (findings block the turn; library default) \| `async` (detached worker, findings on the next prompt). Overrides `extract:` in config. |
 | `SCOREKEEPER_EXTRACT_DEFAULT` | `hook stop` | Surface default consulted only when neither `SCOREKEEPER_EXTRACT` nor config `extract:` decides — the plugin's hooks.json sets it to `async` without shadowing the config key. |
 | `SCOREKEEPER_ROOT` | `scorekeeper-mcp` | Project root for the MCP server (default: cwd). |
@@ -522,5 +554,6 @@ backend:
   model: qwen3:8b
   api_key: ""
 tier0_gate: block            # block | bump (absent = gate off)
+scope_gate: block            # off | block (absent = rides tier0_gate; ADR-0008)
 extract: async               # sync | async
 ```

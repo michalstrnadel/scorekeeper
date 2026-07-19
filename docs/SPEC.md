@@ -35,6 +35,8 @@ Robert Brandom (*Making It Explicit*, 1994; *Articulating Reasons*, 2000) explai
 
 **Key application to agents:** Hallucination and inconsistency in agents can be described precisely in this vocabulary. *Hallucination = commitment without entitlement* (the agent asserts something for which it has no provenance of reasons). *Self-contradiction = an undetected incompatibility between active commitments.* *Loss of consistency after context compression = erasure of the scoreboard.* This is not an analogy — it is a literal description that can be implemented.
 
+**Practical commitments — entitlement to act (added 2026-07-19, ADR-0008):** Brandom draws the same normative structure through **practical commitments** — commitments to *act*, undertaken in intending and discharged in doing (*Making It Explicit*, ch. 4). "Why do you say that?" and "why are you doing that?" are the same move in GOGAR: a challenge to entitlement. Hence the fourth translation: *overreach = practical commitment without entitlement* — the agent performs work no request licensed (a drive-by refactor, an unrequested "modernization"). The user's request entitles a bounded scope of action; scope pins (`path:<glob>`, §4.2) make that boundary explicit and the scope wall (§4.4) enforces it. Direction of fit makes the practical side the more expensive failure: a bluffed claim can be challenged before it harms; a barged action has already changed the artifact — which is why the actions axis needs a pre-execution gate. Full treatment: theory.md §1b.
+
 ### 2.2 Material vs. Formal Inference (Sellars, Brandom, Peregrin)
 
 Formal inference holds in virtue of syntactic form (the syllogism); material inference holds in virtue of the content of concepts ("the cube is made of ice → it is solid") and is naturally non-monotonic (adding the premise "we are in a vacuum" invalidates "I strike the match → it lights"). LLMs demonstrably reason materially, not formally — they have internalized statistical networks of non-monotonic semantic dependencies (Arai & Tsugawa 2024). This has two consequences for the design:
@@ -117,6 +119,8 @@ commitment:
 
 The field `entitlement.source: none` is legal and significant — it marks a commitment without provenance (a hallucination candidate), which is a first-class suspect object and is reported separately.
 
+**Scope grammar (extended 2026-07-19, ADR-0008):** `scope` entries carry three prefixes — `topic:<tag>` (candidate selection for detection), `attr:<key>=<value>` (hard attribute for Tier-0 collisions), and `path:<glob>` (a **scope pin** — a write-scope grant for the scope wall, §4.4). Terminology note: "scope" in this data field historically means the commitment's *retrieval* scope; a "scope pin" (`path:`) is different — the *action* scope the user's request entitles. Path pins are by construction invisible to Tier-0 collision logic and the content scan (a grant is not a claim about content).
+
 ### 4.3 Operators (Adaptation of Bi-Temporal State Arbitration + DCPM into Brandom's Vocabulary)
 
 | Operator | In Brandom's terms | Behavior |
@@ -138,6 +142,8 @@ The SUPERSEDE vs. BRANCH-CONFLICT distinction is the core of the project: it is 
 - **Tier 0 — deterministic:** keyed attributes within a scope (`persistence.primary_db = postgres`) are compared directly; a collision = an immediate conflict, latency ~ms, no LLM. Covers the most frequent and most expensive class of failures (technology choices, versions, contracts, naming).
 - **Tier 1 — material (LLM):** the new commitment + candidates selected by scope → an isolated cheap model judges material incompatibility (non-monotonically, aware of exceptions). Output: compatible / incompatible / needs clarification, with a short justification. This is the main workhorse, faithful to how LLMs actually infer (§2.2).
 - **Tier 2 — symbolic (optional, later):** for structured subsets (version constraints, API schemas), translation into Datalog/Z3. Deliberately *not* a theorem prover over the whole scoreboard — that is PEIRCE's path and is over-engineered for this domain.
+
+**The scope wall — Tier 0's actions axis (added 2026-07-19, ADR-0008):** beyond *content* collisions, Tier 0 also gates *write-target* collisions. While a commitment with externally-entitled `path:` pins is active, a write (Edit/Write/NotebookEdit) outside the union of grants is denied until the board records an entitled widening (a new commitment or a supersede carrying `path:` pins) — the mirror of the ADR-0007 wall: the agent surfaces, the user entitles, the wall lifts. Keyed on entitlement, not resources: a pin on a `source: none` commitment cannot widen the scope (self-attestation prevention). Targets are normalized via realpath (symlink evasion), traversal and case handling; with no pins the gate is inert. Bash writes remain an audited known limitation.
 
 The critical quality metric for the detector is the **false-positive rate**: too many false conflicts = alarm fatigue = the death of the tool. Precision takes priority over recall; tunable threshold.
 
@@ -182,10 +188,13 @@ The project stands or falls with measurable benefit. Without numbers it is a phi
 - **Detector FPR:** the rate of false conflicts (target < 5–10%, otherwise alarm fatigue).
 - **Overhead:** extra tokens and latency (target < 10% of task tokens; extraction on a Haiku-class model).
 - **Post-compression survival:** the share of commitments the agent respects after PreCompact, with/without digest injection.
+- **The actions axis (added 2026-07-19, ADR-0008) — ORR/URR:** **ORR — Overreach Rate** (share of overreach runs classified OVERREACHED — unrequested work outside the granted scope) and **URR — Underreach Rate** (share of expansion runs classified REFUSED — refusing/stalling explicitly ordered work). The mirror pair to SCR/FRR: the 2×2 = axis (claims/actions) × direction (too eager/too timid). Scored deterministically from a seed-vs-final tree diff over protected paths; an empty diff is never HELD (task-success precondition). Mind the literature's naming collisions (ORR = over-refusal in content safety; SCR = Safe Completion Rate in ClawsBench) — always spell out at first use in publications.
 
 ### 6.2 The "DeonticBench" Benchmark (formerly EntitleBench; working name, Phase 2)
 
 No benchmark exists for an agent's consistency with respect to its *own* commitments — BeliefShift measures consistency with respect to the *user's* beliefs, Logic Haystacks static contradiction detection in text. DeonticBench fills this gap: a suite of long-horizon agentic tasks (primarily coding, secondarily research/writing) with **planted decision points and planted temptations to contradict** (long separation, context compression between decision and temptation, distractors à la Logic Haystacks, brief changes testing SUPERSEDE vs. drift). Each task has a ground-truth commitment graph → automatic SCR/JRR scoring. The benchmark is published separately (dataset + harness + leaderboard) and is citable independently of the tool.
+
+**Actions-axis families (added 2026-07-19):** `overreach` (phase 1 grants a write scope; the final phase pairs a real in-scope task with a teammate ping baiting a drive-by edit of a protected module — correct = HELD) and `expansion` (the mirror: the user's explicit final grant orders the same work — correct = EXECUTED). Sibling pairs are isogenic (shared RNG stream, differing only in the final utterance — the OverEager-Gen paired design, licensing paired statistics). Degenerate policies are bounded by the pair: a do-nothing agent → URR 100%, do-everything → high ORR. Evidence status: mechanism implemented and tested, instrument ready, live paired runs pending — no rates claimed until they land.
 
 ### 6.3 Ablations and Baselines
 

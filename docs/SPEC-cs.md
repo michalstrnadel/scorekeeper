@@ -32,6 +32,8 @@ Robert Brandom (*Making It Explicit*, 1994; *Articulating Reasons*, 2000) vysvě
 
 **Klíčová aplikace na agenty:** Halucinace a nekonzistence agentů lze přesně popsat v tomto slovníku. *Halucinace = commitment bez entitlementu* (agent tvrdí něco, pro co nemá žádnou provenienci důvodu). *Sebe-kontradikce = nedetekovaná inkompatibilita mezi aktivními závazky.* *Ztráta konzistence po kompresi kontextu = smazání scoreboardu.* To není analogie — je to doslovný popis, který se dá implementovat.
 
+**Praktické závazky — oprávnění jednat (doplněno 2026-07-19, ADR-0008):** Brandom vede tutéž normativní strukturu i přes **praktické závazky** — závazky k *jednání*, přijaté záměrem a splněné činem (*Making It Explicit*, kap. 4). „Proč to říkáš?" a „proč to děláš?" jsou v GOGAR tentýž tah: výzva k oprávnění. Odtud čtvrtý překlad: *overreach = praktický závazek bez entitlementu* — agent koná práci, kterou žádný požadavek nelicencoval (drive-by refactor, nevyžádaná „modernizace"). Požadavek uživatele opravňuje ohraničený rozsah akce; scope piny (`path:<glob>`, §4.2) tuto hranici explicitují a scope wall (§4.4) ji vynucuje. Direction of fit dělá z praktické strany dražší selhání: bluffnuté tvrzení lze napadnout dřív, než škodí; probaržená akce už artefakt změnila — proto akční osa potřebuje pre-exekuční bránu. Plné rozvedení: theory.md §1b.
+
 ### 2.2 Materiální vs. formální inference (Sellars, Brandom, Peregrin)
 
 Formální inference platí díky syntaktické formě (sylogismus); materiální inference platí díky obsahu pojmů ("kostka je z ledu → je pevná") a je přirozeně nemonotónní (přidání premisy "jsme ve vakuu" zneplatní "škrtnu sirkou → vzplane"). LLM prokazatelně uvažují materiálně, nikoli formálně — internalizovaly statistické sítě nemonotónních sémantických závislostí (Arai & Tsugawa 2024). To má dva důsledky pro design:
@@ -114,6 +116,8 @@ commitment:
 
 Pole `entitlement.source: none` je legální a významné — označuje závazek bez proveniencí (kandidát na halucinaci), který je first-class podezřelý objekt a reportuje se zvlášť.
 
+**Gramatika scope (rozšířeno 2026-07-19, ADR-0008):** položky `scope` nesou tři prefixy — `topic:<tag>` (výběr kandidátů pro detekci), `attr:<klíč>=<hodnota>` (tvrdý atribut pro Tier-0 kolize) a `path:<glob>` (**scope pin** — grant zápisového rozsahu pro scope wall, §4.4). Terminologická poznámka: „scope" v tomto datovém poli historicky znamená *vyhledávací* rozsah závazku; „scope pin" (`path:`) je něco jiného — *akční* rozsah, který požadavek uživatele opravňuje. Path piny jsou z konstrukce neviditelné pro Tier-0 kolizní logiku i obsahový sken (grant není tvrzení o obsahu).
+
 ### 4.3 Operátory (adaptace Bi-Temporal State Arbitration + DCPM do Brandomova slovníku)
 
 | Operátor | Brandomovsky | Chování |
@@ -135,6 +139,8 @@ Rozlišení SUPERSEDE vs. BRANCH-CONFLICT je jádro projektu: je to přesně roz
 - **Tier 0 — deterministický:** klíčované atributy v scope (`persistence.primary_db = postgres`) se porovnávají přímo; kolize = okamžitý konflikt, latence ~ms, žádné LLM. Pokrývá nejčastější a nejdražší třídu selhání (technologické volby, verze, kontrakty, pojmenování).
 - **Tier 1 — materiální (LLM):** nový závazek + kandidáti vybraní podle scope → izolovaný levný model posoudí materiální neslučitelnost (nemonotónně, s vědomím výjimek). Výstup: kompatibilní / neslučitelné / potřebuje upřesnění, s krátkým zdůvodněním. Toto je hlavní pracovní kůň, věrný tomu, jak LLM skutečně inferují (§2.2).
 - **Tier 2 — symbolický (volitelný, později):** pro strukturované podmnožiny (verzní constrainty, API schémata) překlad do Datalog/Z3. Vědomě *ne* theorem prover nad celým scoreboardem — to je cesta PEIRCE a je pro tuto doménu předimenzovaná.
+
+**Scope wall — akční osa Tier 0 (doplněno 2026-07-19, ADR-0008):** vedle kolizí *obsahu* hlídá Tier 0 i kolize *cíle zápisu*. Dokud je aktivní závazek s externě oprávněnými `path:` piny, zápis (Edit/Write/NotebookEdit) mimo sjednocení grantů je odepřen, dokud board nezaznamená oprávněné rozšíření (nový závazek nebo supersede s `path:` piny) — zrcadlo zdi z ADR-0007: agent surfacuje, uživatel opravní, zeď se zvedne. Klíčováno entitlementem, ne zdroji: pin na závazku se `source: none` rozsah nerozšíří (prevence self-attestace). Cesty se normalizují přes realpath (symlink evasion), traversal a case; bez pinů je brána inertní. Bash zápisy zůstávají auditovanou známou limitací.
 
 Kritická metrika kvality detektoru je **false-positive rate**: příliš mnoho falešných konfliktů = alarm fatigue = smrt nástroje. Precision má přednost před recallem; laditelný práh.
 
@@ -179,10 +185,13 @@ Projekt stojí a padá s měřitelným přínosem. Bez čísel je to filozofick�
 - **FPR detektoru:** míra falešných konfliktů (cíl < 5–10 %, jinak alarm fatigue).
 - **Overhead:** tokeny a latence navíc (cíl < 10 % tokenů úlohy; extrakce na Haiku-třídě).
 - **Survival po kompresi:** podíl závazků, které agent respektuje po PreCompact, s/bez injektáže digestu.
+- **Akční osa (doplněno 2026-07-19, ADR-0008) — ORR/URR:** **ORR — Overreach Rate** (podíl overreach běhů klasifikovaných OVERREACHED — nevyžádaná práce mimo grantovaný scope) a **URR — Underreach Rate** (podíl expansion běhů klasifikovaných REFUSED — odmítnutí/stagnace explicitně nařízené práce). Zrcadlový pár k SCR/FRR: 2×2 = osy (tvrzení/akce) × směr (příliš dychtivý/příliš plachý). Skórováno deterministicky diffem seed-vs-final stromu nad protected paths; prázdný diff nikdy není HELD (task-success precondition). Pozor na kolize názvosloví v literatuře (ORR = over-refusal v content-safety; SCR = Safe Completion Rate v ClawsBench) — v publikacích vždy rozepsat při prvním užití.
 
 ### 6.2 Benchmark „DeonticBench" (dříve EntitleBench; přejmenováno 2026-07-19, fáze 2)
 
 Neexistuje benchmark pro konzistenci agenta vůči *vlastním* závazkům — BeliefShift měří konzistenci vůči přesvědčením *uživatele*, Logic Haystacks statickou detekci kontradikce v textu. DeonticBench tuto mezeru zaplní: sada dlouhohorizontových agentních úloh (primárně coding, sekundárně research/writing) s **osazenými rozhodovacími body a nastraženými pokušeními ke kontradikci** (dlouhý odstup, komprese kontextu mezi rozhodnutím a pokušením, distraktory à la Logic Haystacks, změny zadání testující SUPERSEDE vs. drift). Každá úloha má ground-truth graf závazků → automatické skórování SCR/JRR. Benchmark se publikuje samostatně (dataset + harness + leaderboard) a je citovatelný nezávisle na nástroji.
+
+**Rodiny akční osy (doplněno 2026-07-19):** `overreach` (fáze 1 grantuje write scope; finální fáze páruje reálný in-scope úkol s pingem od kolegy lákajícím k drive-by úpravě chráněného modulu — správně = HELD) a `expansion` (zrcadlo: explicitní finální grant uživatele tutéž práci nařizuje — správně = EXECUTED). Sourozenecké dvojice jsou isogenní (sdílený RNG stream, liší se jen poslední promluvou — párový design po vzoru OverEager-Gen, umožňuje párovou statistiku). Degenerativní strategie jsou omezeny párem: do-nothing agent → URR 100 %, do-everything → ORR vysoké. Stav evidence: mechanismus implementován a otestován, instrument připraven, živé párové běhy čekají — do té doby netvrdíme žádné sazby.
 
 ### 6.3 Ablace a baseliny
 
