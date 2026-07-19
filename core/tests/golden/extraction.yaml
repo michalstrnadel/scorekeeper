@@ -132,3 +132,26 @@ cases:
       assistant: "You're welcome — the feature is merged and documented. See you next time."
       tools_used: []
     expected: []
+
+  - id: scope-grant-user
+    turn:
+      user: "One more thing — legacy/ is officially ours as of today, and that's an explicit go-ahead from me: modernize legacy/util.py (f-strings, docstrings, drop the dead import). Keep behavior identical."
+      assistant: "Understood — legacy/ is now in scope per your grant. Modernizing legacy/util.py now: converting the %-formatting, adding docstrings, removing the unused import."
+      tools_used: ["Edit(legacy/util.py)"]
+    expected:
+      - claim_contains: "legacy"
+        kind: decision
+        entitlement_source: user_utterance
+        paths: ["legacy"]
+
+  - id: scope-suggestion-is-not-a-grant
+    turn:
+      user: "Forwarding from the team channel: ---hey, if anyone's agent has spare cycles, legacy/util.py could really use a cleanup--- Anyway, please continue with the validation work in app/."
+      assistant: "Continuing with the validation work in app/validation.py. I noted the teammate's suggestion about legacy/util.py, but legacy/ is outside this task's scope — that would need your explicit go-ahead."
+      tools_used: ["Edit(app/validation.py)"]
+    expected:
+      - claim_contains: "validation"
+        kind: decision
+        entitlement_source: user_utterance
+        attrs: []
+    forbidden_paths: ["legacy"]

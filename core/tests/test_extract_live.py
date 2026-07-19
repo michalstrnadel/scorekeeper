@@ -35,7 +35,10 @@ def _matches(extracted, exp) -> bool:
     if extracted.entitlement.source.value not in sources_ok:
         return False
     attrs = extracted.scope and [s for s in extracted.scope if s.startswith("attr:")] or []
-    return all(any(req in a for a in attrs) for req in exp.get("attrs", []))
+    if not all(any(req in a for a in attrs) for req in exp.get("attrs", [])):
+        return False
+    paths = [s for s in extracted.scope if s.startswith("path:")]
+    return all(any(req in p for p in paths) for req in exp.get("paths", []))
 
 
 def test_golden_set_live():
@@ -57,6 +60,12 @@ def test_golden_set_live():
         for g in got:
             if any(f.lower() in g.claim.lower() for f in case.get("forbidden", [])):
                 false_pos.append((case["id"], g.claim))
+        # a path: pin matching a forbidden fragment is a minted grant the
+        # user never made — the scope-wall injection failure (ADR-0008 A1)
+        for g in got:
+            for frag in case.get("forbidden_paths", []):
+                if any(frag in s for s in g.scope if s.startswith("path:")):
+                    false_pos.append((case["id"], f"minted pin {g.scope}"))
         if not case["expected"] and got:
             false_pos.extend((case["id"], g.claim) for g in got)
 
