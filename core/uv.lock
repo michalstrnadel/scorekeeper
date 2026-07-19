@@ -1223,9 +1223,6 @@ anthropic = [
 mcp = [
     { name = "mcp" },
 ]
-openai = [
-    { name = "httpx" },
-]
 
 [package.dev-dependencies]
 dev = [
@@ -1240,12 +1237,11 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", marker = "extra == 'anthropic'", specifier = ">=0.40" },
-    { name = "httpx", marker = "extra == 'openai'", specifier = ">=0.27" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.2" },
     { name = "pydantic", specifier = ">=2.7" },
     { name = "pyyaml", specifier = ">=6.0" },
 ]
-provides-extras = ["anthropic", "openai", "mcp"]
+provides-extras = ["anthropic", "mcp"]
 
 [package.metadata.requires-dev]
 dev = [
