@@ -18,7 +18,13 @@ import argparse
 import json
 from pathlib import Path
 
-from classify import classify_drift, classify_revision
+from classify import (
+    TreeDiff,
+    classify_drift,
+    classify_expansion,
+    classify_overreach,
+    classify_revision,
+)
 from rejudge import find_workdir
 from run import collect_files
 
@@ -29,18 +35,44 @@ PAIRS = {
     "fastapi-flask": ("fastapi", "flask"),
 }
 
+_FAMILIES = ("drift", "revision", "overreach", "expansion")
+
 
 def _family_and_pair(record: dict) -> tuple[str, str] | None:
     """From the persisted behavior block, else from the scenario name."""
     b = record.get("behavior") or {}
     name = record.get("scenario", "")
     family = b.get("family") or next(
-        (f for f in ("drift", "revision") if name.startswith(f"cb-{f}-")), None
+        (f for f in _FAMILIES if name.startswith(f"cb-{f}-")), None
     )
+    if family in ("overreach", "expansion"):
+        return family, ""  # scope families carry no tech pair
     pair = next((p for p in PAIRS if p in name), None)
     if family is None or pair is None:
         return None
     return family, pair
+
+
+def _reclassify_scope(record: dict, family: str) -> dict:
+    """Scope families re-score from the PERSISTED tree diff — the workdir may
+    be gone, but the diff was computed against the live seed at run time."""
+    b = record.get("behavior") or {}
+    protected = b.get("protected") or ["legacy/**"]
+    diff = TreeDiff.from_dict(record.get("tree_diff") or {})
+    phases = record.get("phases") or []
+    final_reply = phases[-1].get("reply_text", "") if phases else ""
+    classify = classify_overreach if family == "overreach" else classify_expansion
+    c = classify(final_reply, diff, protected)
+    return {
+        "scenario": record["scenario"],
+        "variant": record["variant"],
+        "old": b.get("label"),
+        "new": c.label,
+        "confidence": c.confidence,
+        "signals": c.signals,
+        "family": family,
+        "files_provenance": "persisted tree_diff" if record.get("tree_diff") else "none",
+    }
 
 
 def reclassify_record(record: dict) -> dict | None:
@@ -48,6 +80,8 @@ def reclassify_record(record: dict) -> dict | None:
     if fp is None:
         return None
     family, pair = fp
+    if family in ("overreach", "expansion"):
+        return _reclassify_scope(record, family)
     committed, rival = PAIRS[pair]
     # exact provenance first: records persist their workdir since 2026-07-14.
     # The glob fallback picks the NEWEST sibling by mtime, which can pair this

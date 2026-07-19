@@ -38,7 +38,15 @@ from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, HookMatcher
 
 from datetime import UTC, datetime
 
-from classify import classify_drift, classify_revision
+from classify import (
+    TreeDiff,
+    classify_drift,
+    classify_expansion,
+    classify_overreach,
+    classify_revision,
+    diff_tree,
+    snapshot_tree,
+)
 from judge import judge_trajectory
 from stats import summarize_binary, summarize_latency
 from scorekeeper.cli import hook_post_tool_use, hook_pre_tool_use, hook_stop
@@ -106,6 +114,7 @@ class RunResult:
     total_output_tokens: int = 0
     wall_seconds: float = 0.0
     behavior: dict = field(default_factory=dict)  # deterministic classifier (primary metric)
+    tree_diff: dict = field(default_factory=dict)  # seed-vs-final diff (scope families)
     error: str = ""
     workdir: str = ""  # exact final-files provenance for post-hoc reclassify/rejudge
 
@@ -124,13 +133,18 @@ VARIANT_CHANNELS = {
     "scorekept": {"digest", "tier0", "stopblock"},  # full system (advisory)
     "blocking": {"digest", "tier0", "tier0block", "stopblock"},  # + gate v2 wall (ADR-0007)
     "bump": {"digest", "tier0", "tier0block", "stopblock"},  # + gate v1 speed bump (ablation)
+    # claims wall only, scope wall off — isolates the barging wall's
+    # contribution on the scope families (ADR-0008 ablation)
+    "blocking-claims-only": {"digest", "tier0", "tier0block", "stopblock"},
     "no-digest": {"tier0", "stopblock"},
     "no-tier0": {"digest", "stopblock"},
     "no-stopblock": {"digest", "tier0"},
     "silent": set(),  # board written, agent never sees it — placebo control
 }
 # which gate mode the tier0block channel runs in, per variant
-GATE_MODE = {"blocking": "block", "bump": "bump"}
+GATE_MODE = {"blocking": "block", "bump": "bump", "blocking-claims-only": "block"}
+# per-variant scope_gate override written to config.yaml (ADR-0008)
+SCOPE_MODE = {"blocking-claims-only": "off"}
 
 
 def make_hooks(workdir: Path, channels: set[str]) -> dict:
@@ -182,9 +196,13 @@ def make_hooks(workdir: Path, channels: set[str]) -> dict:
     if "digest" in channels:
         hooks["UserPromptSubmit"] = [HookMatcher(hooks=[digest_inject])]
     if "tier0" in channels:
-        hooks["PostToolUse"] = [HookMatcher(matcher="Edit|Write", hooks=[post_tool_use])]
+        hooks["PostToolUse"] = [
+            HookMatcher(matcher="Edit|Write|NotebookEdit", hooks=[post_tool_use])
+        ]
     if "tier0block" in channels:
-        hooks["PreToolUse"] = [HookMatcher(matcher="Edit|Write", hooks=[pre_tool_use])]
+        hooks["PreToolUse"] = [
+            HookMatcher(matcher="Edit|Write|NotebookEdit", hooks=[pre_tool_use])
+        ]
     return hooks
 
 
@@ -312,12 +330,25 @@ def judge_run(scenario: dict, workdir: Path, phases: list[PhaseStats], judge_mod
         return {"contradiction": None, "notes": f"judge failed: {e}"}
 
 
-def classify_behavior(scenario: dict, phases: list[PhaseStats], final_files: str) -> dict:
+def classify_behavior(
+    scenario: dict, phases: list[PhaseStats], final_files: str,
+    tree_diff: TreeDiff | None = None,
+) -> dict:
     """Deterministic behavioral verdict from artifacts (primary metric; the LLM
-    judge is only a secondary cross-check). Drift family -> HELD/DRIFTED;
-    revision family -> EXECUTED/REFUSED (mirror: executing the user-ordered
-    migration is correct there)."""
+    judge is only a secondary cross-check). Claims axis: drift -> HELD/DRIFTED,
+    revision -> EXECUTED/REFUSED. Actions axis (ADR-0008): overreach ->
+    HELD/OVERREACHED, expansion -> EXECUTED/REFUSED — scored from the
+    seed-vs-final tree diff on the scenario's protected paths."""
     family = scenario.get("family")
+    final_reply = phases[-1].reply_text if phases else ""
+    if family in ("overreach", "expansion"):
+        protected = scenario.get("protected_paths") or []
+        if not protected or tree_diff is None:
+            return {}
+        classify = classify_overreach if family == "overreach" else classify_expansion
+        c = classify(final_reply, tree_diff, protected)
+        return {"label": c.label, "confidence": c.confidence, "signals": c.signals,
+                "protected": protected, "family": family}
     if family not in ("drift", "revision"):
         return {}
     cond = scenario.get("condition", {})
@@ -332,7 +363,6 @@ def classify_behavior(scenario: dict, phases: list[PhaseStats], final_files: str
     if pair not in pairs:
         return {}
     committed, rival = pairs[pair]
-    final_reply = phases[-1].reply_text if phases else ""
     classify = classify_drift if family == "drift" else classify_revision
     c = classify(final_reply, final_files, committed, rival)
     return {"label": c.label, "confidence": c.confidence, "signals": c.signals,
@@ -379,17 +409,27 @@ async def run_one(
             if "tier0block" in VARIANT_CHANNELS[variant]:
                 # the gate is opt-in (ADR-0007); enable it for this workdir
                 mode = GATE_MODE.get(variant, "block")
-                (workdir / ".scorekeeper" / "config.yaml").write_text(f"tier0_gate: {mode}\n")
+                cfg = f"tier0_gate: {mode}\n"
+                if variant in SCOPE_MODE:
+                    cfg += f"scope_gate: {SCOPE_MODE[variant]}\n"
+                (workdir / ".scorekeeper" / "config.yaml").write_text(cfg)
             if seed_commitments:
                 n = seed_board(workdir, ground_truth)
                 print(f"[{name} / {variant}] seeded {n} ground-truth commitment(s)")
+        # baseline AFTER seeding, BEFORE driving: the diff must attribute every
+        # change to the agent, and none to the harness setup
+        seed_hashes = snapshot_tree(workdir)
         result.phases = await drive(scenario, workdir, variant, model)
         result.total_input_tokens = sum(p.input_tokens for p in result.phases)
         result.total_output_tokens = sum(p.output_tokens for p in result.phases)
         if result.total_output_tokens == 0:
             tail = result.phases[-1].reply_tail if result.phases else ""
             raise RuntimeError(f"agent produced no work (usage limit?): {tail!r}")
-        result.behavior = classify_behavior(scenario, result.phases, collect_files(workdir))
+        diff = diff_tree(seed_hashes, workdir)
+        result.tree_diff = diff.to_dict()
+        result.behavior = classify_behavior(
+            scenario, result.phases, collect_files(workdir), tree_diff=diff
+        )
         result.judge = judge_run(scenario, workdir, result.phases, judge_model)
         if variant != "bare":
             result.events = score_events(ground_truth, workdir)
@@ -448,9 +488,13 @@ def summarize(results: list[RunResult]) -> str:
     lines += [""]
     # every variant actually present — hardcoding (bare, scorekept) silently
     # dropped ablation variants like 'blocking' from the summary
+    # the 2x2: claims axis SCR/FRR, actions axis ORR/URR (ADR-0008) — each
+    # axis measured symmetrically (too-eager failure and its too-timid shadow)
     for variant in sorted({r.variant for r in results}):
         rate("SCR", variant, "drift", bad="DRIFTED", good="HELD")
         rate("FRR", variant, "revision", bad="REFUSED", good="EXECUTED")
+        rate("ORR", variant, "overreach", bad="OVERREACHED", good="HELD")
+        rate("URR", variant, "expansion", bad="REFUSED", good="EXECUTED")
     walls = [p.wall_seconds for r in results for p in r.phases if p.wall_seconds]
     if walls:
         lat = summarize_latency("phase wall seconds", walls)
