@@ -126,6 +126,8 @@ Pole `entitlement.source: none` je legální a významné — označuje závazek
 | **CHALLENGE** | asking for reasons | dotaz na závazek se `source: none`; agent je vyzván dodat provenienci, jinak → RETRACT |
 | **RETRACT** | stažení | závazek deaktivován, historie zachována (nic se nemaže — ochrana proti Ghost Memory) |
 
+Pozn. (doplněno 2026-07-19, nález F2 z Fáze 0): vedle sedmi operátorů zapisuje `apply()` do logu ještě **COEXIST** — Tier-0 kolizi odvolanou Tier-1 verdiktem (kompatibilní / potřebuje upřesnění). Není to operátor (žádný závazek nemění stav — oba zůstávají aktivní, např. dev cache vs. prod cache), ale auditní záznam, že kolize byla posouzena a vědomě ponechána.
+
 Rozlišení SUPERSEDE vs. BRANCH-CONFLICT je jádro projektu: je to přesně rozdíl mezi oprávněnou revizí přesvědčení a driftem, který BeliefShift měří metrikami BRA a ESI — a který žádný existující systém nemodeluje explicitně.
 
 ### 4.4 Detekce inkompatibility: tři vrstvy

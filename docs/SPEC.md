@@ -129,6 +129,8 @@ The field `entitlement.source: none` is legal and significant — it marks a com
 | **CHALLENGE** | asking for reasons | a query on a commitment with `source: none`; the agent is challenged to supply provenance, otherwise → RETRACT |
 | **RETRACT** | withdrawal | the commitment is deactivated, history is preserved (nothing is deleted — protection against Ghost Memory) |
 
+Note (added 2026-07-19, Phase-0 finding F2): besides the seven operators, `apply()` also writes **COEXIST** to the log — a Tier-0 collision waived by a Tier-1 verdict (compatible / needs clarification). It is not an operator (no commitment changes state — both stay active, e.g. dev cache vs. prod cache) but an audit record that the collision was examined and deliberately left standing.
+
 The SUPERSEDE vs. BRANCH-CONFLICT distinction is the core of the project: it is exactly the difference between an entitled revision of belief and drift — which BeliefShift measures with the BRA and ESI metrics, and which no existing system models explicitly.
 
 ### 4.4 Incompatibility Detection: Three Tiers

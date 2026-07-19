@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixed
+- **MCP `supersede` no longer carries the replaced claim's `attr:` pins onto the new commitment.** It copied the old scope verbatim, so after a legitimate "Postgres → MongoDB" supersede the new *active* record still pinned `...=postgresql` and the Tier-0 gate went on enforcing the old choice against the very technology the supersede introduced. Now: `topic:`/`repo:` tags carry over, stale pins are dropped, and a new optional `scope` parameter pins the new choice explicitly. The module docstring also no longer claims supersede/retract route through the operator pipeline — they are explicit, entitlement-gated transitions (regression-tested).
+- **One `SUPPORT` per agreeing commitment**, however many attribute keys agree — the dedup guard in `operators.apply` tested a set nothing had been added to, so an N-key agreement logged N `SUPPORT`s and produced N duplicate result entries. Agreement on one key still does not mask a collision on another (both regression-tested).
+- **Extractor-provided entitlement refs survive materialization** — `operators._materialize` overwrote them with the caller's refs instead of merging (regression-tested).
+- Removed the dead `openai` extra (`pip install "scorekeeper[openai]"` installed `httpx` that nothing imports — the OpenAI-compat backend is deliberately stdlib-only).
+
 ### Changed
 - **The benchmark is now DeonticBench** (formerly EntitleBench — the second name collision in a row, this time with an established SE/NLP commit-message benchmark; see `docs/research/related-work.md`). Module `bench/deonticbench/`, progress doc `DEONTICBENCH-PROGRESS.md`; dated evidence artifacts and ADR history keep historical names (scoreboard c-0029).
 - CI hardened: tests now run on a **Python 3.11/3.12/3.13 matrix** (every advertised classifier), with **mypy** type checking, **coverage** reporting (85 % floor), and ruff extended to `bench/`. A new **plugin job** shellchecks `hooks/run.sh`, validates the plugin manifests, and smoke-tests the hook dispatcher — including the "unknown event must never break the agent" regression from #6. `release.yml` runs mypy before shipping.
