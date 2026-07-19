@@ -45,9 +45,23 @@ def _load_config(root: Path | None) -> dict:
 
 
 def detect_backend(root: Path | str | None = None, env: dict | None = None) -> ModelBackend:
-    """Pick the scorer backend. Explicit config wins; env auto-detect otherwise."""
+    """Pick the scorer backend.
+
+    Precedence (env overrides config — the same rule as the gate and extract
+    settings): an explicit ``SCOREKEEPER_MODEL_URL`` wins outright (config
+    fills the gaps it doesn't set), then config ``backend.kind``, then passive
+    auto-detect (``ANTHROPIC_API_KEY`` presence, claude CLI on PATH)."""
     env = env if env is not None else dict(os.environ)
     cfg = _load_config(Path(root) if root else None)
+
+    # explicit env choice first: a user pointing SCOREKEEPER_MODEL_URL at a
+    # local model must not be silently ignored by a config-pinned kind
+    if url := env.get("SCOREKEEPER_MODEL_URL"):
+        return OpenAICompatBackend(
+            base_url=url,
+            model=env.get("SCOREKEEPER_MODEL") or cfg.get("model") or LOCAL_DEFAULT,
+            api_key=env.get("SCOREKEEPER_MODEL_API_KEY") or cfg.get("api_key", ""),
+        )
 
     kind = cfg.get("kind")
     if kind == "openai_compat":
@@ -61,13 +75,7 @@ def detect_backend(root: Path | str | None = None, env: dict | None = None) -> M
     if kind == "claude_cli":
         return ClaudeCLIBackend(model=cfg.get("model", CLI_DEFAULT))
 
-    # auto-detect
-    if url := env.get("SCOREKEEPER_MODEL_URL"):
-        return OpenAICompatBackend(
-            base_url=url,
-            model=env.get("SCOREKEEPER_MODEL", LOCAL_DEFAULT),
-            api_key=env.get("SCOREKEEPER_MODEL_API_KEY", ""),
-        )
+    # passive auto-detect
     if env.get("ANTHROPIC_API_KEY"):
         return AnthropicBackend()
     if ClaudeCLIBackend.available():

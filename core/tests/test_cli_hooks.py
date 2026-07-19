@@ -440,3 +440,25 @@ def test_hook_error_handler_never_creates_store(tmp_path, monkeypatch, capsys):
 
 def _raise_for_test(payload):
     raise RuntimeError("boom")
+
+
+def test_extract_mode_precedence(tmp_path, monkeypatch):
+    """SCOREKEEPER_EXTRACT > config extract: > SCOREKEEPER_EXTRACT_DEFAULT > sync.
+    Regression: the plugin's hooks.json used to inject SCOREKEEPER_EXTRACT
+    itself, making the config key dead under the plugin."""
+    from scorekeeper.cli import _extract_mode
+
+    for var in ("SCOREKEEPER_EXTRACT", "SCOREKEEPER_EXTRACT_DEFAULT"):
+        monkeypatch.delenv(var, raising=False)
+    assert _extract_mode(tmp_path) == "sync"  # bare default
+
+    monkeypatch.setenv("SCOREKEEPER_EXTRACT_DEFAULT", "async")  # plugin surface default
+    assert _extract_mode(tmp_path) == "async"
+
+    store = Store(tmp_path)
+    store.init()
+    (store.dir / "config.yaml").write_text("extract: sync\n")  # config beats surface default
+    assert _extract_mode(tmp_path) == "sync"
+
+    monkeypatch.setenv("SCOREKEEPER_EXTRACT", "async")  # user env beats everything
+    assert _extract_mode(tmp_path) == "async"

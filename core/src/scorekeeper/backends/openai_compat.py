@@ -32,18 +32,24 @@ class OpenAICompatBackend:
         api_key: str = "",
         timeout: float = 120.0,
         temperature: float = 0.0,
+        budget: float = 180.0,
     ):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.api_key = api_key
         self.timeout = timeout
         self.temperature = temperature
+        # total time budget for one complete() incl. retries — callers sit
+        # under hook deadlines (Stop: 180s); unbounded sleep-retry chains
+        # (up to 4x65s on 429s) blew far past them
+        self.budget = budget
 
     def _post(self, payload: dict) -> dict:
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         body = json.dumps(payload).encode("utf-8")
+        deadline = time.monotonic() + self.budget
         for attempt in range(MAX_RETRIES + 1):
             req = urllib.request.Request(
                 f"{self.base_url}/chat/completions",
@@ -57,10 +63,16 @@ class OpenAICompatBackend:
             except urllib.error.HTTPError as e:
                 detail = e.read().decode()[:800]
                 if e.code in TRANSIENT_CODES and attempt < MAX_RETRIES:
-                    if e.code == 429:
-                        time.sleep(self._retry_delay(e, detail))
-                    else:  # transient 5xx: scaled backoff
-                        time.sleep(10.0 * (attempt + 1))
+                    delay = (
+                        self._retry_delay(e, detail) if e.code == 429
+                        else 10.0 * (attempt + 1)  # transient 5xx: scaled backoff
+                    )
+                    if time.monotonic() + delay > deadline:
+                        raise BackendError(
+                            f"{self.name}: HTTP {e.code}: retry would exceed the "
+                            f"{self.budget:.0f}s budget: {detail[:300]}"
+                        ) from e
+                    time.sleep(delay)
                     continue
                 raise BackendError(f"{self.name}: HTTP {e.code}: {detail[:500]}") from e
             except (
@@ -69,8 +81,9 @@ class OpenAICompatBackend:
                 ConnectionRefusedError,
             ) as e:
                 # server dropped mid-request (restart, load) — transient, retry
-                if attempt < MAX_RETRIES:
-                    time.sleep(10.0 * (attempt + 1))
+                delay = 10.0 * (attempt + 1)
+                if attempt < MAX_RETRIES and time.monotonic() + delay <= deadline:
+                    time.sleep(delay)
                     continue
                 raise BackendError(f"{self.name}: connection dropped: {e}") from e
             except (urllib.error.URLError, TimeoutError) as e:

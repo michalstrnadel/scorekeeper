@@ -177,7 +177,11 @@ def _gate_mode(store: Store) -> str:
 
 def _extract_mode(root: Path) -> str:
     """``sync`` (default: findings block the turn) or ``async`` (detached worker,
-    findings injected on the next user prompt — ADR-0006, latency-first)."""
+    findings injected on the next user prompt — ADR-0006, latency-first).
+
+    Precedence: SCOREKEEPER_EXTRACT (user env) > config ``extract:`` >
+    SCOREKEEPER_EXTRACT_DEFAULT (surface default — the plugin's hooks.json
+    sets it to async WITHOUT shadowing the config key) > ``sync``."""
     mode = os.environ.get("SCOREKEEPER_EXTRACT", "")
     if mode in ("sync", "async"):
         return mode
@@ -187,6 +191,9 @@ def _extract_mode(root: Path) -> str:
             data = yaml.safe_load(cfg.read_text()) or {}
             if data.get("extract") in ("sync", "async"):
                 return data["extract"]
+    default = os.environ.get("SCOREKEEPER_EXTRACT_DEFAULT", "")
+    if default in ("sync", "async"):
+        return default
     return "sync"
 
 

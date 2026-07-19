@@ -27,10 +27,13 @@ class ClaudeCLIBackend:
     def complete(self, system: str, user: str) -> str:
         if not self.available():
             raise BackendError("claude CLI not found on PATH")
-        prompt = f"{system}\n\n---\n\n{user}"
         try:
+            # a real system prompt, not folded into the user turn — instruction
+            # adherence matters most on this weakest backend, where the JSON
+            # repair-retry is needed most
             proc = subprocess.run(
-                ["claude", "-p", "--model", self.model, "--output-format", "text", prompt],
+                ["claude", "-p", "--model", self.model, "--output-format", "text",
+                 "--append-system-prompt", system, user],
                 capture_output=True,
                 text=True,
                 timeout=self.timeout,
