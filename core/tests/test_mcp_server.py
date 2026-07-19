@@ -113,3 +113,15 @@ def test_supersede_explicit_scope_pins_the_new_choice(root):
     )
     new = Store(root).load(result["by"])
     assert "attr:persistence.primary_db=mongodb" in new.scope
+
+
+def test_write_tools_report_their_resolved_root(root):
+    """Hooks resolve the store from the session cwd, the MCP server from
+    SCOREKEEPER_ROOT — when they diverge, supersede writes a board the wall
+    never reads. Every write tool reports which root it acted on."""
+    out = mcp_server.assert_commitment(
+        "Caching uses Redis.", scope=["topic:caching", "attr:caching.backend=redis"]
+    )
+    assert out["root"] == str(root.resolve())
+    sup = mcp_server.supersede(out["asserted"][0], "Caching uses an in-process LRU.")
+    assert sup["root"] == str(root.resolve())

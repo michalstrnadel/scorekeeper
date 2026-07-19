@@ -11,6 +11,12 @@ theory.md §5.
 
 Run: ``scorekeeper-mcp`` (stdio). Project root: $SCOREKEEPER_ROOT or cwd.
 Requires the ``mcp`` extra: ``pip install "scorekeeper[mcp]"``.
+
+Root divergence warning: hooks resolve the store from the session's cwd, this
+server from $SCOREKEEPER_ROOT (or ITS cwd) — if they disagree, ``supersede``
+writes a different board than the one the Tier-0 wall reads and the wall never
+lifts. Every write tool therefore reports the ``root`` it acted on; set
+$SCOREKEEPER_ROOT explicitly when launching the server for a project.
 """
 
 from __future__ import annotations
@@ -23,8 +29,15 @@ from mcp.server.fastmcp import FastMCP
 
 from .backends import BackendError, detect_backend
 from .detect import tier0, tier1
-from .extract import ExtractedCommitment
-from .model import Commitment, Entitlement, EntitlementSource, Kind, Status, new_id
+from .model import (
+    Commitment,
+    Entitlement,
+    EntitlementSource,
+    ExtractedCommitment,
+    Kind,
+    Status,
+    new_id,
+)
 from .operators import apply as apply_operators
 from .store import Store
 
@@ -35,8 +48,9 @@ def _store() -> Store:
     return Store(Path(os.environ.get("SCOREKEEPER_ROOT", ".")))
 
 
-def _result_summary(result) -> dict:
+def _result_summary(result, store: Store) -> dict:
     return {
+        "root": str(store.root.resolve()),  # which board was written — see module docstring
         "asserted": result.asserted,
         "supported": result.supported,
         "refined": result.refined,
@@ -90,7 +104,9 @@ def assert_commitment(
     except BackendError:
         backend = None  # Tier-0 still runs; Tier-1 needs a model
     with store.write_lock():  # id allocation races detached workers otherwise
-        return _result_summary(apply_operators(store, [ext], backend=backend, refs=["mcp"]))
+        return _result_summary(
+            apply_operators(store, [ext], backend=backend, refs=["mcp"]), store
+        )
 
 
 @mcp.tool()
@@ -172,7 +188,7 @@ def supersede(
         store.save(new)
         store.log("SUPERSEDE", new.id, f"supersedes {old.id} (mcp)", against=old.id)
         store.write_scoreboard()
-    return {"superseded": old.id, "by": new.id}
+    return {"superseded": old.id, "by": new.id, "root": str(store.root.resolve())}
 
 
 @mcp.tool()
@@ -188,6 +204,7 @@ def challenge(commitment_id: str, reason: str = "") -> dict:
         "claim": c.claim,
         "entitlement": c.entitlement.source.value,
         "suspect": c.entitlement.is_suspect,
+        "root": str(store.root.resolve()),
     }
 
 
@@ -201,7 +218,7 @@ def retract(commitment_id: str, reason: str = "") -> dict:
         store.save(c)
         store.log("RETRACT", c.id, reason or "retracted via mcp")
         store.write_scoreboard()
-    return {"retracted": c.id}
+    return {"retracted": c.id, "root": str(store.root.resolve())}
 
 
 def main() -> None:
