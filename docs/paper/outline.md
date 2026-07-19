@@ -158,6 +158,11 @@ negative results ARE the story, not a footnote. Novelty phrasing strictly per
 - 60-second install (plugin), experience-report issue template, DeonticBench
   run instructions; leaderboard intent.
 
+**Pre-submission gate:** work through
+[submission-checklist.md](submission-checklist.md) (E&D desk-reject triggers:
+anonymized repo, executable oracle, Croissant/RAI, pinning, cluster-aware
+statistics) before any venue upload.
+
 ## Appendix
 
 - ADR index; classifier marker tables; full run manifests; reproduction
