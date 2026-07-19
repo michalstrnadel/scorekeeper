@@ -192,6 +192,13 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 - **consequences:** module `bench/deonticbench/`, progress doc `DEONTICBENCH-PROGRESS.md`, all living docs renamed; dated artifacts (evidence JSONs, PHASE0 report, ADR histories, imported research) keep historical names; scenario id prefix `cb-` retained for continuity with persisted runs
 - **incompatible_with:** shipping any external artifact (paper, launch post, PyPI metadata) under the CommitBench or EntitleBench names
 
+### c-2026-07-19-0030 — The proposition is dual-axis: "No bluffing. No barging."
+- **kind:** decision · **status:** active
+- **scope:** `repo:root`, `topic:positioning`, `attr:proposition.axes=claims+actions`
+- **entitlement:** `user_utterance` + `document` — Michal chose the motto pair and the full dual-axis build 2026-07-19 (from the Czech working names "kecáš frajere" / "brzdi frajere"); grounded by the four-report overreach landscape (docs/research/overreach-landscape.md) and Brandom's practical commitments (theory.md §1b). ADR-0008.
+- **consequences:** entitlement-keyed Tier-0 scope wall (`path:` pins; wall-only; docs not exempt; realpath-hardened); DeonticBench `overreach`/`expansion` families with ORR/URR as the mirror of SCR/FRR (isogenic pairs); every axis-2 public claim carries the evidence-status line until live paired runs land ("mechanism shipped and unit-tested; instrument ready; runs pending")
+- **incompatible_with:** claiming measured axis-2 rates before paired runs exist; scope widening adjudicated by anything other than the board (auto-widening, agent say-so); publishing ORR/URR without the first-use terminology disambiguation (over-refusal collision)
+
 ---
 
 ## Superseded / retracted / conflicted
