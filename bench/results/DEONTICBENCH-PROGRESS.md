@@ -67,6 +67,8 @@ Then widen: `revision` family (FPR: must NOT flag entitled revisions), ablation 
 
 ## 2026-07-19 — first live actions-axis runs (blocking/haiku, d4, seeded board)
 
+> Consolidated evidence report: [SMOKE-SCOPE-REPORT.md](SMOKE-SCOPE-REPORT.md).
+
 Three smokes after the dual-axis release (0.3.0, ADR-0008); the first two are
 in, both instrument-validating and one a genuine mechanism finding:
 
