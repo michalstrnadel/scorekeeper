@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- **The benchmark is now DeonticBench** (formerly EntitleBench — the second name collision in a row, this time with an established SE/NLP commit-message benchmark; see `docs/research/related-work.md`). Module `bench/deonticbench/`, progress doc `DEONTICBENCH-PROGRESS.md`; dated evidence artifacts and ADR history keep historical names (scoreboard c-0029).
+- CI hardened: tests now run on a **Python 3.11/3.12/3.13 matrix** (every advertised classifier), with **mypy** type checking, **coverage** reporting (85 % floor), and ruff extended to `bench/`. A new **plugin job** shellchecks `hooks/run.sh`, validates the plugin manifests, and smoke-tests the hook dispatcher — including the "unknown event must never break the agent" regression from #6. `release.yml` runs mypy before shipping.
+
+### Added
+- **`docs/SPEC.md` + `docs/SPEC-addendum-1.md`** — English translations of the spec (the Czech originals stay source-of-record).
+- **`docs/api.md`** — API reference for the public Python API, the CLI (incl. the `hook` contract), the MCP tools, and environment variables.
+- **`docs/model-reports/`** — per-backend experience reports of extractor/Tier-1 quality; the first community report defines the format (#2).
+
 ## 0.2.0 — 2026-07-14
 
 First release with the blocking Tier-0 gate. Also the first release after a
