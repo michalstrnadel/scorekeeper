@@ -50,6 +50,8 @@ stage_plugin() {  # the hook dispatcher is release-critical bash (#6 incident)
 
 stage_core() {  # keep in sync with the `core` job in .github/workflows/ci.yml
   cd "$ROOT/core"
+  # sync incl. extras — without it a fresh clone fails mypy on `import anthropic`
+  run uv sync --all-extras
   run uv run ruff check src tests ../bench ../scripts
   run uv run mypy
   run uv run pytest -q --cov --cov-report=term --cov-fail-under=85
@@ -59,6 +61,9 @@ stage_core() {  # keep in sync with the `core` job in .github/workflows/ci.yml
 stage_bench() {  # generator + harness tests (relative imports need their cwd)
   cd "$ROOT/bench/harness"
   run uv run --with pytest python -m pytest test_stats.py test_classify.py -q
+  # import smoke over the modules no test imports (run/judge/…): a core-side
+  # rename of an API the harness uses would otherwise ship green
+  run uv run python -c "import classify, judge, meta_eval, reclassify, rejudge, run, stats"
   cd "$ROOT/bench/deonticbench"
   run uv run --project ../harness --with pytest python -m pytest test_generate.py -q
   cd "$ROOT"
@@ -80,6 +85,9 @@ stage_build() {  # never trust core/dist/ — build into a clean temp dir
   # points, py.typed) that nothing running from the checkout can catch
   run uv run --isolated --no-project --with "$BUILD_TMP"/scorekeeper-*.whl -- \
     python -m scorekeeper --help
+  # the second console script's import path, with the mcp extra it needs
+  run uv run --isolated --no-project --with "$BUILD_TMP"/scorekeeper-*.whl --with mcp -- \
+    python -c "from scorekeeper.mcp_server import main"
   cd "$ROOT"
 }
 

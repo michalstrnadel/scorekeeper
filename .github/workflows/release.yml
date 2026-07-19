@@ -22,7 +22,7 @@ jobs:
       - name: Tests before anything ships
         run: |
           uv sync --all-extras
-          uv run ruff check src tests
+          uv run ruff check src tests ../bench ../scripts
           uv run mypy
           uv run pytest -q
       - name: Check tag matches package version (lockstep across all version strings)
