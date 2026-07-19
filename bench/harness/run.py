@@ -107,6 +107,7 @@ class PhaseStats:
 class RunResult:
     scenario: str
     variant: str
+    effort: str = ""  # SDK effort level, when overridden (Q11 axis)
     phases: list[PhaseStats] = field(default_factory=list)
     judge: dict = field(default_factory=dict)
     events: dict = field(default_factory=dict)
@@ -207,7 +208,9 @@ def make_hooks(workdir: Path, channels: set[str]) -> dict:
     return hooks
 
 
-def make_options(workdir: Path, variant: str, model: str | None) -> ClaudeAgentOptions:
+def make_options(
+    workdir: Path, variant: str, model: str | None, effort: str | None = None
+) -> ClaudeAgentOptions:
     kwargs: dict = {
         "cwd": str(workdir),
         "permission_mode": "bypassPermissions",
@@ -215,6 +218,10 @@ def make_options(workdir: Path, variant: str, model: str | None) -> ClaudeAgentO
     }
     if model:
         kwargs["model"] = model
+    if effort:
+        # the effort-proportionality axis (QUESTIONS Q11): a user-chosen high
+        # effort raises initiative — exactly the barge-elicitation knob
+        kwargs["effort"] = effort
     if variant != "bare":
         kwargs["hooks"] = make_hooks(workdir, VARIANT_CHANNELS[variant])
     return ClaudeAgentOptions(**kwargs)
@@ -250,9 +257,12 @@ async def _collect_phase(client, stats: PhaseStats) -> None:
             stats.output_tokens += usage.get("output_tokens", 0) or 0
 
 
-async def drive(scenario: dict, workdir: Path, variant: str, model: str | None) -> list[PhaseStats]:
+async def drive(
+    scenario: dict, workdir: Path, variant: str, model: str | None,
+    effort: str | None = None,
+) -> list[PhaseStats]:
     phases: list[PhaseStats] = []
-    options = make_options(workdir, variant, model)
+    options = make_options(workdir, variant, model, effort)
     client = ClaudeSDKClient(options=options)
     await client.connect()
     try:
@@ -261,7 +271,9 @@ async def drive(scenario: dict, workdir: Path, variant: str, model: str | None) 
                 if phase["harness"] == "force_compact":
                     # emulate compaction: fresh session, context gone (both variants)
                     await client.disconnect()
-                    client = ClaudeSDKClient(options=make_options(workdir, variant, model))
+                    client = ClaudeSDKClient(
+                        options=make_options(workdir, variant, model, effort)
+                    )
                     await client.connect()
                 continue
             stats = PhaseStats(prompt=phase["user"][:80], prompt_full=phase["user"])
@@ -274,7 +286,9 @@ async def drive(scenario: dict, workdir: Path, variant: str, model: str | None) 
                 print(f"  ! phase timed out ({PHASE_TIMEOUT_S:.0f}s) — reconnecting session")
                 with contextlib.suppress(Exception):
                     await client.disconnect()
-                client = ClaudeSDKClient(options=make_options(workdir, variant, model))
+                client = ClaudeSDKClient(
+                    options=make_options(workdir, variant, model, effort)
+                )
                 await client.connect()
             stats.wall_seconds = round(time.time() - phase_started, 1)
             phases.append(stats)
@@ -402,9 +416,10 @@ def score_events(ground_truth: dict, workdir: Path) -> dict:
 async def run_one(
     name: str, variant: str, model: str | None, judge_model: str,
     tasks_dir: Path = TASKS_DIR, seed_commitments: bool = False,
+    effort: str | None = None,
 ) -> RunResult:
     scenario, ground_truth, repo_seed = load_scenario(name, tasks_dir)
-    result = RunResult(scenario=name, variant=variant)
+    result = RunResult(scenario=name, variant=variant, effort=effort or "")
     workdir = Path(tempfile.mkdtemp(prefix=f"skbench-{name}-{variant}-"))
     result.workdir = str(workdir)
     started = time.time()
@@ -426,7 +441,7 @@ async def run_one(
         # baseline AFTER seeding, BEFORE driving: the diff must attribute every
         # change to the agent, and none to the harness setup
         seed_hashes = snapshot_tree(workdir)
-        result.phases = await drive(scenario, workdir, variant, model)
+        result.phases = await drive(scenario, workdir, variant, model, effort)
         result.total_input_tokens = sum(p.input_tokens for p in result.phases)
         result.total_output_tokens = sum(p.output_tokens for p in result.phases)
         if result.total_output_tokens == 0:
@@ -545,6 +560,9 @@ async def main() -> int:
         help="'both' = bare+scorekept; others are SPEC §6.3 ablations",
     )
     parser.add_argument("--model", default=None, help="agent model override")
+    parser.add_argument("--effort", default=None,
+                        choices=["low", "medium", "high", "max"],
+                        help="SDK effort override (Q11: initiative knob)")
     parser.add_argument("--judge-model", default="models/gemini-2.5-flash")
     parser.add_argument(
         "--tasks-dir", default=str(TASKS_DIR),
@@ -584,7 +602,7 @@ async def main() -> int:
         for variant in variants:
             r = await run_one(
                 name, variant, args.model, args.judge_model, tasks_dir,
-                seed_commitments=args.seed_commitments,
+                seed_commitments=args.seed_commitments, effort=args.effort,
             )
             results.append(r)
             # crash-safe: persist each run the moment it finishes
