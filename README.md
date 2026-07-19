@@ -168,7 +168,7 @@ to try it** — see below. See [CHANGELOG](CHANGELOG.md).
 
 ## Contributing
 
-Early project, design-first — **trying it and reporting back is as valuable as code.** Start with [CONTRIBUTING.md](CONTRIBUTING.md): 60-second setup, a tour of the codebase, and good first issues (add a model backend, extend the rival-tech lexicon, write a planted scenario, or port the core to TypeScript). File an [experience report](https://github.com/michalstrnadel/scorekeeper/issues/new?template=experience-report.md) after you run it.
+Early project, design-first — **trying it and reporting back is as valuable as code.** Start with [CONTRIBUTING.md](CONTRIBUTING.md): 60-second setup, a tour of the codebase, and good first issues (add a model backend, extend the rival-tech lexicon, write a planted scenario, or port the core to TypeScript). `scripts/e2e.sh` runs everything CI runs in one command. File an [experience report](https://github.com/michalstrnadel/scorekeeper/issues/new?template=experience-report.md) after you run it.
 
 If you use it in research, there's a [CITATION.cff](CITATION.cff).
 

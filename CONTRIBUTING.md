@@ -39,23 +39,40 @@ Five hooks attach: the digest injects your commitments each turn (and survives c
 
 ## Dev setup
 
+**One command runs everything CI runs** (macOS/Linux; each stage prints the exact
+commands it executes, so on Windows you can run them manually):
+
+```bash
+scripts/e2e.sh              # all stages: docs plugin core bench demo build live
+scripts/e2e.sh core         # or any subset — same stages CI runs, no drift
+scripts/e2e.sh --list
+```
+
 Everything lives in `core/` (the library + CLI + MCP server), driven by `uv`:
 
 ```bash
 cd core
 uv sync --all-extras        # deps incl. [mcp]
-uv run pytest -q            # 65 tests, ~1s
+uv run pytest -q            # full suite, ~2s
 uv run ruff check src tests # lint (must pass; CI enforces)
+uv run mypy                 # types (must pass; CI enforces)
 ```
 
-The benchmark harness is a separate uv project:
+The benchmark harness is a separate uv project — `scripts/e2e.sh bench` runs both
+test locations (raw commands, if you need them piecemeal: `cd bench/harness &&
+uv run --with pytest python -m pytest test_stats.py test_classify.py -q`, and
+`cd bench/deonticbench && uv run --project ../harness --with pytest python -m
+pytest test_generate.py -q`).
 
-```bash
-cd bench/harness && uv run --with pytest python -m pytest test_stats.py test_classify.py -q
-cd bench/deonticbench && uv run --project ../harness --with pytest python -m pytest test_generate.py -q
-```
+If you have a local model endpoint (Ollama, LM Studio, vLLM), `SCOREKEEPER_LIVE=1
+scripts/e2e.sh live` runs the live extractor/detector evals against it.
 
-CI (`.github/workflows/ci.yml`) runs ruff + pytest on every push and PR.
+CI (`.github/workflows/ci.yml`) runs the same stages as jobs: `core` on a
+3.11/3.12/3.13 matrix (ruff + mypy + pytest with a coverage floor), plus `docs`,
+`plugin`, `bench`, and `smoke` — each invoking one `scripts/e2e.sh` stage. Note
+the docs job checks internal links against **git-tracked** files: a link to
+something untracked (e.g. `drafts/`) works locally but 404s on GitHub, so it
+fails the check.
 
 ## The shape of the codebase
 
@@ -85,7 +102,7 @@ Design rule that governs every change (see [`docs/theory.md` §5](docs/theory.md
 ## Pull requests
 
 - Branch, keep changes small and reviewable, add a regression test when you fix a bug.
-- `uv run ruff check src tests` and `uv run pytest -q` must pass (CI enforces both).
+- `scripts/e2e.sh` must pass — ruff, mypy, and pytest at minimum (CI enforces all of it).
 - Conventional Commits (`feat|fix|docs|refactor|test|chore|…`); update `CHANGELOG.md` for user-visible changes.
 - User-visible behavior changes should note the rationale; if it's a design decision, an ADR in `adr/` (and a line in `.scorekeeper/scoreboard.md` — we dogfood) is ideal.
 

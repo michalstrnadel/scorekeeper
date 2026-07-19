@@ -13,6 +13,10 @@
 - CI hardened: tests now run on a **Python 3.11/3.12/3.13 matrix** (every advertised classifier), with **mypy** type checking, **coverage** reporting (85 % floor), and ruff extended to `bench/`. A new **plugin job** shellchecks `hooks/run.sh`, validates the plugin manifests, and smoke-tests the hook dispatcher — including the "unknown event must never break the agent" regression from #6. `release.yml` runs mypy before shipping.
 
 ### Added
+- **`scripts/e2e.sh`** — one command runs everything CI runs, as stage subcommands (`docs plugin core bench demo build live`); CI jobs each invoke exactly one stage, so local runs and CI cannot drift. Includes a clean-room package build with `twine check` and a wheel install-smoke, and an opt-in `live` stage for local model endpoints.
+- **Docs link check in CI** (`scripts/check_links.py`, stdlib-only): internal links and heading anchors validated against **git-tracked** files — a link that resolves locally but points at something untracked (e.g. `drafts/`) 404s on GitHub and now fails CI.
+- **Subprocess-level gate chain test** (`core/tests/test_e2e_chain.py`): the full assert → `pre-tool-use` deny → wall-on-retry → supersede → pass chain through the real CLI process (argv/stdin/stdout/exit code, state read purely from disk), plus the exit-0-on-garbage contract `run.sh` depends on (#6).
+- **Bench tests wired into CI** — the DeonticBench generator and harness test suites (49 tests) now run on every push/PR; previously they only ran when a contributor remembered the incantation.
 - **`docs/SPEC.md` + `docs/SPEC-addendum-1.md`** — English translations of the spec (the Czech originals stay source-of-record).
 - **`docs/api.md`** — API reference for the public Python API, the CLI (incl. the `hook` contract), the MCP tools, and environment variables.
 - **`docs/model-reports/`** — per-backend experience reports of extractor/Tier-1 quality; the first community report defines the format (#2).
