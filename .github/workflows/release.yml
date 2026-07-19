@@ -23,6 +23,7 @@ jobs:
         run: |
           uv sync --all-extras
           uv run ruff check src tests
+          uv run mypy
           uv run pytest -q
       - name: Check tag matches package version (lockstep across all version strings)
         run: |

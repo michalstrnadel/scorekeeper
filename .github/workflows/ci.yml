@@ -9,6 +9,11 @@ on:
 jobs:
   core:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # keep in sync with pyproject classifiers — every advertised version is tested
+        python: ["3.11", "3.12", "3.13"]
     defaults:
       run:
         working-directory: core
@@ -17,9 +22,37 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          python-version: ${{ matrix.python }}
       - name: Sync dependencies
         run: uv sync --all-extras
       - name: Lint
-        run: uv run ruff check src tests
+        run: uv run ruff check src tests ../bench
+      - name: Types
+        run: uv run mypy
       - name: Tests
-        run: uv run pytest -q
+        run: uv run pytest -q --cov --cov-report=term --cov-fail-under=85
+
+  plugin:
+    # the hook dispatcher is release-critical and pure bash — the #6 incident
+    # (a version-skewed scorer denying every Edit/Write) lived exactly here
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Shellcheck the hook dispatcher
+        run: uvx --from shellcheck-py shellcheck claude-code-plugin/hooks/run.sh
+      - name: Plugin manifests parse
+        run: |
+          python3 -c 'import json; json.load(open("claude-code-plugin/.claude-plugin/plugin.json"))'
+          python3 -c 'import json; json.load(open("claude-code-plugin/hooks/hooks.json"))'
+          python3 -c 'import json; json.load(open(".claude-plugin/marketplace.json"))'
+      - name: Hook smoke test — pre-tool-use resolves via the dev checkout
+        run: |
+          printf '%s' '{"tool_name":"Edit","tool_input":{"file_path":"/tmp/x.py","new_string":"pass"}}' \
+            | bash claude-code-plugin/hooks/run.sh pre-tool-use
+      - name: Hook smoke test — session-start exits 0
+        run: printf '%s' '{}' | bash claude-code-plugin/hooks/run.sh session-start
+      - name: Hook smoke test — unknown event must never break the agent (regression, #6)
+        run: printf '%s' '{}' | bash claude-code-plugin/hooks/run.sh definitely-not-an-event
