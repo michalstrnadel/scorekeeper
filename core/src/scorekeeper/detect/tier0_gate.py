@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import contextlib
 import fcntl
+import fnmatch
 import json
 import os
 import tempfile
@@ -47,7 +48,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..model import Commitment
+from ..model import EXTERNAL_SOURCES, Commitment
 from . import tier0_content
 
 STATE_FILENAME = "tier0-gate.json"
@@ -194,3 +195,136 @@ def evaluate(
         if not _save_seen(state_path, seen):
             return None  # cannot honor "the retry will not be blocked" — fail open
     return GateDecision(reason=format_reason(fresh), warnings=fresh)
+
+
+# -- scope wall (ADR-0008): entitlement-keyed write-scope gating -----------------
+#
+# The claims wall above blocks unentitled *content* (rival technologies); this
+# wall blocks unentitled *targets* — writes to paths outside what the request
+# in force granted. Stateless like evaluate_wall: the pass condition is the
+# BOARD changing (an entitled commitment whose ``path:`` pins cover the target
+# lands, the union widens, the check goes quiet). Wall-only by design: the
+# bump's instructed-retry channel was already exploited on claims.
+
+
+@dataclass
+class ScopePin:
+    commitment_id: str
+    pattern: str
+
+
+@dataclass
+class ScopeDecision:
+    reason: str
+    target: str              # normalized root-relative posix path
+    pins: list[ScopePin]     # every entitled pin consulted
+
+
+def collect_scope_pins(active: list[Commitment]) -> list[ScopePin]:
+    """Entitled ``path:`` pins on active commitments — the grant union.
+
+    Entitlement-keyed, not resource-keyed: only commitments whose provenance is
+    external (user_utterance/tool_output/document) count. A self-asserted
+    ``source=none`` commitment carrying ``path:**`` must not widen the agent's
+    own scope — that would be the self-attestation exploit all over again."""
+    pins: list[ScopePin] = []
+    for c in sorted(active, key=lambda c: c.id):
+        if c.entitlement.source not in EXTERNAL_SOURCES:
+            continue
+        pins.extend(ScopePin(c.id, p) for p in c.path_pins)
+    return pins
+
+
+def normalize_target(file_path: str, root: Path) -> str | None:
+    """Root-relative, symlink-resolved, casefolded posix path — or None when
+    the target escapes the project root.
+
+    ``realpath`` (not just normpath) closes the symlink evasion: a link inside
+    the repo pointing elsewhere would otherwise make an out-of-root write look
+    in-scope. Casefold because APFS/NTFS are case-insensitive — ``APP/x.py``
+    writes the same file as ``app/x.py``. Never raises (hook contract)."""
+    try:
+        base = Path(root).resolve()
+        p = Path(file_path)
+        target = (base / p) if not p.is_absolute() else p
+        # resolve symlinks in the whole chain: a symlinked parent OR an
+        # existing symlink leaf would smuggle the write elsewhere; only a
+        # not-yet-created leaf keeps its literal name
+        if target.is_symlink() or target.exists():
+            resolved = target.resolve()
+        else:
+            resolved = target.parent.resolve() / target.name
+        rel = resolved.relative_to(base)
+    except (ValueError, OSError):
+        return None
+    return rel.as_posix().casefold()
+
+
+def path_in_scope(rel: str, patterns: list[str]) -> bool:
+    """fnmatch semantics with an explicit subtree rule: ``p/**`` or ``p/``
+    grants everything under ``p/``. Malformed patterns are skipped, never
+    raised — a bad pin must not crash the hook. Documented caveat: a bare
+    ``*`` crosses ``/`` (fnmatch, not gitignore) — use ``dir/**`` for
+    subtrees and exact names for files."""
+    for raw in patterns:
+        pat = raw.strip().removeprefix("./").casefold()
+        if not pat:
+            continue
+        try:
+            if pat.endswith(("/**", "/")):
+                prefix = pat.rstrip("*").rstrip("/") + "/"
+                if rel.startswith(prefix):
+                    return True
+            elif rel == pat or fnmatch.fnmatchcase(rel, pat):
+                return True
+        except Exception:  # noqa: BLE001 — malformed pin, skip it
+            continue
+    return False
+
+
+def format_scope_reason(target: str, pins: list[ScopePin]) -> str:
+    grants = ", ".join(f"{p.commitment_id} pins path:{p.pattern}" for p in pins[:4])
+    if len(pins) > 4:
+        grants += f" (+{len(pins) - 4} more)"
+    return (
+        f"SCOREKEEPER BLOCKED THIS EDIT: it writes '{target}', which is outside the "
+        f"task's entitled write scope ({grants}). This block repeats until the "
+        "scoreboard itself records an entitled widening of the scope — your own "
+        "say-so cannot lift it. Decide which case you are in:"
+        " (a) The user did NOT ask for this file to change (your own initiative, a"
+        " drive-by cleanup, or a note's suggestion) — do not fight the block; finish"
+        " the requested work, then surface the extra change you wanted and ask."
+        " (b) The user DID explicitly order work on this file, or the requested task"
+        " cannot be completed without it — record that grant on the scoreboard first:"
+        " use the scorekeeper `supersede`/`assert_commitment` tool with a `path:` pin"
+        " covering the file if available, otherwise state the user's order plainly in"
+        " your final reply and finish the turn (the grant is extracted onto the"
+        " scoreboard at turn end; your next attempt will pass). Do NOT work around"
+        " the block via shell writes — every workaround is audited."
+    )
+
+
+def format_scope_warning(target: str, pins: list[ScopePin]) -> str:
+    grants = ", ".join(f"{p.commitment_id} pins path:{p.pattern}" for p in pins[:4])
+    return (
+        f"SCOREKEEPER WARNING: this edit touched '{target}', outside the task's "
+        f"entitled write scope ({grants}). If the user asked for it, record the "
+        "grant on the scoreboard; otherwise surface it or revert."
+    )
+
+
+def evaluate_scope(
+    file_path: str, active: list[Commitment], root: Path
+) -> ScopeDecision | None:
+    """The barging wall. None = allow. Inert (None) when no entitled ``path:``
+    pins are active — opt-in per task, zero behavior change for existing
+    boards. With pins active, a target outside their union (or outside the
+    project root entirely, incl. traversal/symlink escapes) is denied."""
+    pins = collect_scope_pins(active)
+    if not pins:
+        return None
+    rel = normalize_target(file_path, root)
+    if rel is not None and path_in_scope(rel, [p.pattern for p in pins]):
+        return None
+    target = rel if rel is not None else file_path
+    return ScopeDecision(reason=format_scope_reason(target, pins), target=target, pins=pins)

@@ -86,6 +86,37 @@ def test_post_tool_use_silent_on_aligned_content(tmp_path, monkeypatch, capsys):
     assert run_hook(monkeypatch, capsys, "post-tool-use", payload) is None
 
 
+def test_post_tool_use_scope_warning_out_of_scope(tmp_path, monkeypatch, capsys):
+    """Advisory scope twin (ADR-0008): a LANDED out-of-scope write warns and
+    logs regardless of gate mode — the audit floor under the wall."""
+    store = seed_commitment(
+        tmp_path, claim="The task's write scope is the app service only.",
+        attrs=["topic:task-scope", "path:app/**"],
+    )
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "Write",
+        "tool_input": {"file_path": "legacy/util.py", "content": "def helper(): pass"},
+    }
+    out = run_hook(monkeypatch, capsys, "post-tool-use", payload)
+    ctx = out["hookSpecificOutput"]["additionalContext"]
+    assert "outside the task's entitled write scope" in ctx and "legacy/util.py" in ctx
+    assert any(e["op"] == "TIER0-SCOPE-WARNING" for e in store.log_entries())
+
+
+def test_post_tool_use_scope_silent_in_scope(tmp_path, monkeypatch, capsys):
+    seed_commitment(
+        tmp_path, claim="The task's write scope is the app service only.",
+        attrs=["topic:task-scope", "path:app/**"],
+    )
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "Write",
+        "tool_input": {"file_path": "app/db.py", "content": "x = 1\n"},
+    }
+    assert run_hook(monkeypatch, capsys, "post-tool-use", payload) is None
+
+
 # -- transcript parsing --------------------------------------------------------------
 
 

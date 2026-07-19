@@ -18,14 +18,17 @@ from datetime import UTC, datetime
 from .backends.base import ModelBackend
 from .detect import tier0, tier1
 from .detect.tier1 import Verdict
-from .model import Commitment, EntitlementSource, ExtractedCommitment, Status, new_id
+from .model import (
+    EXTERNAL_SOURCES,
+    Commitment,
+    EntitlementSource,
+    ExtractedCommitment,
+    Status,
+    new_id,
+)
 from .store import Store
 
-ENTITLED_TO_REVISE = {
-    EntitlementSource.USER_UTTERANCE,
-    EntitlementSource.TOOL_OUTPUT,
-    EntitlementSource.DOCUMENT,
-}
+ENTITLED_TO_REVISE = EXTERNAL_SOURCES
 
 
 @dataclass

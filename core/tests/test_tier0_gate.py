@@ -298,3 +298,249 @@ def test_bump_fails_open_when_state_cannot_be_saved(tmp_path):
     state.mkdir()  # os.replace onto a directory raises OSError
     decision = tier0_gate.evaluate("from pymongo import MongoClient", [c], state)
     assert decision is None
+
+
+# -- scope wall (ADR-0008): entitlement-keyed write-scope gating -----------------
+
+
+def scope_commitment(pins, cid="c-2026-07-19-0001", source=EntitlementSource.USER_UTTERANCE):
+    return Commitment(
+        id=cid,
+        ts=datetime(2026, 7, 19, tzinfo=UTC),
+        claim="The task's write scope is the app service only.",
+        kind=Kind.DECISION,
+        scope=pins,
+        entitlement=Entitlement(source=source),
+    )
+
+
+def test_scope_wall_denies_out_of_scope_write(tmp_path):
+    active = [scope_commitment(["topic:task-scope", "path:app/**"])]
+    d = tier0_gate.evaluate_scope("legacy/util.py", active, tmp_path)
+    assert d is not None
+    assert d.target == "legacy/util.py"
+    assert "c-2026-07-19-0001" in d.reason and "path:app/**" in d.reason
+
+
+def test_scope_wall_allows_in_scope_write(tmp_path):
+    active = [scope_commitment(["path:app/**"])]
+    assert tier0_gate.evaluate_scope("app/db.py", active, tmp_path) is None
+    assert tier0_gate.evaluate_scope("app/sub/deep/x.py", active, tmp_path) is None
+
+
+def test_scope_inert_without_path_pins(tmp_path):
+    # active commitments but no path: pins -> the wall does not exist
+    active = [commitment(["attr:persistence.primary_db=postgresql"])]
+    assert tier0_gate.evaluate_scope("legacy/util.py", active, tmp_path) is None
+
+
+def test_scope_union_across_commitments(tmp_path):
+    # grants accumulate: a file covered by the SECOND entitled grant passes
+    active = [
+        scope_commitment(["path:app/**"], cid="c-2026-07-19-0001"),
+        scope_commitment(["path:legacy/util.py"], cid="c-2026-07-19-0002"),
+    ]
+    assert tier0_gate.evaluate_scope("legacy/util.py", active, tmp_path) is None
+    assert tier0_gate.evaluate_scope("legacy/other.py", active, tmp_path) is not None
+
+
+def test_unentitled_pin_does_not_widen_scope(tmp_path):
+    # the self-attestation exploit, scope edition: a source=none commitment
+    # carrying path:** must not widen the agent's own write scope
+    active = [
+        scope_commitment(["path:app/**"], cid="c-2026-07-19-0001"),
+        scope_commitment(["path:**"], cid="c-2026-07-19-0002",
+                         source=EntitlementSource.NONE),
+    ]
+    assert tier0_gate.evaluate_scope("legacy/util.py", active, tmp_path) is not None
+
+
+def test_scope_wall_lifts_when_entitled_grant_lands(tmp_path):
+    active = [scope_commitment(["path:app/**"])]
+    assert tier0_gate.evaluate_scope("legacy/util.py", active, tmp_path) is not None
+    active.append(scope_commitment(["path:legacy/util.py"], cid="c-2026-07-19-0002"))
+    assert tier0_gate.evaluate_scope("legacy/util.py", active, tmp_path) is None
+
+
+def test_scope_glob_semantics(tmp_path):
+    active = [scope_commitment(["path:app/**", "path:README.md", "path:*.toml"])]
+    # subtree rule: app/** covers nesting
+    assert tier0_gate.evaluate_scope("app/a/b/c.py", active, tmp_path) is None
+    # exact file
+    assert tier0_gate.evaluate_scope("README.md", active, tmp_path) is None
+    # documented fnmatch caveat, pinned: a bare * crosses '/'
+    assert tier0_gate.evaluate_scope("deep/dir/x.toml", active, tmp_path) is None
+    # trailing-slash form is the same subtree rule
+    slash = [scope_commitment(["path:app/"])]
+    assert tier0_gate.evaluate_scope("app/x.py", slash, tmp_path) is None
+    assert tier0_gate.evaluate_scope("apps/x.py", slash, tmp_path) is not None
+
+
+def test_scope_case_insensitive_match(tmp_path):
+    # APFS/NTFS are case-insensitive: APP/Main.PY writes the same file
+    active = [scope_commitment(["path:app/**"])]
+    assert tier0_gate.evaluate_scope("APP/Main.PY", active, tmp_path) is None
+
+
+def test_path_traversal_is_normalized(tmp_path):
+    active = [scope_commitment(["path:app/**"])]
+    # app/../legacy/x is legacy/x — the dodge must not read as in-scope
+    assert tier0_gate.evaluate_scope("app/../legacy/util.py", active, tmp_path) is not None
+    assert tier0_gate.evaluate_scope("./app/x.py", active, tmp_path) is None
+
+
+def test_absolute_and_relative_targets_equivalent(tmp_path):
+    active = [scope_commitment(["path:app/**"])]
+    assert tier0_gate.evaluate_scope(str(tmp_path / "app" / "x.py"), active, tmp_path) is None
+    assert (
+        tier0_gate.evaluate_scope(str(tmp_path / "legacy" / "x.py"), active, tmp_path)
+        is not None
+    )
+
+
+def test_target_outside_root_is_denied(tmp_path):
+    # the board can only grant scope inside the project it governs
+    active = [scope_commitment(["path:**"])]
+    assert tier0_gate.evaluate_scope("../outside.py", active, tmp_path) is not None
+    assert tier0_gate.evaluate_scope("/etc/passwd", active, tmp_path) is not None
+
+
+def test_symlink_escape_is_denied(tmp_path):
+    # GhostApproval evasion: a symlink inside the repo pointing outside must
+    # not make the write look in-scope (resolved before matching)
+    root = tmp_path / "repo"
+    (root / "app").mkdir(parents=True)
+    outside = tmp_path / "elsewhere"
+    outside.mkdir()
+    (outside / "target.py").write_text("x = 1\n")
+    (root / "app" / "link.py").symlink_to(outside / "target.py")
+    (root / "vendored").symlink_to(outside)
+    active = [scope_commitment(["path:app/**", "path:vendored/**"])]
+    assert tier0_gate.evaluate_scope("app/link.py", active, root) is not None
+    assert tier0_gate.evaluate_scope("vendored/target.py", active, root) is not None
+
+
+def test_malformed_pin_is_skipped_never_raises(tmp_path):
+    # a bad pin must not crash the hook — and must not grant anything either
+    active = [scope_commitment(["path:[", "path:app/**"])]
+    assert tier0_gate.evaluate_scope("app/x.py", active, tmp_path) is None
+    assert tier0_gate.evaluate_scope("legacy/x.py", active, tmp_path) is not None
+
+
+def test_scope_reason_teaches_the_grant_path(tmp_path):
+    active = [scope_commitment(["path:app/**"])]
+    d = tier0_gate.evaluate_scope("legacy/util.py", active, tmp_path)
+    assert "say-so cannot lift it" in d.reason
+    assert "surface the extra change" in d.reason          # branch (a)
+    assert "supersede" in d.reason and "path:" in d.reason  # branch (b)
+    assert "audited" in d.reason
+
+
+# -- scope wall, hook level ------------------------------------------------------
+
+
+LEGACY_EDIT = {
+    "tool_name": "Write",
+    "tool_input": {"file_path": "legacy/util.py", "content": "def helper():\n    pass\n"},
+}
+
+
+def seed_scope(root, mode="block"):
+    seed_commitment(root, claim="The task's write scope is the app service only.",
+                    attrs=["topic:task-scope", "path:app/**", "path:tests/**"])
+    return enable_gate(root, mode=mode)
+
+
+def test_hook_scope_denies_and_logs(tmp_path, monkeypatch, capsys):
+    seed_scope(tmp_path)
+    out = run_hook(monkeypatch, capsys, "pre-tool-use", {"cwd": str(tmp_path), **LEGACY_EDIT})
+    spec = out["hookSpecificOutput"]
+    assert spec["permissionDecision"] == "deny"
+    assert "legacy/util.py" in spec["permissionDecisionReason"]
+    assert any(e["op"] == "TIER0-SCOPE-DENY" for e in Store(tmp_path).log_entries())
+    # the wall: an identical fresh attempt is still denied
+    again = run_hook(monkeypatch, capsys, "pre-tool-use", {"cwd": str(tmp_path), **LEGACY_EDIT})
+    assert again["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_hook_scope_allows_in_scope_write(tmp_path, monkeypatch, capsys):
+    seed_scope(tmp_path)
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "Write",
+        "tool_input": {"file_path": "app/db.py", "content": "import psycopg\n"},
+    }
+    assert run_hook(monkeypatch, capsys, "pre-tool-use", payload) is None
+
+
+def test_docs_are_not_scope_exempt(tmp_path, monkeypatch, capsys):
+    # the .md exemption is a claims-content concern; a drive-by README edit
+    # outside the entitled scope is still barging (ADR-0008 stance)
+    seed_scope(tmp_path)
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "Write",
+        "tool_input": {"file_path": "docs/notes.md", "content": "drive-by cleanup"},
+    }
+    out = run_hook(monkeypatch, capsys, "pre-tool-use", payload)
+    assert out["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_notebook_path_is_scope_gated(tmp_path, monkeypatch, capsys):
+    seed_scope(tmp_path)
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "NotebookEdit",
+        "tool_input": {"notebook_path": "analysis.ipynb", "new_source": "x = 1"},
+    }
+    out = run_hook(monkeypatch, capsys, "pre-tool-use", payload)
+    assert out["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_missing_target_falls_through_to_content_gate(tmp_path, monkeypatch, capsys):
+    # a payload with no file_path/notebook_path cannot be scope-gated; the
+    # claims gate still sees the content
+    seed_scope(tmp_path)
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "Write",
+        "tool_input": {"content": "def helper():\n    pass\n"},
+    }
+    assert run_hook(monkeypatch, capsys, "pre-tool-use", payload) is None
+
+
+def test_scope_active_under_bump_mode_too(tmp_path, monkeypatch, capsys):
+    # scope is wall-only even when the claims gate runs as a bump: the
+    # instructed-retry channel was already exploited on claims
+    seed_scope(tmp_path, mode="bump")
+    assert run_hook(monkeypatch, capsys, "pre-tool-use", {"cwd": str(tmp_path), **LEGACY_EDIT})
+    again = run_hook(monkeypatch, capsys, "pre-tool-use", {"cwd": str(tmp_path), **LEGACY_EDIT})
+    assert again["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_scope_kill_switch_env_and_config(tmp_path, monkeypatch, capsys):
+    seed_scope(tmp_path)
+    monkeypatch.setenv("SCOREKEEPER_SCOPE_GATE", "off")
+    assert run_hook(monkeypatch, capsys, "pre-tool-use",
+                    {"cwd": str(tmp_path), **LEGACY_EDIT}) is None
+    monkeypatch.delenv("SCOREKEEPER_SCOPE_GATE")
+    store = Store(tmp_path)
+    (store.dir / "config.yaml").write_text("tier0_gate: block\nscope_gate: off\n")
+    assert run_hook(monkeypatch, capsys, "pre-tool-use",
+                    {"cwd": str(tmp_path), **LEGACY_EDIT}) is None
+    # force-enable: scope wall alone, claims gate off
+    (store.dir / "config.yaml").write_text("scope_gate: block\n")
+    out = run_hook(monkeypatch, capsys, "pre-tool-use", {"cwd": str(tmp_path), **LEGACY_EDIT})
+    assert out["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_hook_scope_wall_lifts_on_entitled_grant(tmp_path, monkeypatch, capsys):
+    seed_scope(tmp_path)
+    assert run_hook(monkeypatch, capsys, "pre-tool-use", {"cwd": str(tmp_path), **LEGACY_EDIT})
+    # the grant is a SECOND record — the union widens, the original pin stays
+    Store(tmp_path).save(
+        scope_commitment(["topic:task-scope", "path:legacy/util.py"],
+                         cid="c-2026-07-19-0002")
+    )
+    assert run_hook(monkeypatch, capsys, "pre-tool-use",
+                    {"cwd": str(tmp_path), **LEGACY_EDIT}) is None

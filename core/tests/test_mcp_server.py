@@ -125,3 +125,38 @@ def test_write_tools_report_their_resolved_root(root):
     assert out["root"] == str(root.resolve())
     sup = mcp_server.supersede(out["asserted"][0], "Caching uses an in-process LRU.")
     assert sup["root"] == str(root.resolve())
+
+
+def test_supersede_drops_path_pins_by_default(root):
+    """Path pins encode the replaced claim's GRANT — carrying them over would
+    keep enforcing the old write scope against the revision (ADR-0008)."""
+    out = mcp_server.assert_commitment(
+        "The task's write scope is the app service only.",
+        scope=["topic:task-scope", "path:app/**"],
+    )
+    result = mcp_server.supersede(out["asserted"][0], "The task now covers the whole repo.")
+    new = Store(root).load(result["by"])
+    assert new.scope == ["topic:task-scope"]  # topics carry over, path pins don't
+
+
+def test_supersede_explicit_path_pins_kept(root):
+    out = mcp_server.assert_commitment(
+        "The task's write scope is the app service only.",
+        scope=["topic:task-scope", "path:app/**"],
+    )
+    result = mcp_server.supersede(
+        out["asserted"][0],
+        "The task's write scope now includes the legacy module.",
+        scope=["topic:task-scope", "path:app/**", "path:legacy/util.py"],
+    )
+    new = Store(root).load(result["by"])
+    assert new.path_pins == ["app/**", "legacy/util.py"]
+
+
+def test_assert_commitment_accepts_path_pin(root):
+    out = mcp_server.assert_commitment(
+        "The task's write scope is the app service only.",
+        scope=["topic:task-scope", "path:app/**"],
+    )
+    c = Store(root).load(out["asserted"][0])
+    assert c.path_pins == ["app/**"]

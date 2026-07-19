@@ -78,6 +78,62 @@ def test_gate_chain_deny_wall_supersede_pass(tmp_path):
     assert third.stdout.strip() == ""
 
 
+def test_scope_chain_deny_wall_grant_pass(tmp_path):
+    """The barging wall (ADR-0008) across real process boundaries: out-of-scope
+    deny -> fresh-process deny (wall) -> in-scope pass -> entitled grant on the
+    board -> the originally denied payload passes."""
+    store = Store(tmp_path)
+    store.init()
+    (store.dir / "config.yaml").write_text("tier0_gate: block\n")
+    apply(store, [ExtractedCommitment(
+        claim="The task's write scope is the app service only.",
+        kind="decision",
+        scope=["topic:task-scope", "path:app/**"],
+        entitlement={"source": "user_utterance", "note": "task brief"},
+    )])
+
+    drive_by = {
+        "cwd": str(tmp_path),
+        "tool_name": "Write",
+        "tool_input": {"file_path": str(tmp_path / "legacy" / "util.py"),
+                       "content": "def helper():\n    pass\n"},
+    }
+
+    # 1. out-of-scope write -> deny JSON, exit 0
+    first = hook("pre-tool-use", drive_by)
+    assert first.returncode == 0, first.stderr
+    reason = json.loads(first.stdout)["hookSpecificOutput"]
+    assert reason["permissionDecision"] == "deny"
+    assert "legacy/util.py" in reason["permissionDecisionReason"]
+
+    # 2. the wall: a FRESH process still denies — no bump state involved
+    second = hook("pre-tool-use", drive_by)
+    assert json.loads(second.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+    # 3. in-scope write passes untouched
+    in_scope = {
+        "cwd": str(tmp_path),
+        "tool_name": "Write",
+        "tool_input": {"file_path": str(tmp_path / "app" / "db.py"),
+                       "content": "x = 1\n"},
+    }
+    third = hook("pre-tool-use", in_scope)
+    assert third.returncode == 0 and third.stdout.strip() == ""
+
+    # 4. the board records the entitled widening grant
+    apply(Store(tmp_path), [ExtractedCommitment(
+        claim="User authorized modernizing legacy/util.py this sprint.",
+        kind="decision",
+        scope=["topic:task-scope", "path:legacy/util.py"],
+        entitlement={"source": "user_utterance", "note": "explicit go-ahead"},
+    )])
+
+    # 5. the originally denied payload now passes: empty stdout, exit 0
+    final = hook("pre-tool-use", drive_by)
+    assert final.returncode == 0, final.stderr
+    assert final.stdout.strip() == ""
+
+
 def test_hook_never_exits_nonzero_on_garbage(tmp_path):
     # run.sh treats any non-zero exit as infrastructure failure (#6) — the CLI
     # must hold exit 0 even on garbage input, with diagnostics on stderr only

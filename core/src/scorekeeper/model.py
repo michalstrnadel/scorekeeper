@@ -39,6 +39,16 @@ class EntitlementSource(StrEnum):
     NONE = "none"
 
 
+# Provenance external to the agent — the entitlement boundary (SPEC §4.3).
+# A revision (operators) or a scope grant (tier0_gate) counts only when its
+# source is here: the agent's own inference cannot entitle either.
+EXTERNAL_SOURCES = frozenset({
+    EntitlementSource.USER_UTTERANCE,
+    EntitlementSource.TOOL_OUTPUT,
+    EntitlementSource.DOCUMENT,
+})
+
+
 class Entitlement(BaseModel):
     """Provenance of the reason backing a commitment."""
 
@@ -88,6 +98,13 @@ class Commitment(BaseModel):
         """Topic tags in scope (``topic:...``) — candidate selection surface."""
         return {s.removeprefix("topic:") for s in self.scope if s.startswith("topic:")}
 
+    @property
+    def path_pins(self) -> list[str]:
+        """Write-scope pins (``path:<glob>``) — the Tier-0 scope-wall surface
+        (ADR-0008). Invisible to ``scope_attrs`` and the rival content scan by
+        construction: a path grant is not a claim about content."""
+        return [s.removeprefix("path:") for s in self.scope if s.startswith("path:")]
+
 
 def new_id(existing: list[str], now: datetime | None = None) -> str:
     """Next id in the ``c-YYYY-MM-DD-NNNN`` series (counter is global, not per-day)."""
@@ -116,8 +133,12 @@ class ExtractedCommitment(BaseModel):
     @classmethod
     def scope_prefixes(cls, v: list[str]) -> list[str]:
         for s in v:
-            if not (s.startswith("topic:") or s.startswith("attr:")):
-                raise ValueError(f"scope entry must start with topic: or attr: — got {s!r}")
+            if not s.startswith(("topic:", "attr:", "path:")):
+                raise ValueError(
+                    f"scope entry must start with topic:, attr: or path: — got {s!r}"
+                )
             if s.startswith("attr:") and "=" not in s:
                 raise ValueError(f"attr: scope entry must be key=value — got {s!r}")
+            if s.startswith("path:") and not s.removeprefix("path:").strip():
+                raise ValueError("path: scope entry must carry a glob — got bare 'path:'")
         return v

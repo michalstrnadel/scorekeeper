@@ -78,27 +78,43 @@ def hook_post_tool_use(payload: dict) -> dict | None:
                 f"{w.key}={w.pinned_value} vs '{w.rival_found}' in shell command",
             )
         return None
+    # advisory scope twin (ADR-0008): a landed out-of-scope write is logged and
+    # surfaced regardless of gate mode — the audit floor under the wall
+    lines: list[str] = []
+    target = str(tool_input.get("file_path") or tool_input.get("notebook_path") or "")
+    if target:
+        sd = tier0_gate.evaluate_scope(target, store.active(), _root(payload))
+        if sd is not None:
+            for cid in dict.fromkeys(p.commitment_id for p in sd.pins):
+                store.log(
+                    "TIER0-SCOPE-WARNING", cid, f"'{sd.target}' outside pinned write scope"
+                )
+            lines.append(tier0_gate.format_scope_warning(sd.target, sd.pins))
     content = " ".join(
         str(tool_input.get(k, "")) for k in ("content", "new_string", "new_source")
     ).strip()
-    if not content:
-        return None
-    warnings = tier0_content.scan(content, store.active())
-    # a rival already in old_string is not NEW: an edit REMOVING the rival
-    # (drift being fixed) must not warn (audit finding 2026-07-14)
-    warnings = tier0_content.novel(warnings, str(tool_input.get("old_string", "")), store.active())
-    if not warnings:
-        return None
-    for w in warnings:
-        store.log(
-            "TIER0-CONTENT-WARNING",
-            w.commitment_id,
-            f"{w.key}={w.pinned_value} vs '{w.rival_found}' in {tool_input.get('file_path', '?')}",
+    if content:
+        warnings = tier0_content.scan(content, store.active())
+        # a rival already in old_string is not NEW: an edit REMOVING the rival
+        # (drift being fixed) must not warn (audit finding 2026-07-14)
+        warnings = tier0_content.novel(
+            warnings, str(tool_input.get("old_string", "")), store.active()
         )
+        for w in warnings:
+            store.log(
+                "TIER0-CONTENT-WARNING",
+                w.commitment_id,
+                f"{w.key}={w.pinned_value} vs '{w.rival_found}'"
+                f" in {tool_input.get('file_path', '?')}",
+            )
+        if warnings:
+            lines.append(tier0_content.format_warnings(warnings))
+    if not lines:
+        return None
     return {
         "hookSpecificOutput": {
             "hookEventName": "PostToolUse",
-            "additionalContext": tier0_content.format_warnings(warnings),
+            "additionalContext": "\n".join(lines),
         }
     }
 
@@ -115,9 +131,29 @@ def hook_pre_tool_use(payload: dict) -> dict | None:
     if not store.exists:
         return None
     mode = _gate_mode(store)
+    tool_input = payload.get("tool_input") or {}
+    # scope wall (ADR-0008) runs FIRST: it gates the TARGET, so the doc
+    # exemption below (a claims-content concern) and the empty-content bail
+    # must not shadow it — a drive-by README edit or an empty new file
+    # outside the entitled scope is still barging
+    target = str(tool_input.get("file_path") or tool_input.get("notebook_path") or "")
+    if target and _scope_mode(store):
+        sd = tier0_gate.evaluate_scope(target, store.active(), _root(payload))
+        if sd is not None:
+            for cid in dict.fromkeys(p.commitment_id for p in sd.pins):
+                store.log(
+                    "TIER0-SCOPE-DENY", cid,
+                    f"'{sd.target}' outside pinned write scope", mode="block",
+                )
+            return {
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": sd.reason,
+                }
+            }
     if not mode:
         return None
-    tool_input = payload.get("tool_input") or {}
     # the gate blocks CODE drift; prose that argues about the rival ("Memcached
     # was evaluated and rejected") lives in docs, where a hard deny is pure FPR
     # (audit finding 2026-07-14) — the advisory PostToolUse warning still fires
@@ -173,6 +209,31 @@ def _gate_mode(store: Store) -> str:
             if data.get("tier0_gate") in ("block", "bump"):
                 return data["tier0_gate"]
     return ""
+
+
+def _scope_mode(store: Store) -> str:
+    """'' (off) | 'block'. The scope wall (ADR-0008) rides the claim gate: it
+    is active whenever ``tier0_gate`` is enabled (block OR bump — scope is
+    wall-only either way; the bump's retry channel was exploited on claims).
+    Independent kill switch for ablation/emergencies: SCOREKEEPER_SCOPE_GATE=off
+    or ``scope_gate: off`` disables just the scope wall; =block force-enables
+    it even with the claim gate off. Env overrides config, like _gate_mode."""
+    mode = os.environ.get("SCOREKEEPER_SCOPE_GATE", "")
+    if mode == "block":
+        return "block"
+    if mode == "off":
+        return ""
+    cfg = store.dir / "config.yaml"
+    if cfg.exists():
+        with contextlib.suppress(Exception):
+            data = yaml.safe_load(cfg.read_text()) or {}
+            val = data.get("scope_gate")
+            # YAML 1.1 reads a bare `off` as boolean False — accept both spellings
+            if val == "off" or val is False:
+                return ""
+            if val == "block":
+                return "block"
+    return "block" if _gate_mode(store) else ""
 
 
 def _extract_mode(root: Path) -> str:

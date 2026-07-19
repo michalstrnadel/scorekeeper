@@ -1,5 +1,9 @@
 """Extractor plumbing tests — validation gate, repair retry, failure modes. No network."""
 
+from datetime import UTC, datetime
+
+import pytest
+
 from scorekeeper.backends.base import BackendError
 from scorekeeper.extract import (
     ExtractedCommitment,
@@ -7,7 +11,7 @@ from scorekeeper.extract import (
     extract_commitments,
     suspect_note,
 )
-from scorekeeper.model import EntitlementSource, Kind
+from scorekeeper.model import Commitment, EntitlementSource, Kind
 
 
 class SeqBackend:
@@ -108,3 +112,29 @@ def test_suspect_note_only_for_none():
         entitlement={"source": "tool_output", "note": "read the file"},
     )
     assert suspect_note(backed) is None
+
+
+# -- scope grammar (model validator) --------------------------------------------
+
+
+def test_path_pin_accepted_and_exposed():
+    ext = ExtractedCommitment(
+        claim="The task's write scope is the app service only.",
+        kind=Kind.DECISION,
+        scope=["topic:task-scope", "path:app/**", "path:README.md"],
+    )
+    c = Commitment(
+        id="c-1", ts=datetime.now(UTC), claim=ext.claim, kind=ext.kind, scope=ext.scope
+    )
+    assert c.path_pins == ["app/**", "README.md"]
+    # path pins are invisible to the attr surface — no collision-logic leakage
+    assert c.scope_attrs == {}
+
+
+def test_bare_path_prefix_rejected():
+    with pytest.raises(ValueError, match="bare 'path:'"):
+        ExtractedCommitment(
+            claim="Scope pin without a glob is meaningless here.",
+            kind=Kind.DECISION,
+            scope=["path:"],
+        )

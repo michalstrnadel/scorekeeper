@@ -88,7 +88,9 @@ def assert_commitment(
     """Record a commitment through the full operator pipeline (Tier-0 collisions,
     Tier-1 material check when a backend is configured, SUPERSEDE vs
     BRANCH-CONFLICT by entitlement). kind: decision|assertion|promise|assumption.
-    scope: 'topic:...' tags and 'attr:key=value' hard attributes. source:
+    scope: 'topic:...' tags, 'attr:key=value' hard attributes, and 'path:<glob>'
+    write-scope pins (entitlement-keyed Tier-0 scope wall, ADR-0008 — pins count
+    only when source is external). source:
     user_utterance|tool_output|document|prior_inference|none."""
     ext = ExtractedCommitment(
         claim=claim,
@@ -156,9 +158,10 @@ def supersede(
     of the chain kept; nothing deleted). source must be external to the agent:
     user_utterance|tool_output|document. scope tags the NEW claim; when omitted,
     topic:/repo: tags carry over from the old commitment but its 'attr:key=value'
-    pins are dropped — pins encode the replaced claim's content, and carrying
-    them over would leave Tier-0 enforcing the OLD choice against the new one.
-    Pass explicit 'attr:' pins to keep the new choice gate-protected."""
+    and 'path:' pins are dropped — pins encode the replaced claim's content or
+    grant, and carrying them over would leave Tier-0 enforcing the OLD choice
+    (or the OLD write scope) against the new one. Pass explicit 'attr:'/'path:'
+    pins to keep the new choice or scope gate-protected."""
     src = EntitlementSource(source)
     if src not in (
         EntitlementSource.USER_UTTERANCE,
@@ -172,7 +175,7 @@ def supersede(
     with store.write_lock():  # id allocation races detached workers otherwise
         old = store.load(old_id)
         if scope is None:
-            scope = [s for s in old.scope if not s.startswith("attr:")]
+            scope = [s for s in old.scope if not s.startswith(("attr:", "path:"))]
         new = Commitment(
             id=new_id(store.ids()),
             ts=datetime.now(UTC),
