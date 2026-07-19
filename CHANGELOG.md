@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed (architecture follow-ups, audit 2026-07-19)
+- **Backend selection is now env-over-config, like every other setting** — an explicit `SCOREKEEPER_MODEL_URL` wins over a config-pinned `backend.kind` (config still fills `model`/`api_key` gaps; passive auto-detect — `ANTHROPIC_API_KEY`, claude CLI — stays below config). Previously the env var was silently ignored when config pinned a kind.
+- **`extract:` in config works under the plugin again** — hooks.json now sets `SCOREKEEPER_EXTRACT_DEFAULT=async` instead of injecting `SCOREKEEPER_EXTRACT`, so the precedence is: user env > config `extract:` > surface default > `sync`.
+- **MCP write tools report the `root` they acted on** — hooks resolve the store from the session cwd, the MCP server from `$SCOREKEEPER_ROOT`; when they diverge, `supersede` writes a board the Tier-0 wall never reads. The divergence is now visible in every write result.
+- **`ExtractedCommitment` moved to `scorekeeper.model`** (re-exported from `scorekeeper.extract` and at top level, so existing imports keep working) — the write-path schema is part of the model, not the LLM-extraction machinery.
+- **`OpenAICompatBackend` has a total retry budget** (`budget=180.0`s, matching the Stop-hook deadline) — one `complete()` can no longer sleep-retry for minutes under a hook that dies at 180s. `ClaudeCLIBackend` passes the system prompt via `--append-system-prompt` instead of folding it into the user turn.
+
 ### Fixed
 - **Sync stop-hook extraction no longer holds the store write lock through the LLM call** — and `operators.apply` now takes the write lock itself (re-entrant per `Store` instance), making the one-door invariant structural: a future caller cannot reintroduce the unlocked id-collision race. The async worker likewise extracts unlocked and locks only the write/append phase (audit 2026-07-19; regression-tested).
 - **Pre-compact backup can no longer clobber a hand-maintained scoreboard or snapshot a half-applied transition** — it skips empty stores (zero commitment records) and takes the write lock non-blocking, skipping the backup when a writer is mid-`apply()` instead of persisting a dangling `superseded_by` (regression-tested). `scorekeeper init` similarly no longer regenerates over an existing `scoreboard.md`.

@@ -9,7 +9,7 @@
 **A normative overlay that gives long-running LLM agents a scoreboard of their own commitments — not just a memory of what happened.**
 
 ![status: Phase 2](https://img.shields.io/badge/status-Phase%202%20·%20DeonticBench-brightgreen)
-![tests](https://img.shields.io/badge/tests-155%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-161%20passing-brightgreen)
 [![PyPI](https://img.shields.io/pypi/v/scorekeeper)](https://pypi.org/project/scorekeeper/)
 [![Downloads](https://static.pepy.tech/badge/scorekeeper/month)](https://pepy.tech/project/scorekeeper)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)

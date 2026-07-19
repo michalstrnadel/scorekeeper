@@ -11,8 +11,8 @@ for the MCP server). Requires Python >= 3.11.
 ## Python API
 
 Top-level exports (`from scorekeeper import ...`): `Commitment`, `Entitlement`,
-`EntitlementSource`, `Kind`, `Status`, `Store`, `new_id`, plus `__version__`. Everything else is
-imported from its submodule as shown below.
+`EntitlementSource`, `ExtractedCommitment`, `Kind`, `Status`, `Store`, `new_id`, plus
+`__version__`. Everything else is imported from its submodule as shown below.
 
 ### Commitment model — `scorekeeper.model`
 
@@ -222,11 +222,14 @@ AnthropicBackend(model="claude-haiku-4-5-20251001", api_key=None,
                  max_tokens=2048, timeout=60.0)          # needs the [anthropic] extra
 
 OpenAICompatBackend(base_url, model="qwen3:8b", api_key="",
-                    timeout=120.0, temperature=0.0)      # Ollama / LM Studio / vLLM;
-                                                         # stdlib-only, retries transient errors
+                    timeout=120.0, temperature=0.0,      # Ollama / LM Studio / vLLM;
+                    budget=180.0)                        # stdlib-only; retries transient errors
+                                                         # but never past `budget` seconds total
+                                                         # per complete() (hook deadlines)
 
-ClaudeCLIBackend(model="haiku", timeout=120.0)           # headless `claude -p`; slowest,
-                                                         # last in auto-detect order
+ClaudeCLIBackend(model="haiku", timeout=120.0)           # headless `claude -p`; slowest, last in
+                                                         # auto-detect order; system prompt goes
+                                                         # via --append-system-prompt
 ClaudeCLIBackend.available() -> bool                     # is `claude` on PATH?
 ```
 
@@ -236,10 +239,12 @@ ClaudeCLIBackend.available() -> bool                     # is `claude` on PATH?
 def detect_backend(root: Path | str | None = None, env: dict | None = None) -> ModelBackend
 ```
 
-Order: explicit config in `<root>/.scorekeeper/config.yaml` (`backend: {kind, url, model,
-api_key}`, kind one of `openai_compat | anthropic_api | claude_cli`) → `SCOREKEEPER_MODEL_URL`
-(OpenAI-compat) → `ANTHROPIC_API_KEY` (Haiku) → `claude` CLI on PATH. Raises `BackendError` when
-nothing is available.
+Order (env overrides config — the same rule as the gate and extract settings):
+`SCOREKEEPER_MODEL_URL` (OpenAI-compat; config fills `model`/`api_key` gaps it doesn't set) →
+explicit config in `<root>/.scorekeeper/config.yaml` (`backend: {kind, url, model, api_key}`,
+kind one of `openai_compat | anthropic_api | claude_cli`) → passive auto-detect:
+`ANTHROPIC_API_KEY` (Haiku) → `claude` CLI on PATH. Raises `BackendError` when nothing is
+available; a malformed `config.yaml` degrades to auto-detect.
 
 #### Errors and JSON helpers
 
@@ -258,7 +263,8 @@ never the agent's private reasoning. Write-path validation: nothing enters the s
 passes the schema.
 
 ```python
-class ExtractedCommitment(BaseModel):    # the only door into the store
+class ExtractedCommitment(BaseModel):    # the only door into the store; lives in
+                                         # scorekeeper.model (re-exported here and top-level)
     claim: str                           # 10–500 chars
     kind: Kind
     scope: list[str] = []                # max 6; each entry must start with "topic:" or
@@ -434,10 +440,16 @@ board; `supersede`/`retract` are explicit, entitlement-gated status transitions 
 Write results share one summary shape (mirrors `ApplyResult`):
 
 ```json
-{"asserted": [...], "supported": [...], "refined": [["old", "new"], ...],
+{"root": "/abs/project/root",
+ "asserted": [...], "supported": [...], "refined": [["old", "new"], ...],
  "superseded": [["old", "new"], ...],
  "conflicts": [{"new": "...", "existing": "...", "reason": "..."}], "challenges": [...]}
 ```
+
+Every write tool reports the `root` it acted on: hooks resolve the store from the session's
+cwd but this server resolves it from `$SCOREKEEPER_ROOT` (or its own cwd) — if the two diverge,
+`supersede` writes a board the Tier-0 wall never reads and the wall never lifts. Set
+`$SCOREKEEPER_ROOT` explicitly when launching the server.
 
 ### `get_scoreboard() -> str`
 
@@ -492,12 +504,13 @@ Retract a commitment — a status transition, the record is kept. Returns `{"ret
 
 | Variable | Used by | Meaning |
 |---|---|---|
-| `SCOREKEEPER_MODEL_URL` | backend auto-detect | Base URL of an OpenAI-compatible endpoint (Ollama, LM Studio, vLLM — `<url>/chat/completions`). First in the auto-detect order. |
+| `SCOREKEEPER_MODEL_URL` | backend selection | Base URL of an OpenAI-compatible endpoint (Ollama, LM Studio, vLLM — `<url>/chat/completions`). Wins over config `backend.kind` (env overrides config). |
 | `SCOREKEEPER_MODEL` | backend auto-detect | Model name for the OpenAI-compat backend (default `qwen3:8b`). |
 | `SCOREKEEPER_MODEL_API_KEY` | backend auto-detect | Bearer token for the OpenAI-compat endpoint (optional). |
 | `ANTHROPIC_API_KEY` | backend auto-detect | Enables the Anthropic API backend (Haiku-class default) when no local URL is set. |
 | `SCOREKEEPER_TIER0_GATE` | `hook pre-tool-use` | `block` (board-adjudicated wall, recommended) \| `bump` (one-shot deny, ablation) \| `warn` (force-disable the gate, advisory only). Overrides `tier0_gate:` in config in both directions. Unset: config decides; default off. |
-| `SCOREKEEPER_EXTRACT` | `hook stop` | `sync` (findings block the turn; library default) \| `async` (detached worker, findings on the next prompt; the Claude Code plugin defaults to async). Overrides `extract:` in config. |
+| `SCOREKEEPER_EXTRACT` | `hook stop` | `sync` (findings block the turn; library default) \| `async` (detached worker, findings on the next prompt). Overrides `extract:` in config. |
+| `SCOREKEEPER_EXTRACT_DEFAULT` | `hook stop` | Surface default consulted only when neither `SCOREKEEPER_EXTRACT` nor config `extract:` decides — the plugin's hooks.json sets it to `async` without shadowing the config key. |
 | `SCOREKEEPER_ROOT` | `scorekeeper-mcp` | Project root for the MCP server (default: cwd). |
 
 `.scorekeeper/config.yaml` (all keys optional) is the file-based counterpart:
