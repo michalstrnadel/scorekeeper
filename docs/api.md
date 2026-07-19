@@ -426,8 +426,9 @@ Events (payload fields used → output):
 ## MCP server
 
 `scorekeeper-mcp` — stdio transport, requires the `[mcp]` extra. Project root:
-`$SCOREKEEPER_ROOT` or cwd. Every write routes through the same validated operator pipeline as
-the hooks, so an agent given these tools still cannot silently rewrite its own board (see
+`$SCOREKEEPER_ROOT` or cwd. `assert_commitment` routes through the same validated operator
+pipeline as the hooks, so an agent given these tools still cannot silently rewrite its own
+board; `supersede`/`retract` are explicit, entitlement-gated status transitions (see
 `mcp/README.md` for the design constraint).
 
 Write results share one summary shape (mirrors `ApplyResult`):
@@ -465,13 +466,16 @@ Dry run — nothing is written. Returns:
 
 With no backend configured, `tier1_verdicts` is empty and a `note` field says so.
 
-### `supersede(old_id, claim, source="user_utterance", note="") -> dict`
+### `supersede(old_id, claim, source="user_utterance", note="", scope=None) -> dict`
 
 Explicitly replace a commitment with an entitled revision. `source` must be external to the
 agent (`user_utterance|tool_output|document`) — anything else raises `ValueError` (an unentitled
 replacement is drift; use `assert_commitment` and let the operators flag it). The new record
-inherits the old one's kind and scope; both directions of the chain are kept. Returns
-`{"superseded": old_id, "by": new_id}`.
+inherits the old one's kind. `scope` tags the **new** claim; when omitted, `topic:`/`repo:` tags
+carry over but the old `attr:key=value` pins are dropped — they encode the replaced claim's
+content, and carrying them over would leave Tier-0 enforcing the old choice against the new one.
+Pass explicit `attr:` pins to keep the new choice gate-protected. Both directions of the chain
+are kept. Returns `{"superseded": old_id, "by": new_id}`.
 
 ### `challenge(commitment_id, reason="") -> dict`
 

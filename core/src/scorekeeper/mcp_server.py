@@ -1,10 +1,13 @@
 """scorekeeper-mcp — MCP server exposing the scoreboard to any harness (SPEC §4.5).
 
 Intended for harness-level integration (LangGraph node, orchestrator, CI), not
-for handing the agent authority over its own scoreboard: every write routes
-through ``operators.apply`` — the same validated door the hooks use — so Tier-0
-/ Tier-1 checking and the SUPERSEDE vs BRANCH-CONFLICT gate cannot be bypassed
-(scaffolded, not extended — theory.md §5).
+for handing the agent authority over its own scoreboard: ``assert_commitment``
+routes through ``operators.apply`` — the same validated door the hooks use — so
+Tier-0 / Tier-1 checking and the SUPERSEDE vs BRANCH-CONFLICT gate cannot be
+bypassed. ``supersede`` and ``retract`` are explicit, targeted status
+transitions; they skip the pipeline by design but stay entitlement-gated
+(supersede refuses non-external sources). Scaffolded, not extended —
+theory.md §5.
 
 Run: ``scorekeeper-mcp`` (stdio). Project root: $SCOREKEEPER_ROOT or cwd.
 Requires the ``mcp`` extra: ``pip install "scorekeeper[mcp]"``.
@@ -126,10 +129,20 @@ def check_compatibility(claim: str, scope: list[str] | None = None) -> dict:
 
 
 @mcp.tool()
-def supersede(old_id: str, claim: str, source: str = "user_utterance", note: str = "") -> dict:
+def supersede(
+    old_id: str,
+    claim: str,
+    source: str = "user_utterance",
+    note: str = "",
+    scope: list[str] | None = None,
+) -> dict:
     """Explicitly replace a commitment with an entitled revision (both directions
     of the chain kept; nothing deleted). source must be external to the agent:
-    user_utterance|tool_output|document."""
+    user_utterance|tool_output|document. scope tags the NEW claim; when omitted,
+    topic:/repo: tags carry over from the old commitment but its 'attr:key=value'
+    pins are dropped — pins encode the replaced claim's content, and carrying
+    them over would leave Tier-0 enforcing the OLD choice against the new one.
+    Pass explicit 'attr:' pins to keep the new choice gate-protected."""
     src = EntitlementSource(source)
     if src not in (
         EntitlementSource.USER_UTTERANCE,
@@ -142,12 +155,14 @@ def supersede(old_id: str, claim: str, source: str = "user_utterance", note: str
     store = _store()
     with store.write_lock():  # id allocation races detached workers otherwise
         old = store.load(old_id)
+        if scope is None:
+            scope = [s for s in old.scope if not s.startswith("attr:")]
         new = Commitment(
             id=new_id(store.ids()),
             ts=datetime.now(UTC),
             claim=claim,
             kind=old.kind,
-            scope=old.scope,
+            scope=scope,
             entitlement=Entitlement(source=src, note=note, refs=["mcp"]),
             supersedes=old.id,
         )

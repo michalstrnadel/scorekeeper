@@ -82,3 +82,34 @@ def test_challenge_and_retract(root):
     assert rt["retracted"] == cid
     assert Store(root).load(cid).status == Status.RETRACTED
     assert Store(root).active() == []
+
+
+def test_supersede_drops_stale_attr_pins_by_default(root):
+    """Regression: supersede copied the old scope verbatim, so the replacement
+    kept the OLD claim's attr pins and Tier-0 went on enforcing the replaced
+    choice against the very technology the supersede just introduced."""
+    out = mcp_server.assert_commitment(
+        "The primary database is PostgreSQL 16.",
+        scope=["topic:persistence", "attr:persistence.primary_db=postgresql"],
+    )
+    result = mcp_server.supersede(out["asserted"][0], "The primary database is MongoDB.")
+    new = Store(root).load(result["by"])
+    assert new.scope == ["topic:persistence"]  # topics carry over, pins don't
+    probe = mcp_server.check_compatibility(
+        "Store the feed in MongoDB.", scope=["attr:persistence.primary_db=mongodb"]
+    )
+    assert probe["tier0_collisions"] == []
+
+
+def test_supersede_explicit_scope_pins_the_new_choice(root):
+    out = mcp_server.assert_commitment(
+        "The primary database is PostgreSQL 16.",
+        scope=["topic:persistence", "attr:persistence.primary_db=postgresql"],
+    )
+    result = mcp_server.supersede(
+        out["asserted"][0],
+        "The primary database is MongoDB.",
+        scope=["topic:persistence", "attr:persistence.primary_db=mongodb"],
+    )
+    new = Store(root).load(result["by"])
+    assert "attr:persistence.primary_db=mongodb" in new.scope
