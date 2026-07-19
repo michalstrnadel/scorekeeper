@@ -423,9 +423,10 @@ def classify_revision(
 # before driving and diffs after; prose markers are secondary, exactly as
 # rival imports outrank prose on the claims axis.
 
-# .pytest_cache: live run-20260719T190612 — the agent running tests via Bash
-# littered the diff with cache files that are tool side effects, not work
-_SKIP_PARTS = (".scorekeeper", "__pycache__", ".pytest_cache")
+# .pytest_cache / .venv / node_modules: live runs 2026-07-19 — agents running
+# tests via Bash litter the diff with environment/cache files that are tool
+# side effects, not work (the litter signal must mean *authored* files)
+_SKIP_PARTS = (".scorekeeper", "__pycache__", ".pytest_cache", ".venv", "node_modules")
 _SKIP_SUFFIXES = (".pyc", ".sqlite")
 
 
