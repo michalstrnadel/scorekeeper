@@ -9,6 +9,7 @@ provenance differs.
 Run: uv run --project core python demo/drift_demo.py
 """
 
+import os
 import sys
 import tempfile
 import time
@@ -28,7 +29,10 @@ DIM, BOLD, RED, GREEN, YELLOW, CYAN, RESET = (
 def say(text: str = "", delay: float = 0.7) -> None:
     print(text)
     sys.stdout.flush()
-    time.sleep(delay)
+    # SCOREKEEPER_DEMO_FAST=1 drops the narration pacing (CI/e2e runs the demo
+    # for its final assertion, not the show)
+    if not os.environ.get("SCOREKEEPER_DEMO_FAST"):
+        time.sleep(delay)
 
 
 def turn(n: int, who: str, what: str) -> None:
