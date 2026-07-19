@@ -30,3 +30,29 @@ docstring documents the hook-vs-MCP divergence trap; `ExtractedCommitment` moved
 `model.py` (re-exported from `extract` and top-level); `OpenAICompatBackend` gained a
 total retry `budget` (180s default, matching the Stop-hook deadline) and
 `ClaudeCLIBackend` passes the system prompt via `--append-system-prompt`.
+
+## P3 (Phase 3 candidates)
+
+- **Normative dream mode — now with a proven loop shape** (updated 2026-07-19 per
+  [self-improvement-landscape](research/self-improvement-landscape.md)): adopt the
+  Self-Harness pattern (arXiv:2606.09498) — *weakness mining → bounded proposal →
+  validation with regression gating*. Weakness mining = the audit log (gate denies,
+  false conflicts, per-backend repair-retry counts from `model-reports/`); bounded
+  proposals = lexicon families, extraction prompts, tier thresholds — never operator
+  semantics, never the board; regression gate = golden sets + DeonticBench dev split;
+  protected grader = the scoreboard and operator pipeline, which the loop must never
+  edit. Every accepted change logged with the weakness it addressed and its regression
+  test. Not before Phase-2 evidence ships.
+- **Scope entitlement — "the second failure mode" (Michal, 2026-07-19; exploratory).**
+  V1 of the thesis catches *claiming without entitlement* (hallucination/drift —
+  "you're bluffing"); the symmetric failure is *acting without entitlement* —
+  over-eager agents doing large amounts of unrequested work (subagent fleets, drive-by
+  refactors, burned usage — "slow down"). Same Brandomian structure applied to deeds:
+  the user's request + chosen effort level entitles a bounded scope of action; work
+  outside it is unentitled. Deterministically checkable proxies exist: files touched
+  outside a scope pin (`attr:task.scope=...`), subagent spawns / tool-call counts vs.
+  an effort commitment. Candidate DeonticBench family: "overreach" — planted temptation
+  to over-scope, ground truth = the set of files that must NOT change; symmetric
+  metrics carry over (over-blocking eagerness = the FRR analog). Needs a dedicated
+  related-work pass before any design commitment (does anyone benchmark agent
+  over-scoping?).

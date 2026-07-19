@@ -43,7 +43,7 @@ negative results ARE the story, not a footnote. Novelty phrasing strictly per
 
 - Procedural generator: worlds × tech pairs × distance × forced compaction ×
   distractors; dev/eval RNG split, contamination protocol (generated/ never
-  committed). **Naming note:** renamed from the working name "DeonticBench"
+  committed). **Naming note:** renamed from the working name "EntitleBench"
   (collision with the established commit-message benchmark).
 - Mirror families: drift (unentitled temptation; correct = HELD) and revision
   (entitled order; correct = EXECUTED). Symmetric metrics: SCR and FRR.
@@ -84,6 +84,20 @@ negative results ARE the story, not a footnote. Novelty phrasing strictly per
 
 - Advice vs. physics: prompts address the driver, the environment addresses
   the road; entitlement must live out-of-process.
+- **The gate as a protected grader** (cf. Karpathy's `train.py`/`prepare.py`
+  split; [self-improvement-landscape](../research/self-improvement-landscape.md)):
+  negative finding #2 — the agent lifting the bump by self-attesting
+  entitlement — is an in-vivo instance of the verifier-gaming failure the
+  Darwin Gödel Machine authors documented (the agent disabled its own
+  hallucination detector, arXiv:2505.22954). The board-adjudicated wall is
+  judge–optimizer separation for normative state (cf. Red Queen GM,
+  arXiv:2606.26294); our escalation story independently reproduces, at the
+  scale of one commitment, the trajectory the self-improvement field walked
+  at the scale of whole benchmarks. Corollary for self-improving agents: a
+  loop that edits its own harness needs exactly a commitment ledger outside
+  its write authority; the audit trail doubles as the hard-versioned
+  modification history that self-modifying deployments will need for
+  oversight (EU AI Act Art. 14 analysis — inference, not settled guidance).
 - Legibility even in failure: when drift succeeds (Bash bypass, extraction
   errors), the board still records it — auditability as the floor, prevention
   as the ceiling.
