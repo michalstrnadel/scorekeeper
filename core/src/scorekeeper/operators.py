@@ -112,7 +112,22 @@ def apply(
     refs: list[str] | None = None,
 ) -> ApplyResult:
     """Run each extracted commitment through Tier 0 (+ Tier 1 when a backend is given)
-    and write the outcome. The scoreboard file is regenerated at the end."""
+    and write the outcome. The scoreboard file is regenerated at the end.
+
+    Takes the store's write lock itself (re-entrant for callers that already
+    hold it) — the one-door invariant includes the lock, so a future caller
+    cannot reintroduce the unlocked id-collision race (audit 2026-07-14)."""
+    with store.write_lock():
+        return _apply_locked(store, extracted, backend, session, refs)
+
+
+def _apply_locked(
+    store: Store,
+    extracted: list[ExtractedCommitment],
+    backend: ModelBackend | None,
+    session: str,
+    refs: list[str] | None,
+) -> ApplyResult:
     result = ApplyResult()
     refs = refs or []
 

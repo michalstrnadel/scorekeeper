@@ -190,10 +190,13 @@ def _extract_mode(root: Path) -> str:
     return "sync"
 
 
-def _extract_findings(root: Path, payload: dict) -> list[str]:
+def _extract_findings(store: Store, payload: dict) -> list[str]:
     """Extract the last turn, run the operators, return findings lines.
-    Shared by the sync stop hook and the detached worker."""
-    store = Store(root)
+    Shared by the sync stop hook and the detached worker. Runs the LLM
+    extraction outside any lock — ``apply()`` takes the store's write lock
+    itself for the write phase, so callers must pass THE store instance they
+    coordinate on, not re-derive one (per-instance lock re-entrancy)."""
+    root = store.root
     turn = read_last_turn(payload["transcript_path"])
     if turn.empty:
         return []
@@ -267,8 +270,9 @@ def hook_stop(payload: dict) -> dict | None:
         Store(root).init()
         _spawn_worker(root, payload)
         return None
-    with Store(root).write_lock():  # sync writers race async workers on ids
-        lines = _extract_findings(root, payload)
+    # no outer lock: the LLM extraction must not serialize other writers for
+    # tens of seconds — apply() takes the write lock itself for the write phase
+    lines = _extract_findings(Store(root), payload)
     if not lines:
         return None
     return {"decision": "block", "reason": "\n".join(lines)}
@@ -303,12 +307,23 @@ def hook_pre_compact(payload: dict) -> dict | None:
     store = Store(_root(payload))
     if not store.exists:
         return None
-    backup_dir = store.dir / "backups"
-    backup_dir.mkdir(exist_ok=True)
-    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    store.write_scoreboard()
-    shutil.copy2(store.scoreboard_path, backup_dir / f"scoreboard-{stamp}.md")
-    store.log("PRECOMPACT-BACKUP", detail=str(backup_dir / f"scoreboard-{stamp}.md"))
+    # nothing to protect on an empty store — and regenerating would clobber a
+    # hand-maintained scoreboard.md (this repo's own board, pre-MVP convention)
+    if not store.all():
+        return None
+    try:
+        # non-blocking: a worker mid-apply() holds the lock, and a backup
+        # snapshotting a half-applied transition (old record SUPERSEDED, new
+        # one not yet saved) is worse than skipping this compaction's backup
+        with store.write_lock(blocking=False):
+            backup_dir = store.dir / "backups"
+            backup_dir.mkdir(exist_ok=True)
+            stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+            store.write_scoreboard()
+            shutil.copy2(store.scoreboard_path, backup_dir / f"scoreboard-{stamp}.md")
+            store.log("PRECOMPACT-BACKUP", detail=str(backup_dir / f"scoreboard-{stamp}.md"))
+    except BlockingIOError:
+        return None
     return None
 
 
@@ -337,9 +352,12 @@ def cmd_worker(payload_path: Path) -> None:
     store = Store(root)
     store.init()
     try:
-        with store.write_lock():
-            lines = _extract_findings(root, payload)
-            if lines:
+        # extraction (LLM, possibly minutes) runs unlocked; apply() locks its
+        # own write phase. Only the findings append needs the lock here — it
+        # is coordinated with the prompt-submit drain's non-blocking read.
+        lines = _extract_findings(store, payload)
+        if lines:
+            with store.write_lock():
                 with (store.dir / "pending-findings.md").open("a") as f:
                     f.write("\n".join(lines) + "\n")
                 store.log("ASYNC-FINDINGS", detail=f"{len(lines)} pending finding(s)")
@@ -356,7 +374,10 @@ def cmd_worker(payload_path: Path) -> None:
 def cmd_init(root: Path) -> None:
     store = Store(root)
     store.init()
-    store.write_scoreboard()
+    # don't regenerate over an existing board (it may be hand-maintained);
+    # every write path refreshes it anyway
+    if not store.scoreboard_path.exists():
+        store.write_scoreboard()
     print(f"initialized {store.dir}")
 
 
@@ -393,7 +414,9 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as e:  # noqa: BLE001 — a broken scorer must never break the agent
             print(f"scorekeeper {args.event} error: {e}", file=sys.stderr)
             with contextlib.suppress(Exception):
-                Store(_root(payload)).log("ERROR", detail=f"{args.event}: {e}")
+                store = Store(_root(payload))
+                if store.exists:  # best-effort audit; never create .scorekeeper/ just to log
+                    store.log("ERROR", detail=f"{args.event}: {e}")
         return 0
 
     root = Path(args.root)

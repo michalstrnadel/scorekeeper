@@ -402,3 +402,41 @@ def test_drain_skips_while_worker_holds_the_lock(tmp_path, monkeypatch, capsys):
         assert (store.dir / "pending-findings.md").exists()  # nothing lost
     out = run_hook(monkeypatch, capsys, "user-prompt-submit", {"cwd": str(tmp_path)})
     assert "COMMITMENT CONFLICT: X" in out["hookSpecificOutput"]["additionalContext"]
+
+
+def test_pre_compact_skips_empty_store_and_preserves_hand_scoreboard(
+    tmp_path, monkeypatch, capsys
+):
+    """Regression: an empty store (records dir exists, zero c-*.yaml) with a
+    hand-maintained scoreboard.md — this repo's own pre-MVP board — was
+    clobbered by the pre-compact regeneration."""
+    store = Store(tmp_path)
+    store.init()
+    store.scoreboard_path.write_text("# Hand-maintained board\n")
+    run_hook(monkeypatch, capsys, "pre-compact", {"cwd": str(tmp_path)})
+    assert store.scoreboard_path.read_text() == "# Hand-maintained board\n"
+    assert not (store.dir / "backups").exists()
+
+
+def test_pre_compact_skips_when_writer_holds_the_lock(tmp_path, monkeypatch, capsys):
+    """A backup snapshotted mid-apply() could persist a half-applied transition;
+    the hook must skip rather than block or snapshot."""
+    store = seed_commitment(tmp_path)
+    with Store(tmp_path).write_lock():
+        run_hook(monkeypatch, capsys, "pre-compact", {"cwd": str(tmp_path)})
+    assert not list((store.dir / "backups").glob("scoreboard-*.md"))
+
+
+def test_hook_error_handler_never_creates_store(tmp_path, monkeypatch, capsys):
+    """The catch-all audit log is best-effort — it must not materialize
+    .scorekeeper/ in repos the user never initialized."""
+    monkeypatch.setattr(
+        cli_module, "HOOKS", {**cli_module.HOOKS, "stop": _raise_for_test}
+    )
+    monkeypatch.setattr("sys.stdin", FakeStdin(json.dumps({"cwd": str(tmp_path)})))
+    assert main(["hook", "stop"]) == 0
+    assert not (tmp_path / ".scorekeeper").exists()
+
+
+def _raise_for_test(payload):
+    raise RuntimeError("boom")

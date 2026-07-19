@@ -50,6 +50,7 @@ class Store:
         self.commitments_dir = self.dir / "commitments"
         self.log_path = self.dir / "log.jsonl"
         self.scoreboard_path = self.dir / "scoreboard.md"
+        self._write_lock_held = False
 
     # -- lifecycle -----------------------------------------------------------
 
@@ -67,11 +68,23 @@ class Store:
         take THIS lock (unlocked writers allocated the same commitment id,
         audit 2026-07-14). ``blocking=False`` raises BlockingIOError when
         the lock is held (used by the pending-findings drain to skip a turn
-        instead of stalling a 10s hook behind a worker's LLM call)."""
+        instead of stalling a 10s hook behind a worker's LLM call).
+
+        Re-entrant per Store instance: ``operators.apply`` locks itself so
+        the one-door invariant is structural, and callers that pre-lock
+        (hooks, MCP tools) nest without deadlocking. flock alone is NOT
+        re-entrant across separate opens of the lock file."""
+        if self._write_lock_held:
+            yield
+            return
         self.dir.mkdir(parents=True, exist_ok=True)
         with (self.dir / LOCK_FILENAME).open("w") as lk:
             fcntl.flock(lk, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
-            yield
+            self._write_lock_held = True
+            try:
+                yield
+            finally:
+                self._write_lock_held = False
 
     # -- records -------------------------------------------------------------
 

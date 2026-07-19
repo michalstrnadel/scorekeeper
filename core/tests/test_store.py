@@ -125,3 +125,24 @@ def test_scoreboard_render(tmp_path):
     assert "## Active commitments" in text
     assert "PostgreSQL 16" in text
     assert "→ c-2026-07-08-0001" in text
+
+
+def test_write_lock_is_reentrant_per_instance(tmp_path):
+    """apply() takes the lock itself; callers that pre-lock must nest freely
+    (flock alone is not re-entrant across separate opens of the lock file)."""
+    store = Store(tmp_path)
+    with store.write_lock(), store.write_lock():  # inner would flock-block before the fix
+        store.init()
+    # released after the outer exit: a second Store instance can acquire non-blocking
+    with Store(tmp_path).write_lock(blocking=False):
+        pass
+
+
+def test_write_lock_still_excludes_other_instances(tmp_path):
+    """Re-entrancy is per instance only — real cross-writer exclusion stays."""
+    import pytest
+
+    store = Store(tmp_path)
+    other = Store(tmp_path)
+    with store.write_lock(), pytest.raises(BlockingIOError), other.write_lock(blocking=False):
+        pass
