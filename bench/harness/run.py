@@ -531,10 +531,12 @@ async def main() -> int:
     )
     args = parser.parse_args()
 
-    # ambient env must not decide which variant gets the gate — hooks run
-    # in-process, so an exported SCOREKEEPER_TIER0_GATE would silently
-    # override every workdir's config.yaml and corrupt the A/B
+    # ambient env must not decide which variant gets which gate — hooks run
+    # in-process, so an exported SCOREKEEPER_TIER0_GATE (or the scope wall's
+    # SCOREKEEPER_SCOPE_GATE, ADR-0008) would silently override every
+    # workdir's config.yaml and corrupt the A/B
     os.environ.pop("SCOREKEEPER_TIER0_GATE", None)
+    os.environ.pop("SCOREKEEPER_SCOPE_GATE", None)
 
     tasks_dir = Path(args.tasks_dir)
     names = (
