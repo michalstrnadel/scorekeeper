@@ -69,3 +69,35 @@ def test_percentiles():
     assert percentile(vals, 90) == 90.0
     assert percentile(vals, 99) == 99.0
     assert percentile([], 90) == 0.0
+
+
+# -- ICC / design effect (run-design inputs, overreach-landscape §6) ------------
+
+from stats import design_effect, icc_anova  # noqa: E402
+
+
+def test_icc_identical_within_clusters_is_high():
+    # every scenario perfectly repeats its outcome -> ICC ~ 1
+    assert icc_anova([[1, 1, 1], [0, 0, 0], [1, 1, 1], [0, 0, 0]]) > 0.95
+
+
+def test_icc_no_cluster_structure_is_low():
+    # within-cluster variance dominates -> ICC ~ 0 (clamped at 0)
+    assert icc_anova([[0, 1, 0], [1, 0, 1], [0, 1, 1], [1, 0, 0]]) < 0.2
+
+
+def test_icc_degenerate_inputs_return_zero():
+    assert icc_anova([]) == 0.0
+    assert icc_anova([[1, 0, 1]]) == 0.0          # one cluster
+    assert icc_anova([[1], [0], [1]]) == 0.0      # all singletons
+
+
+def test_icc_all_identical_outcomes():
+    # zero variance everywhere: nothing to attribute -> 0.0, never a crash
+    assert icc_anova([[1, 1], [1, 1], [1, 1]]) == 0.0
+
+
+def test_design_effect():
+    assert design_effect(0.0, 3) == 1.0
+    assert design_effect(0.3, 3) == 1.6
+    assert design_effect(-0.2, 5) == 1.0  # clamped

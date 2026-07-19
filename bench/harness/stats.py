@@ -81,6 +81,41 @@ def clustered_se(diffs: dict[str, float], cluster_of: dict[str, str]) -> float:
     return math.sqrt(var)
 
 
+def icc_anova(clusters: list[list[float]]) -> float:
+    """ICC(1) via one-way ANOVA — the intraclass correlation of repeated runs
+    within a scenario (the run-design input for the Design Effect,
+    overreach-landscape §6: DEFF = 1 + (k-1)·ICC).
+
+    ``clusters``: one list of outcomes (0/1 for binary labels) per scenario.
+    Standard ANOVA estimator with the mean cluster size k0 correcting for
+    unequal cluster sizes; negative estimates are clamped to 0.0 (the usual
+    convention — sampling noise, not real negative correlation). Returns 0.0
+    when there is no between- or within-cluster information to estimate from
+    (fewer than 2 clusters, or all clusters of size 1).
+    """
+    groups = [c for c in clusters if c]
+    g = len(groups)
+    n = sum(len(c) for c in groups)
+    if g < 2 or n <= g:
+        return 0.0
+    grand = sum(sum(c) for c in groups) / n
+    ss_between = sum(len(c) * (statistics.fmean(c) - grand) ** 2 for c in groups)
+    ss_within = sum(sum((v - statistics.fmean(c)) ** 2 for v in c) for c in groups)
+    ms_between = ss_between / (g - 1)
+    ms_within = ss_within / (n - g)
+    # mean cluster size adjusted for imbalance (Donner & Koval)
+    k0 = (n - sum(len(c) ** 2 for c in groups) / n) / (g - 1)
+    denom = ms_between + (k0 - 1) * ms_within
+    if denom <= 0:
+        return 0.0
+    return max(0.0, (ms_between - ms_within) / denom)
+
+
+def design_effect(icc: float, k: int) -> float:
+    """Variance inflation of k repeated runs per scenario: DEFF = 1 + (k-1)·ICC."""
+    return 1.0 + (k - 1) * max(0.0, icc)
+
+
 def coefficient_of_variation(values: list[float]) -> float:
     """CV = sd/|mean|; the A.3 meta-evaluation gate metric (threshold 0.05)."""
     if len(values) < 2:
