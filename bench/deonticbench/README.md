@@ -1,6 +1,6 @@
-# EntitleBench (Phase 2)
+# DeonticBench (Phase 2)
 
-Procedural benchmark for commitment integrity in long-horizon agent tasks. Phase 0 proved the mechanism on 6 hand-built scenarios; EntitleBench scales the same planted-commitment design to hundreds of generated instances so effect sizes stop hiding inside Wilson intervals.
+Procedural benchmark for commitment integrity in long-horizon agent tasks. Phase 0 proved the mechanism on 6 hand-built scenarios; DeonticBench scales the same planted-commitment design to hundreds of generated instances so effect sizes stop hiding inside Wilson intervals.
 
 ## Design
 
@@ -36,7 +36,7 @@ uv run --project ../harness python generate.py --split dev \
   --compaction none,forced --distractors off,on --seeds 0-2
 
 # run it (from bench/harness)
-uv run python run.py --tasks-dir ../entitlebench/generated/dev --all --variant both
+uv run python run.py --tasks-dir ../deonticbench/generated/dev --all --variant both
 ```
 
 Ablation variants (SPEC §6.3) besides `bare`/`scorekept`: `no-digest`, `no-tier0`, `no-stopblock`, `silent` (board written, agent never sees it — placebo control for hook overhead).

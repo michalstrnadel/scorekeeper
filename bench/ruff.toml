@@ -1,0 +1,9 @@
+# Mirrors core/pyproject.toml [tool.ruff] so `ruff check bench` works standalone (CI lints bench).
+line-length = 100
+target-version = "py311"
+
+# Planted scenario repos are benchmark *content*, not project code — never lint them.
+extend-exclude = ["tasks"]
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

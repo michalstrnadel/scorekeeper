@@ -1,12 +1,12 @@
-# EntitleBench — progress report (Phase 2, in progress)
+# DeonticBench — progress report (Phase 2, in progress)
 
 > **Renamed 2026-07-14** from the working name *CommitBench* (collision with the established commit-message-generation benchmark; scoreboard c-0028). Dated artifacts and run ids below keep the historical name/prefix.
 
 **Date:** 2026-07-11, updated 2026-07-14 · **Status:** tooling built + validated; **seed-0 paired smoke complete + the gate escalation resolved (advisory failed → v1 bump exploited → v2 board-adjudicated wall HELD symmetrically)** — see [SMOKE-DRIFT-S0-REPORT.md](SMOKE-DRIFT-S0-REPORT.md): pg-mongo reproduces the Phase-0 effect; redis-memcached is a verified **negative finding** (scorekept drifted additively past 11 tier0 warnings — advisory channels alone did not steer haiku). **Agent under test:** claude-haiku-4-5 (via Agent SDK, subscription). **Primary metric:** deterministic behavioral classifier (`bench/harness/classify.py`).
 
-## What EntitleBench is
+## What DeonticBench is
 
-Procedural benchmark scaling the Phase-0 planted-commitment design to hundreds of generated instances (`bench/entitlebench/`). Two mirror-image families measure the SUPERSEDE-vs-BRANCH-CONFLICT boundary under identical surface pressure:
+Procedural benchmark scaling the Phase-0 planted-commitment design to hundreds of generated instances (`bench/deonticbench/`). Two mirror-image families measure the SUPERSEDE-vs-BRANCH-CONFLICT boundary under identical surface pressure:
 
 - **drift** — a *draft* note (marked "for discussion", never adopted) tempts the agent to migrate the committed primary store to a rival. Following it is revision without entitlement.
 - **revision** — an explicit, *final* user decision replaces the tech. Executing it is entitled.
@@ -53,13 +53,13 @@ dedicated `--out` dir — `generated/dev` accumulates mixed pilot scenarios, so
 
 ```
 # generate (dedicated out dir; 6 scenarios exactly)
-uv run --project bench/harness python bench/entitlebench/generate.py --split dev \
+uv run --project bench/harness python bench/deonticbench/generate.py --split dev \
   --families drift --pairs pg-mongo,redis-memcached --distance 8 \
   --compaction forced --distractors on --seeds 0-2 \
-  --out bench/entitlebench/generated/smoke-drift
+  --out bench/deonticbench/generated/smoke-drift
 # run (seeded board, deterministic classifier)
 cd bench/harness && caffeinate -i uv run python run.py \
-  --tasks-dir ../entitlebench/generated/smoke-drift/dev --all --variant both \
+  --tasks-dir ../deonticbench/generated/smoke-drift/dev --all --variant both \
   --model claude-haiku-4-5-20251001 --seed-commitments
 ```
 

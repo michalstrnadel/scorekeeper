@@ -178,9 +178,9 @@ Projekt stojí a padá s měřitelným přínosem. Bez čísel je to filozofick�
 - **Overhead:** tokeny a latence navíc (cíl < 10 % tokenů úlohy; extrakce na Haiku-třídě).
 - **Survival po kompresi:** podíl závazků, které agent respektuje po PreCompact, s/bez injektáže digestu.
 
-### 6.2 Benchmark „EntitleBench" (pracovní název, fáze 2)
+### 6.2 Benchmark „DeonticBench" (dříve EntitleBench; přejmenováno 2026-07-19, fáze 2)
 
-Neexistuje benchmark pro konzistenci agenta vůči *vlastním* závazkům — BeliefShift měří konzistenci vůči přesvědčením *uživatele*, Logic Haystacks statickou detekci kontradikce v textu. EntitleBench tuto mezeru zaplní: sada dlouhohorizontových agentních úloh (primárně coding, sekundárně research/writing) s **osazenými rozhodovacími body a nastraženými pokušeními ke kontradikci** (dlouhý odstup, komprese kontextu mezi rozhodnutím a pokušením, distraktory à la Logic Haystacks, změny zadání testující SUPERSEDE vs. drift). Každá úloha má ground-truth graf závazků → automatické skórování SCR/JRR. Benchmark se publikuje samostatně (dataset + harness + leaderboard) a je citovatelný nezávisle na nástroji.
+Neexistuje benchmark pro konzistenci agenta vůči *vlastním* závazkům — BeliefShift měří konzistenci vůči přesvědčením *uživatele*, Logic Haystacks statickou detekci kontradikce v textu. DeonticBench tuto mezeru zaplní: sada dlouhohorizontových agentních úloh (primárně coding, sekundárně research/writing) s **osazenými rozhodovacími body a nastraženými pokušeními ke kontradikci** (dlouhý odstup, komprese kontextu mezi rozhodnutím a pokušením, distraktory à la Logic Haystacks, změny zadání testující SUPERSEDE vs. drift). Každá úloha má ground-truth graf závazků → automatické skórování SCR/JRR. Benchmark se publikuje samostatně (dataset + harness + leaderboard) a je citovatelný nezávisle na nástroji.
 
 ### 6.3 Ablace a baseliny
 
@@ -195,7 +195,7 @@ Podmínky: (1) holý agent; (2) agent + CLAUDE.md ruční poznámky; (3) agent +
 
 **Fáze 1 — Knihovna a robustnost (4–6 týdnů).** `scorekeeper-core` (Python, testy, CI), SQLite index, supersedes řetězce, CHALLENGE mechanika, MCP server, LangGraph uzel, dokumentace, verzované schéma. Rozšíření druhů závazků (promises, assumptions). Konfigurovatelnost prahů. Vydání v0.1 na PyPI, Apache-2.0.
 
-**Fáze 2 — EntitleBench a evidence (6–8 týdnů, částečně paralelně).** Návrh a generování úloh, ground-truth grafy, eval harness, běhy ablací (rozpočet: cílit na stovky běhů; Haiku/Sonnet mix), technická zpráva s čísly. Publikace datasetu na HuggingFace.
+**Fáze 2 — DeonticBench a evidence (6–8 týdnů, částečně paralelně).** Návrh a generování úloh, ground-truth grafy, eval harness, běhy ablací (rozpočet: cílit na stovky běhů; Haiku/Sonnet mix), technická zpráva s čísly. Publikace datasetu na HuggingFace.
 
 **Fáze 3 — Akademizace a komunita.** Paper (cíle dle výsledků: PhilML workshop, ACL demo track — vzor PEIRCE, NeurIPS workshop o agentech; spoluautorství/konzultace: česká inferencialistická škola — Peregrin/FLÚ AV ČR, případně M-Rational tým). Blog post, integrace s dalšími frameworky (Letta plugin), multiagentní sdílený scoreboard (viz §5), návrh "normativního dream" módu. Community building: dobré first issues, CONTRIBUTING, examples.
 

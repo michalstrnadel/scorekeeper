@@ -12,7 +12,7 @@ Per Addendum-1 §C; items land in Phase 1–2 unless pulled earlier.
 - **PROV-JSON export** — `scorekeeper export --format prov-json` ([interop.md](interop.md) §2).
 - **OpenTelemetry emitter** — span events `commitment.asserted`, `conflict.detected`, `challenge.raised` for Langfuse/LangSmith/AgentOps users.
 - **`scorekeeper report` UI** (Addendum-1 §B.3): split-pane chronology + time-travel commitment graph over the append-only log; superseded nodes dimmed not removed; conflict = red CA-edge between two live nodes; scope-cluster collapsing; optional Sankey provenance view (PROV-O-Viz pattern).
-- **Game Engine Separation** for EntitleBench publication: public engine/rules/generator, private held-out eval instances (TCG-Bench pattern).
+- **Game Engine Separation** for DeonticBench publication: public engine/rules/generator, private held-out eval instances (TCG-Bench pattern).
 - **Search-time contamination sandbox** for Phase-2 eval runs (denylist: HuggingFace, GitHub, forums).
 - **Concept-drift audit**: rerun the fixed golden sets on every minor release and before any published number.
 - **CyclicJudge**: round-robin second judge family (Addendum-1 §A.1).

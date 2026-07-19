@@ -64,14 +64,16 @@ blocking channel, measured symmetrically.**
   address the driver, the environment addresses the road. Our gate is
   deliberately a *bump*, not a wall (one deny, instructed retry passes).
 
-## Benchmark naming — action required
+## Benchmark naming — RESOLVED 2026-07-19
 
-**"EntitleBench" collides with an established benchmark** (commit-message
-generation, 1.6 M commits, heavily cited in SE/NLP). Publishing under the same
-name invites desk rejection and kills search visibility. **Rename before any
-external artifact ships.** Candidates from the research: NormBench, ScoreEval,
-EntitlementBench, EpistemicDrift. Internal shortlist to decide with Michal —
-criteria: distinctive, searchable, names the measured boundary.
+**Renamed to "DeonticBench".** The previous working name ("EntitleBench")
+collided with an established benchmark (commit-message generation, 1.6 M
+commits, heavily cited in SE/NLP) — publishing under the same name invites
+desk rejection and kills search visibility. "DeonticBench" names the
+theoretical boundary being measured (Brandom's deontic scorekeeping), is
+distinctive, and had no collisions at decision time. Living docs and
+`bench/deonticbench/` renamed; dated artifacts and ADR history keep the
+historical names per the c-0028 convention.
 
 ## Venues (next ~6 months)
 

@@ -408,7 +408,7 @@ async def run_one(
 
 def summarize(results: list[RunResult]) -> str:
     lines = [
-        "# EntitleBench run summary",
+        "# DeonticBench run summary",
         "",
         "Primary metric: `behavior` (deterministic artifact classifier). "
         "`judge` (LLM) is a secondary cross-check — known unreliable on long inputs.",
@@ -478,7 +478,7 @@ async def main() -> int:
     parser.add_argument("--judge-model", default="models/gemini-2.5-flash")
     parser.add_argument(
         "--tasks-dir", default=str(TASKS_DIR),
-        help="scenario root (e.g. ../entitlebench/generated/dev)",
+        help="scenario root (e.g. ../deonticbench/generated/dev)",
     )
     parser.add_argument(
         "--seed-commitments", action="store_true",

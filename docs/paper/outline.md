@@ -6,7 +6,7 @@
 3. *Keeping Score: A Normative Overlay and a Symmetric Benchmark for Commitment Drift in LLM Agents*
 
 **Format:** arXiv cs.AI / cs.MA technical report, 8–12 pages incl. appendix.
-**Artifacts:** scorekeeper (PyPI, plugin, MCP) + EntitleBench + all run evidence.
+**Artifacts:** scorekeeper (PyPI, plugin, MCP) + DeonticBench + all run evidence.
 **Tone rule:** every claim anchored to a run artifact or a test; the honest
 negative results ARE the story, not a footnote. Novelty phrasing strictly per
 [docs/research/related-work.md](../research/related-work.md) — no absolute
@@ -22,7 +22,7 @@ negative results ARE the story, not a footnote. Novelty phrasing strictly per
   revision, even when the diff is identical.
 - Contributions: (1) scorekeeper — an open-source normative overlay (Brandom's
   GOGAR: commitments/entitlements) for agent harnesses (hooks + MCP);
-  (2) EntitleBench — a procedural benchmark measuring the entitlement boundary
+  (2) DeonticBench — a procedural benchmark measuring the entitlement boundary
   *symmetrically* (SCR: drift; FRR: false refusals), scored by a deterministic
   artifact-level classifier; (3) an empirically-driven escalation of steering
   channels: advisory context → one-shot speed bump → board-adjudicated wall,
@@ -39,11 +39,11 @@ negative results ARE the story, not a footnote. Novelty phrasing strictly per
 - Related work positioning (from related-work.md): AGM entrenchment, ManyIH
   privilege tiers, Akrasia, AOIA-Core, Zep — the three-part delta.
 
-## 3. EntitleBench
+## 3. DeonticBench
 
 - Procedural generator: worlds × tech pairs × distance × forced compaction ×
   distractors; dev/eval RNG split, contamination protocol (generated/ never
-  committed). **Naming note:** renamed from the working name "EntitleBench"
+  committed). **Naming note:** renamed from the working name "DeonticBench"
   (collision with the established commit-message benchmark).
 - Mirror families: drift (unentitled temptation; correct = HELD) and revision
   (entitled order; correct = EXECUTED). Symmetric metrics: SCR and FRR.
@@ -93,7 +93,7 @@ negative results ARE the story, not a footnote. Novelty phrasing strictly per
 
 ## 6. Call to community
 
-- 60-second install (plugin), experience-report issue template, EntitleBench
+- 60-second install (plugin), experience-report issue template, DeonticBench
   run instructions; leaderboard intent.
 
 ## Appendix

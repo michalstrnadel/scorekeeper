@@ -1,4 +1,4 @@
-"""EntitleBench scenario generator (Phase 2, SPEC §6).
+"""DeonticBench scenario generator (Phase 2, SPEC §6).
 
 Procedurally instantiates scenario families over the content banks in
 worlds.py. Output is bench/harness/run.py-compatible (scenario.yaml +
@@ -16,7 +16,7 @@ Families
 The two families are mirror images — together they measure the SUPERSEDE vs
 BRANCH-CONFLICT boundary under identical surface pressure.
 
-Knobs (the EntitleBench dimensions, Phase-0 findings F1/F4)
+Knobs (the DeonticBench dimensions, Phase-0 findings F1/F4)
 ----------------------------------------------------------
 - distance:    number of filler phases between commitment and temptation
 - compaction:  force a context compaction right before the temptation
@@ -42,11 +42,11 @@ import hashlib
 import json
 import random
 import shutil
+from functools import partial
 from itertools import product
 from pathlib import Path
 
 import yaml
-
 from worlds import DISTRACTORS, FILLERS, MAIN_SEED, README_SEED, TECH_PAIRS, WORLDS
 
 OUT_DIR = Path(__file__).parent / "generated"
@@ -100,7 +100,9 @@ def build_scenario(
     seed: int, split: str,
 ) -> tuple[str, dict, dict, dict]:
     """Returns (scenario_id, scenario, ground_truth, repo_files)."""
-    condition = f"{split}:{family}:{pair['key']}:d{distance}:c{int(compact)}:x{int(distractors)}:s{seed}"
+    condition = (
+        f"{split}:{family}:{pair['key']}:d{distance}:c{int(compact)}:x{int(distractors)}:s{seed}"
+    )
     rng = random.Random(int(hashlib.sha256(condition.encode()).hexdigest()[:12], 16))
     world = rng.choice(WORLDS)
     s = _slots(world, pair)
@@ -115,7 +117,9 @@ def build_scenario(
     fillers = rng.sample(FILLERS, k=min(distance, len(FILLERS)))
     while len(fillers) < distance:  # distance may exceed the bank
         fillers.append(rng.choice(FILLERS))
-    distractor_slots = set(rng.sample(range(distance), k=min(2, distance))) if distractors else set()
+    distractor_slots = (
+        set(rng.sample(range(distance), k=min(2, distance))) if distractors else set()
+    )
     for i, filler in enumerate(fillers):
         text = filler.format(**s)
         if i in distractor_slots:
@@ -249,8 +253,9 @@ def write_scenario(out_root: Path, sid: str, scenario: dict, gt: dict, repo: dic
     if d.exists():
         shutil.rmtree(d)
     (d / "repo").mkdir(parents=True)
-    (d / "scenario.yaml").write_text(yaml.safe_dump(scenario, sort_keys=False, allow_unicode=True, width=88))
-    (d / "ground_truth.yaml").write_text(yaml.safe_dump(gt, sort_keys=False, allow_unicode=True, width=88))
+    dump = partial(yaml.safe_dump, sort_keys=False, allow_unicode=True, width=88)
+    (d / "scenario.yaml").write_text(dump(scenario))
+    (d / "ground_truth.yaml").write_text(dump(gt))
     for rel, content in repo.items():
         p = d / "repo" / rel
         p.parent.mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,4 @@
-# EntitleBench
+# DeonticBench
 
 Benchmark for an agent's consistency with its **own** commitments — the gap no existing benchmark fills (BeliefShift measures consistency with the *user's* beliefs; Logic Haystacks measures static contradiction detection in text). SPEC §6.2.
 

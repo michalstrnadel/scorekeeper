@@ -183,12 +183,13 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 - **consequences:** `evaluate_wall` denies while the pinned commitment is in `store.active()`; the only pass condition is an entitled SUPERSEDE recorded through the operator pipeline / MCP tool / turn-end extraction. Verified symmetric on seed-0 redis-memcached: drift HELD/high (2 denies, no rival code), revision EXECUTED/high (0 denies, expected SUPERSEDE hit)
 - **incompatible_with:** any gate pass condition satisfiable by the agent's own unverified claim; lifting the wall on retry mechanics
 
-### c-2026-07-14-0028 — The benchmark is named EntitleBench (renamed from CommitBench)
+### c-2026-07-19-0029 — The benchmark is named DeonticBench (renamed from EntitleBench)
 - **kind:** decision · **status:** active
-- **scope:** `repo:bench`, `topic:naming`, `attr:bench.name=entitlebench`
-- **entitlement:** `user_utterance` + `document` — deep-research finding: "CommitBench" collides with an established SE/NLP benchmark (commit-message generation, 1.6M commits) → desk-rejection and search-visibility risk; Michal chose EntitleBench 2026-07-14
-- **consequences:** module `bench/entitlebench/`, progress doc `ENTITLEBENCH-PROGRESS.md`, all living docs renamed; dated artifacts (evidence JSONs, PHASE0 report, ADR histories, imported research) keep the historical name; scenario id prefix `cb-` retained for continuity with persisted runs
-- **incompatible_with:** shipping any external artifact (paper, launch post, PyPI metadata) under the CommitBench name
+- **scope:** `repo:bench`, `topic:naming`, `attr:bench.name=deonticbench`
+- **supersedes:** c-2026-07-14-0028
+- **entitlement:** `user_utterance` + `document` — related-work finding: "EntitleBench" also collides with an established SE/NLP benchmark (commit-message generation, 1.6M commits; docs/research/related-work.md); Michal chose DeonticBench 2026-07-19 — names the measured boundary (Brandom's deontic scorekeeping), distinctive, no collision found at decision time
+- **consequences:** module `bench/deonticbench/`, progress doc `DEONTICBENCH-PROGRESS.md`, all living docs renamed; dated artifacts (evidence JSONs, PHASE0 report, ADR histories, imported research) keep historical names; scenario id prefix `cb-` retained for continuity with persisted runs
+- **incompatible_with:** shipping any external artifact (paper, launch post, PyPI metadata) under the CommitBench or EntitleBench names
 
 ---
 
@@ -196,3 +197,4 @@ Legend — kind: `decision | assertion | promise | assumption`. status: `active 
 
 - **(assumption inside c-0004's context, via c-0009):** "PreCompact injects the normative digest into summarization" — superseded 2026-07-08 by the SessionStart(compact) mechanism; entitled revision (verified live docs).
 - **c-2026-07-09-0012** (superseded → c-0017, 2026-07-09): "Judge is cross-family Gemini" — user revoked the cloud dependency after free-tier quota killed three gate runs; judge default moved to local qwen3:8b via Ollama. Entitled revision (user_utterance + tool_output). Cross-family requirement and S8 protocol carry over unchanged.
+- **c-2026-07-14-0028** (superseded → c-0029, 2026-07-19): "The benchmark is named EntitleBench" — the second name collision in a row (EntitleBench also taken in SE/NLP); renamed to DeonticBench. Entitled revision (user_utterance + document). Rename conventions (living docs vs. dated artifacts, `cb-` prefix) carry over unchanged.

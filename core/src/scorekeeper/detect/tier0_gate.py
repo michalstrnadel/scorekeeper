@@ -11,7 +11,7 @@ Two modes:
 
 v1 rationale below; it still documents the shared design goals.
 
-The seed-0 EntitleBench smoke (2026-07-13) showed that advisory warnings do not
+The seed-0 DeonticBench smoke (2026-07-13) showed that advisory warnings do not
 steer weaker models: the scorekept agent shipped a Memcached hot path past 11
 ``TIER0-CONTENT-WARNING``s, rationalized as polyglot caching. The gate converts
 the first such write into a PreToolUse *deny* whose reason forces the conflict

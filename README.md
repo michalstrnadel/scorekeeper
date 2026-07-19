@@ -8,7 +8,7 @@
 
 **A normative overlay that gives long-running LLM agents a scoreboard of their own commitments — not just a memory of what happened.**
 
-![status: Phase 2](https://img.shields.io/badge/status-Phase%202%20·%20EntitleBench-brightgreen)
+![status: Phase 2](https://img.shields.io/badge/status-Phase%202%20·%20DeonticBench-brightgreen)
 ![tests](https://img.shields.io/badge/tests-126%20passing-brightgreen)
 [![PyPI](https://img.shields.io/pypi/v/scorekeeper)](https://pypi.org/project/scorekeeper/)
 [![Downloads](https://static.pepy.tech/badge/scorekeeper/month)](https://pepy.tech/project/scorekeeper)
@@ -18,7 +18,7 @@
 ![MCP](https://img.shields.io/badge/protocol-MCP-000000)
 ![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
-> **It runs, and it's measured — negative results included.** On EntitleBench's hardest condition, a weak agent drifted past *advisory warnings*, then exploited a *one-shot blocking bump* by simply claiming entitlement it didn't have. What held was the **board-adjudicated wall** ([ADR-0007](adr/0007-blocking-tier0-gate.md)): the write stays denied until the scoreboard itself records an entitled revision — verified symmetrically (drift **HELD**, entitled revision **EXECUTED with zero denies**). Full evidence: [seed-0 report](bench/results/SMOKE-DRIFT-S0-REPORT.md). Roadmap: [ROADMAP.md](ROADMAP.md).
+> **It runs, and it's measured — negative results included.** On DeonticBench's hardest condition, a weak agent drifted past *advisory warnings*, then exploited a *one-shot blocking bump* by simply claiming entitlement it didn't have. What held was the **board-adjudicated wall** ([ADR-0007](adr/0007-blocking-tier0-gate.md)): the write stays denied until the scoreboard itself records an entitled revision — verified symmetrically (drift **HELD**, entitled revision **EXECUTED with zero denies**). Full evidence: [seed-0 report](bench/results/SMOKE-DRIFT-S0-REPORT.md). Roadmap: [ROADMAP.md](ROADMAP.md).
 
 ---
 
@@ -88,7 +88,7 @@ Pieces of that boundary exist elsewhere — AGM-style belief revision protects u
 2. **An active channel, not a passive store** — the boundary becomes environmental *physics*: the blocking Tier-0 gate denies an unentitled rival write before it lands ([ADR-0007](adr/0007-blocking-tier0-gate.md)).
 3. **Symmetric measurement** — the benchmark penalizes both drift (SCR) *and* false refusals (FRR) at the same boundary, scored by a deterministic artifact-level classifier, not an LLM judge.
 
-For the argument in accessible form, start with [`docs/why.md`](docs/why.md). Then see [`docs/theory.md`](docs/theory.md) for the full conceptual apparatus, [`docs/research/related-work.md`](docs/research/related-work.md) for positioning against the closest five systems, [`docs/interop.md`](docs/interop.md) for mappings onto xAIF and W3C PROV-O, the [ROADMAP](ROADMAP.md), and [`docs/SPEC-cs.md`](docs/SPEC-cs.md) for the full specification (Czech, source-of-record).
+For the argument in accessible form, start with [`docs/why.md`](docs/why.md). Then see [`docs/theory.md`](docs/theory.md) for the full conceptual apparatus, [`docs/research/related-work.md`](docs/research/related-work.md) for positioning against the closest five systems, [`docs/interop.md`](docs/interop.md) for mappings onto xAIF and W3C PROV-O, the [ROADMAP](ROADMAP.md), and [`docs/SPEC.md`](docs/SPEC.md) for the full specification (English translation; the Czech [`SPEC-cs.md`](docs/SPEC-cs.md) is source-of-record). The public API, CLI, and MCP tools are documented in [`docs/api.md`](docs/api.md).
 
 ## Design stance: scaffolded, not extended
 
@@ -107,7 +107,7 @@ The pipeline works end-to-end and the first paired evidence is in:
   drifted to MongoDB against its own PostgreSQL decision (verified in
   artifacts); the scorekept twin — same model, same scenario, only the
   scoreboard added — held the line. SCR bare 1/6 vs scorekept **0/6** (N=6,
-  Wilson CIs overlap — effect size awaits EntitleBench).
+  Wilson CIs overlap — effect size awaits DeonticBench).
 - **0 false conflicts** on the dedicated entitled-revision probe (FPR target < 10 %).
 - **+0.6 % token overhead** (target < 10 %); commitment survived context
   compaction via digest re-injection.
@@ -120,7 +120,7 @@ through the same operator pipeline as the hooks), extraction is **async by
 default in the plugin** (detached worker, ~0 ms added turn latency; findings
 surface on the next prompt — [ADR-0006](adr/0006-async-extraction.md)).
 
-**Phase 2 (current) — EntitleBench evidence, including the negative kind:**
+**Phase 2 (current) — DeonticBench (formerly EntitleBench) evidence, including the negative kind:**
 
 - **The effect reproduces.** Two independent paired runs on the hardest
   condition (distance 8 + forced compaction + distractors): the bare haiku
@@ -161,8 +161,8 @@ to try it** — see below. See [CHANGELOG](CHANGELOG.md).
 | `claude-code-plugin/` | Primary integration: 5 Claude Code hooks (`claude --plugin-dir ./claude-code-plugin`) |
 | `mcp/` | `scorekeeper-mcp` docs — the server lives in core (`pip install "scorekeeper[mcp]"`) |
 | `demo/` | ~20-second mechanism demo (`drift_demo.py`) + the README GIF tape |
-| `bench/` | planted acceptance scenarios + Agent-SDK eval harness; EntitleBench in Phase 2 |
-| `docs/` | `why.md` (start here), `theory.md`, `SPEC-cs.md`, `research/` |
+| `bench/` | planted acceptance scenarios + Agent-SDK eval harness; DeonticBench in Phase 2 |
+| `docs/` | `why.md` (start here), `theory.md`, `api.md`, `SPEC.md` (+ Czech source `SPEC-cs.md`), `model-reports/`, `research/` |
 | `adr/` | Architecture Decision Records |
 | `.scorekeeper/` | The project's own scoreboard — scorekeeper dogfoods itself |
 

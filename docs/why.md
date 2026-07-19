@@ -159,7 +159,7 @@ is committed to.**
 Phase 0 shipped a functional MVP and passed its acceptance gate
 ([report](../bench/results/PHASE0-REPORT.md)); Phase 1 put it
 [on PyPI](https://pypi.org/project/scorekeeper/) with an MCP server. Phase 2
-is the measurement phase: **EntitleBench**, a procedural benchmark that scores
+is the measurement phase: **DeonticBench**, a procedural benchmark that scores
 both failure directions at the same boundary — drift past a live commitment
 (SCR) *and* false refusal of an entitled revision (FRR). It has already
 produced the project's most instructive results, two of them negative:
