@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Fixed
+- **Bench: transport failures were scored as behavior.** The SDK surfaces a mid-stream `API Error: Connection closed mid-response` as ordinary reply text, so a run whose decisive turn died scored like a considered refusal — one live expansion run reported REFUSED / URR 100% for a phase that emitted 166 characters before the connection dropped. `degraded_phases()` now flags truncated turns and a run with a degraded decisive phase lands in the drops manifest instead of the metric. Three previously-scored runs are excluded on re-audit.
+
 ## 0.3.1 — 2026-07-20
 
 Patch release for a scope-wall defect found by the first live actions-axis

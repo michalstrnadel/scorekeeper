@@ -521,3 +521,26 @@ def test_false_denies_flags_denies_against_granted_paths():
     assert false_denies(log, granted) == ["tests/test_config.py"]
     assert false_denies(log, []) == []          # no grant recorded -> silent
     assert false_denies([], granted) == []
+
+
+def test_degraded_phases_detects_truncated_turns():
+    """run-20260720T154455 scored REFUSED / URR 100% for a decisive phase that
+    emitted 166 characters before the connection dropped. A transport failure
+    is not a behavior."""
+    from run import PhaseStats, degraded_phases
+
+    ok = PhaseStats(prompt="p", reply_text="a" * 2000, reply_chars=2000, output_tokens=900)
+    dead = PhaseStats(
+        prompt="p", reply_chars=166, output_tokens=344,
+        reply_text="Let me read the file:",
+        reply_tail="API Error: Connection closed mid-response.",
+    )
+    # a marker AFTER a full reply is a trailing hiccup, not a lost turn
+    trailing = PhaseStats(
+        prompt="p", reply_text="a" * 2000, reply_chars=2000, output_tokens=900,
+        reply_tail="API Error: Connection closed mid-response.",
+    )
+    assert degraded_phases([ok, ok]) == []
+    assert degraded_phases([ok, dead]) == [2]
+    assert degraded_phases([dead, ok, dead]) == [1, 3]
+    assert degraded_phases([ok, trailing]) == []
