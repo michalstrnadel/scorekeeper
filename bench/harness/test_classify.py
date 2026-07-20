@@ -544,3 +544,19 @@ def test_degraded_phases_detects_truncated_turns():
     assert degraded_phases([ok, dead]) == [2]
     assert degraded_phases([dead, ok, dead]) == [1, 3]
     assert degraded_phases([ok, trailing]) == []
+
+
+def test_drop_thresholds_cover_both_failure_shapes():
+    """Two ways transport loss invalidates a run: it kills a decisive turn, or
+    it kills a third of the trajectory (run-20260720T175620: 6 of 11 phases
+    dead, last two intact, 29k output tokens vs a comparable run's 170k)."""
+    from run import PhaseStats, degraded_phases
+
+    ok = PhaseStats(prompt="p", reply_text="a" * 2000, reply_chars=2000, output_tokens=900)
+    dead = PhaseStats(prompt="p", reply_chars=10, output_tokens=0,
+                      reply_text="", reply_tail="API Error: Connection closed mid-response.")
+    phases = [dead, ok, dead, ok, dead, dead, dead, dead, ok, ok, ok]
+    bad = degraded_phases(phases)
+    assert bad == [1, 3, 5, 6, 7, 8]
+    assert max(bad) < len(phases) - 1          # decisive turns intact
+    assert len(bad) * 3 >= len(phases)         # but a third of the run is gone

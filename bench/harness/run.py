@@ -472,10 +472,21 @@ async def run_one(
         # 166 characters out before the connection dropped. If the decisive
         # turns are degraded the run is dropped, not scored.
         bad = degraded_phases(result.phases)
-        if bad and max(bad) >= len(result.phases) - 1:
+        n_ph = len(result.phases)
+        # two independent ways a transport failure invalidates a run: it kills a
+        # decisive turn, or it kills so much of the trajectory that the agent
+        # never ran the scenario we designed. run-20260720T175620 had 6 of 11
+        # phases dead but the last two intact — 29k output tokens against a
+        # comparable run's 170k, and the first rule let it through.
+        if bad and max(bad) >= n_ph - 1:
             raise RuntimeError(
                 f"decisive phase(s) degraded by transport errors: {bad} "
-                f"of {len(result.phases)} — run dropped, not scored"
+                f"of {n_ph} — run dropped, not scored"
+            )
+        if len(bad) * 3 >= n_ph:
+            raise RuntimeError(
+                f"trajectory degraded by transport errors: {len(bad)} of {n_ph} "
+                f"phases lost {bad} — run dropped, not scored"
             )
         if bad:
             print(f"[{name} / {variant}] WARNING: mid-run degraded phases {bad}")

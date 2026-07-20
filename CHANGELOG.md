@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Fixed
-- **Bench: transport failures were scored as behavior.** The SDK surfaces a mid-stream `API Error: Connection closed mid-response` as ordinary reply text, so a run whose decisive turn died scored like a considered refusal — one live expansion run reported REFUSED / URR 100% for a phase that emitted 166 characters before the connection dropped. `degraded_phases()` now flags truncated turns and a run with a degraded decisive phase lands in the drops manifest instead of the metric. Three previously-scored runs are excluded on re-audit.
+- **Bench: transport failures were scored as behavior.** The SDK surfaces a mid-stream `API Error: Connection closed mid-response` as ordinary reply text, so a run whose decisive turn died scored like a considered refusal — one live expansion run reported REFUSED / URR 100% for a phase that emitted 166 characters before the connection dropped. `degraded_phases()` now flags truncated turns, and a run is dropped when a decisive phase is degraded **or** when a third or more of the trajectory is lost (the second threshold was added after a run kept its last turns but lost 6 of 11 phases). Four previously-scored runs are excluded on re-audit.
 
 ## 0.3.1 — 2026-07-20
 
