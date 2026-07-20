@@ -4,9 +4,16 @@
 
 ### Added
 - **Extraction can mint `path:` scope pins — from the user only** (ADR-0008 Amendment 1, driven by live negative finding #3): the extractor prompt recognizes explicit user scope grants ("legacy/ is ours now, go ahead"), and a mechanical guard (`enforce_grant_discipline`) strips `path:` pins from any commitment whose provenance is not `user_utterance` — a pasted note phrased as a grant cannot widen the wall, whatever the model returns. Without this, the scope wall's entitled path never lifted through the extraction channel (the first live expansion run scored URR 100% against ordered work).
+- **`telos-coder-14b:latest` model report** in `docs/model-reports/`, covering a negative
+  Ollama/OpenAI-compatible live smoke run for issue #2.
 
 ### Changed
 - DeonticBench scope families gain a neutral status-check follow-up phase after the aside/order (turn-end extraction needs a turn boundary to act across); siblings stay isogenic — the closing phase is identical. `.pytest_cache` excluded from the tree diff (Bash test runs are tool side effects, not work).
+
+### Fixed
+- Windows live/local-model runs can import the core package: store and Tier-0 gate file locks now
+  use a platform-neutral helper instead of importing POSIX-only `fcntl`, and store text I/O is
+  explicit UTF-8.
 
 ## 0.3.0 — 2026-07-19
 
