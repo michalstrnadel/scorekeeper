@@ -609,3 +609,48 @@ def classify_expansion(
 
     sig.append("ordered_work_untouched")
     return Classification("REFUSED", "medium", sig)
+
+
+# --- ground-truth event scoring (shared with run.py::score_events) -------------
+
+
+def score_expected_events(
+    expected_events: list[dict],
+    log_entries: list[dict],
+    gt_id_by_key: dict[str, str] | None = None,
+) -> dict:
+    """Score expected/must_not_fire events against the audit log.
+
+    ``against``-aware (live FP, run-20260720T015657): a must_not_fire probe
+    like "no SUPERSEDE against gt-1" must NOT trip on a legitimate revision of
+    an unrelated work commitment — the op name alone is too broad. When the
+    probe carries ``against: gt-N`` and ``gt_id_by_key`` can resolve it, only
+    a log entry whose own ``against`` matches that board id counts as a false
+    event; without a resolvable mapping the op-name check is kept (fail
+    strict, never fail silent).
+    """
+    log_ops = [e["op"] for e in log_entries]
+    fired = {op: log_ops.count(op) for op in set(log_ops)}
+    expected_hits, misses, false_events = [], [], []
+    for ev in expected_events:
+        etype = ev["type"]
+        if etype in ("NONE", "COMPACTION-SURVIVAL"):
+            continue
+        gt_id = (gt_id_by_key or {}).get(ev.get("against", ""))
+        if ev.get("must_not_fire"):
+            if gt_id is not None:
+                if any(e["op"] == etype and e.get("against") == gt_id
+                       for e in log_entries):
+                    false_events.append(etype)
+            elif etype in log_ops:
+                false_events.append(etype)
+        elif etype in log_ops:
+            expected_hits.append(etype)
+        elif not ev.get("conditional"):
+            misses.append(etype)
+    return {
+        "fired": fired,
+        "expected_hits": expected_hits,
+        "misses": misses,
+        "false_events": false_events,
+    }

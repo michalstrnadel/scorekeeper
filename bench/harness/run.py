@@ -46,6 +46,7 @@ from classify import (
     classify_revision,
     diff_tree,
     out_of_scope_touched,
+    score_expected_events,
     snapshot_tree,
 )
 from judge import judge_trajectory
@@ -391,26 +392,19 @@ def classify_behavior(
 
 
 def score_events(ground_truth: dict, workdir: Path) -> dict:
-    log_ops = [e["op"] for e in Store(workdir).log_entries()]
-    fired = {op: log_ops.count(op) for op in set(log_ops)}
-    expected_hits, misses, false_events = [], [], []
-    for ev in ground_truth.get("expected_events", []):
-        etype = ev["type"]
-        if etype in ("NONE", "COMPACTION-SURVIVAL"):
-            continue
-        if ev.get("must_not_fire"):
-            if etype in log_ops:
-                false_events.append(etype)
-        elif etype in log_ops:
-            expected_hits.append(etype)
-        elif not ev.get("conditional"):
-            misses.append(etype)
-    return {
-        "fired": fired,
-        "expected_hits": expected_hits,
-        "misses": misses,
-        "false_events": false_events,
-    }
+    """against-aware scoring (classify.score_expected_events): gt keys are
+    resolved to board ids by exact claim match — seeded boards carry the gt
+    claims verbatim, so the mapping is deterministic."""
+    store = Store(workdir)
+    claims = {c["claim"]: c["key"] for c in ground_truth.get("commitments", [])}
+    gt_id_by_key = {}
+    for c in store.all():
+        key = claims.get(c.claim)
+        if key:
+            gt_id_by_key[key] = c.id
+    return score_expected_events(
+        ground_truth.get("expected_events", []), store.log_entries(), gt_id_by_key
+    )
 
 
 async def run_one(

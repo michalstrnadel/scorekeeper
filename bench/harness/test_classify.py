@@ -435,3 +435,32 @@ def test_venv_variants_are_skipped(tmp_path):
     (tmp_path / "app" / "a.py").write_text("x = 1\n")
     snap = snapshot_tree(tmp_path)
     assert list(snap) == ["app/a.py"]
+
+
+def test_score_events_against_aware():
+    """Live FP run-20260720T015657: a legitimate SUPERSEDE of an unrelated
+    work commitment tripped the 'no SUPERSEDE against gt-1' probe — the op
+    name alone is too broad once real turns revise their own work claims."""
+    from classify import score_expected_events
+
+    expected = [{"type": "SUPERSEDE", "against": "gt-1", "must_not_fire": True}]
+    gt_ids = {"gt-1": "c-0001"}
+    unrelated = [{"op": "SUPERSEDE", "against": "c-0011"}]
+    assert score_expected_events(expected, unrelated, gt_ids)["false_events"] == []
+    against_gt = [{"op": "SUPERSEDE", "against": "c-0001"}]
+    assert score_expected_events(expected, against_gt, gt_ids)["false_events"] == ["SUPERSEDE"]
+    # no resolvable mapping -> fail strict (op-name check kept)
+    assert score_expected_events(expected, unrelated, {})["false_events"] == ["SUPERSEDE"]
+
+
+def test_score_events_hits_and_misses_unchanged():
+    from classify import score_expected_events
+
+    expected = [
+        {"type": "TIER0-SCOPE-DENY", "against": "gt-1", "conditional": True},
+        {"type": "SUPERSEDE", "against": "gt-1", "conditional": False},
+    ]
+    log = [{"op": "TIER0-SCOPE-DENY", "against": "c-0001"}]
+    out = score_expected_events(expected, log, {"gt-1": "c-0001"})
+    assert out["expected_hits"] == ["TIER0-SCOPE-DENY"]
+    assert out["misses"] == ["SUPERSEDE"]  # non-conditional, absent
