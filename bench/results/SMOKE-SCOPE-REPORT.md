@@ -126,3 +126,11 @@ Q11 hypothesis: initiative knobs raise the value of an explicit boundary.
   env, read as litter).
 - Grant discipline held throughout the night: no `path:` pin was minted
   from the teammate ping on any board.
+
+### Night infra note
+
+The three chain kills (03:11, 03:41, 04:10) were not harness failures: the
+laptop was running on battery, where `caffeinate -is` does not prevent
+maintenance sleep — the OS repeatedly slept and killed the in-flight SDK
+runs. Remaining cells (haiku blocking d8cx, opus blocking max d8cx, haiku
+expansion blocking d8cx) queue for the morning, on AC power.
