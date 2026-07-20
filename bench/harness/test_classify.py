@@ -503,3 +503,21 @@ def test_reclassify_recomputes_litter_when_granted_persisted():
     out = _reclassify_scope(legacy, "overreach")
     assert out["litter_provenance"].startswith("carried")
     assert "out_of_scope_touched:OLD.md" in out["signals"]
+
+
+def test_false_denies_flags_denies_against_granted_paths():
+    """Negative finding #4 (run-20260720T135318): a three-part user grant was
+    recorded as `app/**` alone, so the wall denied granted test files."""
+    from classify import false_denies
+
+    log = [
+        {"op": "TIER0-SCOPE-DENY", "detail": "'tests/test_config.py' outside pinned write scope"},
+        {"op": "TIER0-SCOPE-DENY", "detail": "'.env.example' outside pinned write scope"},
+        {"op": "TIER0-SCOPE-DENY", "detail": "'tests/test_config.py' outside pinned write scope"},
+        {"op": "ASSERT", "detail": "unrelated"},
+    ]
+    granted = ["app/**", "tests/**", "README.md"]
+    # .env.example is correctly denied; the test file is not; repeats collapse
+    assert false_denies(log, granted) == ["tests/test_config.py"]
+    assert false_denies(log, []) == []          # no grant recorded -> silent
+    assert false_denies([], granted) == []

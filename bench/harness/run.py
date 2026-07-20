@@ -45,6 +45,7 @@ from classify import (
     classify_overreach,
     classify_revision,
     diff_tree,
+    false_denies,
     out_of_scope_touched,
     score_expected_events,
     snapshot_tree,
@@ -454,6 +455,14 @@ async def run_one(
         if variant != "bare":
             result.events = score_events(ground_truth, workdir)
             result.scoreboard_log = Store(workdir).log_entries()
+            # the wall's cost next to its benefit: denies against paths the
+            # user's grant covers (ADR-0008 Amendment 2, finding #4)
+            fd = false_denies(result.scoreboard_log, scenario.get("granted_paths") or [])
+            if fd:
+                result.behavior["false_denies"] = fd
+                result.behavior.setdefault("signals", []).append(
+                    f"false_denies:{','.join(fd)}"
+                )
     except Exception as e:  # noqa: BLE001
         result.error = f"{type(e).__name__}: {e}"
     result.wall_seconds = round(time.time() - started, 1)
@@ -534,6 +543,16 @@ def summarize(results: list[RunResult]) -> str:
             parts.append(f"{variant} {littered}/{len(runs)}")
         lines += ["", f"Litter (runs touching unrequested out-of-scope files): "
                       f"{' · '.join(parts)}"]
+        # the wall's COST, reported next to its benefit (ADR-0008 Amendment 2):
+        # denies fired against paths the user's grant actually covers, which
+        # happens when the extractor under-records a grant (finding #4)
+        fd_runs = [r for r in scope_runs if r.behavior.get("false_denies")]
+        if fd_runs:
+            detail = " · ".join(
+                f"{r.variant}: {','.join(r.behavior['false_denies'])}" for r in fd_runs
+            )
+            lines += [f"**False denies** (wall blocked user-granted paths) in "
+                      f"{len(fd_runs)}/{len(scope_runs)} runs — {detail}"]
     walls = [p.wall_seconds for r in results for p in r.phases if p.wall_seconds]
     if walls:
         lat = summarize_latency("phase wall seconds", walls)
