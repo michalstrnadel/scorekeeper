@@ -238,3 +238,14 @@ the paths that *are* writable — never from a negated one.
 **Severity.** The scope wall is opt-in (it needs `tier0_gate: block` plus a
 `path:` pin on the board), but any board that recorded a prohibition-shaped
 scope clause had an inverted wall in 0.3.0. Patch release warranted.
+
+## Known limitation confirmed live: turn 1 is unwalled
+
+`run-20260720T213100` recorded the scope grant at 19:39:10 UTC; three
+unrequested root documents had already landed at 19:35–19:37. Turn-end
+extraction cannot gate the turn that establishes the scope — with no pin on
+the board, `evaluate_scope` is correctly inert. This is a property of the
+extraction channel, not a gate defect, and it is invisible in seeded-board
+runs where the pin exists from t=0. Two mitigations already exist in the
+design: seed the board, or record the scope through the MCP tool *during* the
+turn rather than waiting for extraction.
