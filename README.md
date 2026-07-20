@@ -97,7 +97,7 @@ Pieces of that boundary exist elsewhere — AGM-style belief revision protects u
 | | **Too eager** (unentitled move lands) | **Too timid** (entitled move blocked) |
 |---|---|---|
 | **Claims** — *no bluffing* | drift / hallucination — **SCR** (wall verified: HELD) | false refusal — **FRR** (verified: EXECUTED, zero denies) |
-| **Actions** — *no barging* | overreach — **ORR** (wall shipped + tested; runs pending) | underreach — **URR** (instrument ready; runs pending) |
+| **Actions** — *no barging* | overreach — **ORR** (wall shipped + tested; first live runs: a case series, not rates) | underreach — **URR** (instrument validated live; no rates yet) |
 
 All four scored by a deterministic artifact-level classifier, not an LLM judge.
 

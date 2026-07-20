@@ -70,9 +70,11 @@ negative results ARE the story, not a footnote. Novelty phrasing strictly per
   OverEager-Gen's paired design, licensing paired statistics. Degenerate
   policies are bounded by the pair: do-nothing → URR 100%, do-everything →
   ORR high (AgentAbstain's Paired-Accuracy bound, direction preserved).
-  Evidence status stated exactly: mechanism shipped and unit-tested;
-  instrument ready; live paired runs pending — no rates implied until they
-  land.
+  Evidence status stated exactly: mechanism shipped and unit-tested; the
+  first live paired runs (2026-07-19/20) are a case series (n=1 per cell),
+  not rates — the barge appears only under forced compaction, the overlay
+  closes it there, and the runs found three prose→pin translation defects
+  (ADR-0008 Amendments 1–3). No rates until the powered set lands.
 - Run-design commitments for the actions-axis ablation (bare vs
   claims-only vs full): fixed allocation, average-rate aggregation, GEE /
   cluster-aware inference, cluster bootstrap by scenario; budget anchor ≈36

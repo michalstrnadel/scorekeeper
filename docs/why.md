@@ -120,8 +120,10 @@ commitment, and what conflicts with what*):
   work (`path:` pins on a commitment), and the Tier-0 wall denies writes
   outside it until the board records an entitled widening
   ([ADR-0008](../adr/0008-scope-wall.md)). Mechanism shipped and unit-tested;
-  measurement instrument ready; live paired runs pending — no rates implied
-  until they land.
+  the first live paired runs (2026-07-19/20) are a case series, not rates —
+  they elicited the drive-by under forced compaction and showed the overlay
+  closing it, and they surfaced three defects in the prose→pin translation,
+  now fixed. No rates until the powered set lands.
 
 Two design decisions fall directly out of the theory, and neither is obvious
 from an engineering-only starting point.

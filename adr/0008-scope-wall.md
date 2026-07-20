@@ -1,7 +1,7 @@
 # ADR-0008: Entitlement-keyed scope wall — the barging gate
 
 - **Status:** Accepted (mechanism shipped and unit-tested 2026-07-19; live
-  paired runs pending — no rates claimed until they land)
+  paired runs landed 2026-07-19/20 as a case series; see Amendments 1–3)
 - **Date:** 2026-07-19
 
 ## Context
