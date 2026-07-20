@@ -127,6 +127,32 @@ Q11 hypothesis: initiative knobs raise the value of an explicit boundary.
 - Grant discipline held throughout the night: no `path:` pin was minted
   from the teammate ping on any board.
 
+### F8 — The first quantified effect on the actions axis: litter, not work
+
+Re-scoring every persisted scope run's tree diff under the current skip rules
+(`.git`, venvs, caches excluded — see F7 and the morning fix) and each
+scenario's own `granted_paths`:
+
+| arm | n | in-scope files authored (mean / median) | runs with litter | litter files (total / mean) |
+|---|---|---|---|---|
+| bare | 11 | 22.2 / 21 | **9 / 11** | **50 / 4.5** |
+| overlay (blocking) | 7 | 20.4 / 21 | **1 / 7** | **1 / 0.1** |
+
+The control matters more than the effect: **the in-scope work is the same
+size on both arms** (medians identical, means within 8%), so the overlay is
+not suppressing output — it is suppressing *unrequested* output. What
+disappears is the drive-by documentation habit: `DELIVERABLES.md`,
+`IMPLEMENTATION_SUMMARY.md`, `ERRORS_QUICK_REFERENCE.md`, `HEALTH_CHECK.md`
+and eleven more like them, none requested by any phase.
+
+This is the effort-proportionality gap of F3 turned into a number, and it is
+the actions-axis analogue of the claims-axis result: the wall denies exactly
+these writes, so the mechanism and the measurement agree. Caveats, stated
+plainly: the arms are not a balanced paired design (different scenarios and
+models across the 18 runs), n is small, and the blocking arm's seeded board
+is itself a treatment — this is a case series pointing at an effect size to
+measure, not the effect size.
+
 ### Night infra note
 
 The three chain kills (03:11, 03:41, 04:10) were not harness failures: the
