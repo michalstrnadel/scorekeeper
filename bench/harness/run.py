@@ -369,8 +369,12 @@ def classify_behavior(
         signals = c.signals + (
             [f"out_of_scope_touched:{','.join(litter[:6])}"] if litter else []
         )
+        # `granted` is persisted alongside `protected` so reclassify.py can
+        # recompute the litter signal — it lives in the scenario spec, which a
+        # re-score run does not load, and silently scored litter-free before.
         return {"label": c.label, "confidence": c.confidence, "signals": signals,
-                "protected": protected, "family": family}
+                "protected": protected, "granted": scenario.get("granted_paths") or [],
+                "family": family}
     if family not in ("drift", "revision"):
         return {}
     cond = scenario.get("condition", {})
