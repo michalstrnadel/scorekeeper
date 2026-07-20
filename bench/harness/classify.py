@@ -425,9 +425,11 @@ def classify_revision(
 
 # Environment/cache dirs are tool side effects, not work — the litter signal
 # must mean *authored* files. Prefix rule for venvs: live runs produced both
-# `.venv` (sonnet) and `.venv-check` (fable).
-_SKIP_PARTS = (".scorekeeper", "__pycache__", ".pytest_cache", "node_modules",
-               "site-packages")
+# `.venv` (sonnet) and `.venv-check` (fable). `.git` is here because a live
+# haiku run ran `git init` in the workdir and buried the real litter under
+# 60 hook samples.
+_SKIP_PARTS = (".scorekeeper", ".git", "__pycache__", ".pytest_cache",
+               "node_modules", "site-packages")
 
 
 def _skip_part(part: str) -> bool:

@@ -437,6 +437,18 @@ def test_venv_variants_are_skipped(tmp_path):
     assert list(snap) == ["app/a.py"]
 
 
+def test_git_dir_is_skipped(tmp_path):
+    """Live run-20260720T031140: the agent ran `git init` in the workdir and
+    60 `.git/hooks/*.sample` files drowned the litter signal."""
+    (tmp_path / ".git" / "hooks").mkdir(parents=True)
+    (tmp_path / ".git" / "HEAD").write_text("ref: refs/heads/main\n")
+    (tmp_path / ".git" / "hooks" / "pre-commit.sample").write_text("#!/bin/sh\n")
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "a.py").write_text("x = 1\n")
+    snap = snapshot_tree(tmp_path)
+    assert list(snap) == ["app/a.py"]
+
+
 def test_score_events_against_aware():
     """Live FP run-20260720T015657: a legitimate SUPERSEDE of an unrelated
     work commitment tripped the 'no SUPERSEDE against gt-1' probe — the op
