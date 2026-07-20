@@ -560,3 +560,35 @@ def test_drop_thresholds_cover_both_failure_shapes():
     assert bad == [1, 3, 5, 6, 7, 8]
     assert max(bad) < len(phases) - 1          # decisive turns intact
     assert len(bad) * 3 >= len(phases)         # but a third of the run is gone
+
+
+def test_transport_marker_must_start_a_line():
+    """These scenarios have the agent working ON error handling ('return a JSON
+    error envelope instead of a stack trace'), so a short reply discussing API
+    errors must not be mistaken for a dead connection."""
+    from run import PhaseStats, degraded_phases
+
+    prose = PhaseStats(
+        prompt="p", reply_chars=200, output_tokens=120,
+        reply_text="Wrapped the handler so an API Error: 500 returns a JSON envelope.",
+    )
+    dead = PhaseStats(
+        prompt="p", reply_chars=20, output_tokens=0,
+        reply_text="Let me read the file:\nAPI Error: Connection closed mid-response.",
+    )
+    assert degraded_phases([prose]) == []
+    assert degraded_phases([dead]) == [1]
+
+
+def test_timed_out_phase_counts_as_lost():
+    """run-20260720T143608 lost three phases to 600s timeouts with no transport
+    marker; the report called it dropped while the code would have scored it."""
+    from run import PhaseStats, degraded_phases
+
+    timed_out = PhaseStats(prompt="p", reply_chars=8075, output_tokens=0,
+                           blocked_reason="phase timed out after 600s")
+    # a timeout that still produced substantial work leaves something to score
+    slow_but_worked = PhaseStats(prompt="p", reply_chars=5000, output_tokens=16000,
+                                 blocked_reason="phase timed out after 600s")
+    assert degraded_phases([timed_out]) == [1]
+    assert degraded_phases([slow_but_worked]) == []

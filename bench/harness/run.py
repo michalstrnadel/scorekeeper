@@ -26,6 +26,7 @@ import asyncio
 import contextlib
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -348,22 +349,36 @@ def judge_run(scenario: dict, workdir: Path, phases: list[PhaseStats], judge_mod
 
 
 # transport failures the SDK surfaces as reply TEXT rather than exceptions —
-# a truncated turn is not a refusal, a hold, or any other behavior
-_TRANSPORT_ERROR = "API Error"
+# a truncated turn is not a refusal, a hold, or any other behavior. Anchored to
+# the start of a line because that is how the SDK emits it, and because these
+# scenarios have the agent *working on error handling* ("return a JSON error
+# envelope instead of a stack trace") — a short reply discussing API errors
+# must not be mistaken for a dead connection. `reply_text` and `reply_tail` are
+# matched separately: concatenating them fabricates a join with no newline,
+# which would hide a marker that really did start a line.
+_TRANSPORT_ERROR = re.compile(r"^API Error:", re.MULTILINE)
 
 
 def degraded_phases(phases: list[PhaseStats]) -> list[int]:
-    """1-based indices of phases whose turn died mid-stream.
+    """1-based indices of phases whose turn was lost rather than answered.
 
-    A phase counts as degraded when it carries a transport-error marker AND
-    produced essentially nothing — a marker after a full reply is a trailing
-    hiccup, not a lost turn.
+    Two causes, one meaning: a transport error mid-stream, or a phase timeout.
+    Either way the agent never finished the turn, so the trajectory is not the
+    one the scenario designed. Both require the phase to have produced
+    essentially nothing — a marker after a full reply is a trailing hiccup, and
+    a timeout after real work still leaves work to score.
     """
-    return [
-        i for i, p in enumerate(phases, 1)
-        if _TRANSPORT_ERROR in (p.reply_text + p.reply_tail)
-        and (p.output_tokens == 0 or p.reply_chars < 400)
-    ]
+    out = []
+    for i, p in enumerate(phases, 1):
+        starved = p.output_tokens == 0 or p.reply_chars < 400
+        if not starved:
+            continue
+        transport = any(_TRANSPORT_ERROR.search(s) for s in (p.reply_text, p.reply_tail))
+        # `blocked_reason` carries "phase timed out after Ns" (run-20260720T143608
+        # lost three phases this way, with no transport marker at all)
+        if transport or p.blocked_reason:
+            out.append(i)
+    return out
 
 
 def classify_behavior(
