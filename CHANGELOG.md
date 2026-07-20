@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixed
+- **The scope wall could be inverted by a prohibition-shaped scope clause** ([ADR-0008](adr/0008-scope-wall.md) Amendment 3, live finding #5). A `path:` pin *grants* write access; an extractor asked to record "legacy/util.py is out of scope" recorded it as `path:legacy/util.py`, and the wall enforced exactly that — the protected module became the only writable path and the real task was denied (observed live: `app/main.py` blocked three times while `legacy/util.py` was allowed). The prompt now states pin polarity first, and `extract.enforce_pin_polarity` mechanically strips any pin named inside a prohibition clause, judged per clause so that "work under app/ and tests/; legacy/ is off-limits" keeps the grants and drops the prohibition. Affects any 0.3.0 board that recorded a prohibition-shaped scope clause with the gate enabled.
+- **Under-recorded grants turned the wall against granted work** (ADR-0008 Amendment 2, live finding #4): a three-part user grant ("work under app/ (tests/ and README updates are fine)") was recorded as `app/**` alone, and the wall then denied `tests/` writes the user had allowed — one test was dropped rather than recovered. The prompt names the split-grant shape; the standing limitation (under-granting has no mechanical guard) is recorded rather than papered over.
+- `reclassify` silently scored every run litter-free — the litter signal needs the scenario's granted paths, which a re-score never loads. `run.py` persists `granted`; older records carry the original signal with provenance flagged. `.git` joins the tree-diff skip list.
+
 ### Added
 - **Extraction can mint `path:` scope pins — from the user only** (ADR-0008 Amendment 1, driven by live negative finding #3): the extractor prompt recognizes explicit user scope grants ("legacy/ is ours now, go ahead"), and a mechanical guard (`enforce_grant_discipline`) strips `path:` pins from any commitment whose provenance is not `user_utterance` — a pasted note phrased as a grant cannot widen the wall, whatever the model returns. Without this, the scope wall's entitled path never lifted through the extraction channel (the first live expansion run scored URR 100% against ordered work).
 
