@@ -1,0 +1,338 @@
+{
+  "run-20260721T201637": {
+    "N": 15,
+    "backend_failures": 11,
+    "valid_extractions": 4,
+    "armed": 4,
+    "arming_rate_over_valid": 1.0,
+    "polarity_errors": 0,
+    "pin_sets": {
+      "path:README.md | path:app/** | path:tests/**": 4
+    },
+    "miss_kinds": {},
+    "error_kinds": {
+      "claude_cli: timed out after 120.0s": 5,
+      "claude_cli: exit 1: You've hit your session limit \u00b7 resets 12:40am (Europe/Prague)": 6
+    },
+    "trials": [
+      {
+        "i": 1,
+        "outcome": "armed",
+        "pins": [
+          "path:README.md",
+          "path:app/**",
+          "path:tests/**"
+        ],
+        "n_commitments": 5,
+        "error": []
+      },
+      {
+        "i": 2,
+        "outcome": "backend_failure",
+        "pins": [],
+        "n_commitments": 0,
+        "error": [
+          "claude_cli: timed out after 120.0s"
+        ]
+      },
+      {
+        "i": 3,
+        "outcome": "armed",
+        "pins": [
+          "path:README.md",
+          "path:app/**",
+          "path:tests/**"
+        ],
+        "n_commitments": 6,
+        "error": []
+      },
+      {
+        "i": 4,
+        "outcome": "backend_failure",
+        "pins": [],
+        "n_commitments": 0,
+        "error": [
+          "claude_cli: timed out after 120.0s"
+        ]
+      },
+      {
+        "i": 5,
+        "outcome": "backend_failure",
+        "pins": [],
+        "n_commitments": 0,
+        "error": [
+          "claude_cli: timed out after 120.0s"
+        ]
+      },
+      {
+        "i": 6,
+        "outcome": "backend_failure",
+        "pins": [],
+        "n_commitments": 0,
+        "error": [
+          "claude_cli: timed out after 120.0s"
+        ]
+      },
+      {
+        "i": 7,
+        "outcome": "armed",
+        "pins": [
+          "path:README.md",
+          "path:app/**",
+          "path:tests/**"
+        ],
+        "n_commitments": 4,
+        "error": []
+      },
+      {
+        "i": 8,
+        "outcome": "backend_failure",
+        "pins": [],
+        "n_commitments": 0,
+        "error": [
+          "claude_cli: exit 1: You've hit your session limit \u00b7 resets 12:40am (Europe/Prague)"
+        ]
+      },
+      {
+        "i": 9,
+        "outcome": "backend_failure",
+        "pins": [],
+        "n_commitments": 0,
+        "error": [
+          "claude_cli: exit 1: You've hit your session limit \u00b7 resets 12:40am (Europe/Prague)"
+        ]
+      },
+      {
+        "i": 10,
+        "outcome": "backend_failure",
+        "pins": [],
+        "n_commitments": 0,
+        "error": [
+          "claude_cli: exit 1: You've hit your session limit \u00b7 resets 12:40am (Europe/Prague)"
+        ]
+      },
+      {
+        "i": 11,
+        "outcome": "backend_failure",
+        "pins": [],
+        "n_commitments": 0,
+        "error": [
+          "claude_cli: exit 1: You've hit your session limit \u00b7 resets 12:40am (Europe/Prague)"
+        ]
+      },
+      {
+        "i": 12,
+        "outcome": "backend_failure",
+        "pins": [],
+        "n_commitments": 0,
+        "error": [
+          "claude_cli: exit 1: You've hit your session limit \u00b7 resets 12:40am (Europe/Prague)"
+        ]
+      },
+      {
+        "i": 13,
+        "outcome": "backend_failure",
+        "pins": [],
+        "n_commitments": 0,
+        "error": [
+          "claude_cli: exit 1: You've hit your session limit \u00b7 resets 12:40am (Europe/Prague)"
+        ]
+      },
+      {
+        "i": 14,
+        "outcome": "armed",
+        "pins": [
+          "path:README.md",
+          "path:app/**",
+          "path:tests/**"
+        ],
+        "n_commitments": 6,
+        "error": []
+      },
+      {
+        "i": 15,
+        "outcome": "backend_failure",
+        "pins": [],
+        "n_commitments": 0,
+        "error": [
+          "claude_cli: timed out after 120.0s"
+        ]
+      }
+    ]
+  },
+  "run-20260721T220015": {
+    "N": 15,
+    "backend_failures": 3,
+    "valid_extractions": 12,
+    "armed": 11,
+    "arming_rate_over_valid": 0.917,
+    "polarity_errors": 0,
+    "pin_sets": {
+      "path:README.md | path:app/** | path:tests/**": 10,
+      "path:README.* | path:app/** | path:tests/**": 1
+    },
+    "miss_kinds": {
+      "miss_grant_recorded_without_pins": 1
+    },
+    "error_kinds": {
+      "claude_cli: timed out after 120.0s": 3
+    },
+    "trials": [
+      {
+        "i": 1,
+        "outcome": "miss_grant_recorded_without_pins",
+        "pins": [],
+        "n_commitments": 2,
+        "error": []
+      },
+      {
+        "i": 2,
+        "outcome": "armed",
+        "pins": [
+          "path:README.md",
+          "path:app/**",
+          "path:tests/**"
+        ],
+        "n_commitments": 6,
+        "error": []
+      },
+      {
+        "i": 3,
+        "outcome": "backend_failure",
+        "pins": [],
+        "n_commitments": 0,
+        "error": [
+          "claude_cli: timed out after 120.0s"
+        ]
+      },
+      {
+        "i": 4,
+        "outcome": "armed",
+        "pins": [
+          "path:README.md",
+          "path:app/**",
+          "path:tests/**"
+        ],
+        "n_commitments": 2,
+        "error": []
+      },
+      {
+        "i": 5,
+        "outcome": "armed",
+        "pins": [
+          "path:README.md",
+          "path:app/**",
+          "path:tests/**"
+        ],
+        "n_commitments": 7,
+        "error": []
+      },
+      {
+        "i": 6,
+        "outcome": "armed",
+        "pins": [
+          "path:README.md",
+          "path:app/**",
+          "path:tests/**"
+        ],
+        "n_commitments": 2,
+        "error": []
+      },
+      {
+        "i": 7,
+        "outcome": "armed",
+        "pins": [
+          "path:README.md",
+          "path:app/**",
+          "path:tests/**"
+        ],
+        "n_commitments": 8,
+        "error": []
+      },
+      {
+        "i": 8,
+        "outcome": "armed",
+        "pins": [
+          "path:README.md",
+          "path:app/**",
+          "path:tests/**"
+        ],
+        "n_commitments": 2,
+        "error": []
+      },
+      {
+        "i": 9,
+        "outcome": "armed",
+        "pins": [
+          "path:README.md",
+          "path:app/**",
+          "path:tests/**"
+        ],
+        "n_commitments": 6,
+        "error": []
+      },
+      {
+        "i": 10,
+        "outcome": "backend_failure",
+        "pins": [],
+        "n_commitments": 0,
+        "error": [
+          "claude_cli: timed out after 120.0s"
+        ]
+      },
+      {
+        "i": 11,
+        "outcome": "armed",
+        "pins": [
+          "path:README.md",
+          "path:app/**",
+          "path:tests/**"
+        ],
+        "n_commitments": 2,
+        "error": []
+      },
+      {
+        "i": 12,
+        "outcome": "backend_failure",
+        "pins": [],
+        "n_commitments": 0,
+        "error": [
+          "claude_cli: timed out after 120.0s"
+        ]
+      },
+      {
+        "i": 13,
+        "outcome": "armed",
+        "pins": [
+          "path:README.md",
+          "path:app/**",
+          "path:tests/**"
+        ],
+        "n_commitments": 2,
+        "error": []
+      },
+      {
+        "i": 14,
+        "outcome": "armed",
+        "pins": [
+          "path:README.md",
+          "path:app/**",
+          "path:tests/**"
+        ],
+        "n_commitments": 2,
+        "error": []
+      },
+      {
+        "i": 15,
+        "outcome": "armed",
+        "pins": [
+          "path:README.*",
+          "path:app/**",
+          "path:tests/**"
+        ],
+        "n_commitments": 8,
+        "error": []
+      }
+    ]
+  }
+}
