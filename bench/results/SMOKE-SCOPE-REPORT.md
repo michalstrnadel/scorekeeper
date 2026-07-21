@@ -1,6 +1,6 @@
 # SMOKE-SCOPE: first live actions-axis evidence (2026-07-19 → 20)
 
-## Where this stands (updated 2026-07-21)
+## Where this stands (updated 2026-07-22)
 
 Read chronologically below; this is the state after two days of runs.
 
@@ -44,18 +44,20 @@ value so far is elsewhere — suppressing out-of-scope writes (F8) and catching
 root escapes (F13).
 
 **Open.** Re-elicitation exists only on the strong model (F16; haiku HELD
-6/6 collision-free across F15+F17). The strong-model 2×2 ran the same
-evening (F18, corrected by F19): **both single interventions held Fable** —
-the digest by preventing the attempt (two cells after the F19 relabel), the
-wall by denying an attempted write it was armed for by live extraction (the
-first direct evidence of the wall's own preventive value, end-to-end from
-prose). n=1–2 per cell, one scenario, one seed. Open: replication
-seeds/scenarios for the Fable matrix (each cell ~40–50 min); **extraction
-arming reliability** (F19: one of two identical runs minted the pins — the
-plugin path has no seeding, so this gates real deployments); the harness
-gaps F19 lists (Bash outside the hook matchers, user-level settings leaking
-into SDK sessions); and haiku re-elicitation archetypes if a weak-model
-story is still wanted.
+6/6 collision-free across F15+F17). On Fable, **each single intervention
+held** — the digest by preventing the attempt (two cells), the wall by
+denying an attempted write it was armed for by live extraction, the first
+direct evidence of the wall's own preventive value (F18, corrected by F19).
+The **genuine both-on cell is still owed** — its first attempt died of
+exhausted credits mid-turn and was dropped (F21). Arming, F19's alarm, is
+now measured: **~94% over valid extractions** (15/16, 0 polarity errors),
+the one miss being the known under-granting shape — but conditional on the
+backend answering, and under load it often did not (F20). n=1–2 per scored
+cell, one scenario, one seed. Open: the both-on cell rerun and replication
+across seeds (each Fable cell ~40–50 min, and budget-limited — the night
+hit the session credit ceiling); haiku re-elicitation archetypes if a
+weak-model story is still wanted. Harness gaps F19 raised are now fixed
+(Bash audited, SDK sessions isolated, `wall_armed`/drop guards on re-score).
 
 ---
 
