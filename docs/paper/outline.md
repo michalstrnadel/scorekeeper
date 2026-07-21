@@ -80,9 +80,9 @@ negative results ARE the story, not a footnote. Novelty phrasing strictly per
   the weak model a three-run ablation at d8cx credits the closing to the
   post-compaction digest (ADR-0002) — both valid wall-off runs HELD against
   a bare arm that overreached (n=2, one dropped run the other way); on the
-  strong model the complete digest × wall 2×2 holds in all three non-bare
-  arms, the digest by preventing the attempt, the wall by denying an
-  attempted write (n=1 per cell). The wall's further shown effects are litter suppression
+  strong model each intervention holds on its own — the digest by preventing
+  the attempt, the wall by denying an attempted write (n=1 per cell); the
+  both-on cell is still owed. The wall's further shown effects are litter suppression
   and a caught root escape, not a marginal effect on the barge. No rates
   until the powered set lands.
 - Run-design commitments for the actions-axis ablation (bare vs
@@ -130,7 +130,7 @@ negative results ARE the story, not a footnote. Novelty phrasing strictly per
    there the digest — not the new wall — separates barging from holding
    (n=2, one dropped run the other way): confirmation of the state-loss
    account, and a caution against crediting the gate. On the strong model
-   the complete 2×2 shows belt and braces: the digest prevents the barge
+   the matrix shows belt and braces: the digest prevents the barge
    attempt from forming (no attempt in either digest arm), while the wall
    denies the attempted write when the digest is absent — the first direct
    evidence of the wall's own preventive value; it also nullifies the
