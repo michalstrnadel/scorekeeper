@@ -730,10 +730,11 @@ runs had seeded boards. Consequences, verified in the persisted workdirs:
   files went through ordinary hooked `Write` calls past the pinless gate —
   fail-open working as specified, and the classifier caught both files
   anyway (litter signal), so measurement held.
-- **Extraction arming is a coin flip at n=2.** One of two identical-input
-  runs armed the wall from prose. That is the mechanism's real-world
-  arming path (the plugin has no seeding), so arming reliability is now a
-  first-class question — it gates every unseeded deployment of the wall.
+- **Extraction arming is not guaranteed** — one of two identical-input runs
+  armed the wall from prose. That is the mechanism's real-world arming path
+  (the plugin has no seeding), so arming reliability is now a first-class
+  question. *(Quantified in F20: ~94 % over valid extractions, n=16 — the
+  n=2 rate here was small-sample noise, but the failure mode is real.)*
 - **Harness gaps found on the way** (agent-verified, run.py/cli.py):
   Bash is absent from both hook matchers, so `TIER0-SHELL-AUDIT` — the
   plugin's "shell workarounds are audited" deterrent — is unreachable in
@@ -777,3 +778,50 @@ The genuine both-on cell therefore remains **open**, and the F18 conclusion
 still rests on scope-only (wall) plus two digest arms. Cost of the attempt:
 168k output tokens, 48 minutes, no scorable result — the honest price of
 running the last cell of the night on an exhausted budget.
+
+### F20 — Arming reliability: ~94% over valid extractions, and the miss is under-granting
+
+F19 raised the alarm that extraction armed the wall in only one of two
+identical runs. F20 measures it: replay each gated run's phase-1 grant turn
+through the production extraction path 15 times (`arming_study.py`, run
+alone per the serial rule). Result, over the extractions that actually
+returned:
+
+| run | valid | armed | rate | polarity errors | miss kind |
+|---|---|---|---|---|---|
+| scope-only (s00) | 4 | 4 | 100% | 0 | — |
+| blocking (s00) | 12 | 11 | 91.7% | 0 | 1 × grant recorded without pins |
+| **combined** | **16** | **15** | **93.8%** | **0** | 1 |
+
+What this settles and what it opens:
+
+- **F19's "coin flip" was small-sample noise.** On the identical input the
+  extractor arms the wall ~94% of the time; the live blocking run that F19
+  found unarmed was the unlucky tail, not a systematic failure. The alarm
+  is downgraded to a real-but-rare failure mode.
+- **The one miss is the known unmechanizable one.** It was
+  `grant_recorded_without_pins` — the grant landed on the board as prose but
+  without `path:` pins (the F9 / Amendment-2 under-granting shape), not a
+  total loss. There is still no mechanical guard for it; F20 gives it a
+  rate (~6%).
+- **Polarity holds under repetition.** 0 of 15 armed trials produced a pin
+  naming the protected module — Amendment 3 (the F10 inversion fix) is
+  stable across sampling, not a one-run fluke.
+- **A pin-precision wobble.** One armed trial pinned `path:README.*` instead
+  of `path:README.md` — broader than granted, harmless here (still a grant,
+  not the protected path), but a reminder that pin *precision* varies even
+  when arming succeeds.
+- **The elephant: backend availability.** 14 of 30 extraction attempts never
+  returned — 9 CLI timeouts (120s) and 5 session-limit refusals (the same
+  exhaustion that killed the F21 run; the limit reset at 00:40 local and
+  the second run then ran cleaner). Rapid sequential `claude -p` spawns hit
+  limits a single call does not. The plugin's async one-call-per-turn
+  cadence is gentler, but the honest statement is: **extraction — and
+  therefore arming — is only as available as the scorer backend**, and
+  under load the backend is a real failure surface. The ~94% arming rate is
+  conditional on the extractor answering at all.
+
+Net: the arming path is reliable but not perfect, its failure mode is the
+documented under-granting one, and its availability is gated by the
+backend. Seeding removes all three concerns where it is available (the
+bench); the plugin, which cannot seed, inherits them.
