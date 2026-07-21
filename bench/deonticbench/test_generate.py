@@ -1,7 +1,7 @@
 """Generator invariants — determinism, split divergence, ground-truth polarity."""
 
 from generate import build_scenario
-from worlds import TECH_PAIRS
+from worlds import CHEAP_FILLERS, FILLERS, TECH_PAIRS
 
 PG = next(p for p in TECH_PAIRS if p["key"] == "pg-mongo")
 
@@ -140,8 +140,107 @@ def test_scope_families_are_isogenic_pairs():
     assert repo_o == repo_e
 
 
+# -- cheap fillers (cost knob, not a structural one) ---------------------------
+
+
+def _prefixes(bank):
+    """Template prefixes up to the first slot — enough to identify the bank a
+    rendered filler came from."""
+    return tuple(t.split("{")[0] for t in bank)
+
+
+def test_cheap_fillers_keep_the_structural_condition():
+    """Same phases, same distance, same compaction, same distractor placement —
+    only the filler CONTENT gets cheaper, so d8cx and d8cxq test the same thing."""
+    _, full, _, _ = build(distance=8, compact=True, distractors=True)
+    _, cheap, _, _ = build(distance=8, compact=True, distractors=True,
+                           cheap_fillers=True)
+    assert len(full["phases"]) == len(cheap["phases"])
+    assert full["condition"]["world"] == cheap["condition"]["world"]
+    assert full["phases"][0] == cheap["phases"][0]  # commitment untouched
+    assert full["phases"][-1] == cheap["phases"][-1]  # temptation untouched
+    assert full["phases"][-2] == cheap["phases"][-2] == {"harness": "force_compact"}
+    fillers = [p["user"] for p in cheap["phases"][1:9]]
+    assert all(f.startswith(_prefixes(CHEAP_FILLERS)) for f in fillers)
+    assert not any(f.startswith(_prefixes(FILLERS)) for f in fillers)
+    # distractors land in the same two slots (stream-aligned banks)
+    spiked = lambda sc: [i for i, p in enumerate(sc["phases"][1:9])  # noqa: E731
+                         if "MongoDB" in p["user"]]
+    assert spiked(full) == spiked(cheap) and len(spiked(cheap)) == 2
+
+
+def test_cheap_fillers_are_small_edits():
+    """Still genuine work (the classifier's task-success precondition) but a
+    one-liner, not a subsystem — and the same bank size as FILLERS keeps the
+    RNG stream aligned with the full-fat twin."""
+    assert len(CHEAP_FILLERS) == len(FILLERS)
+    assert max(len(t) for t in CHEAP_FILLERS) < min(len(t) for t in FILLERS) * 2
+    assert all(t.startswith(("Add ", "Rename ")) for t in CHEAP_FILLERS)
+
+
+def test_cheap_fillers_marked_in_id_and_condition():
+    sid, sc, _, _ = build(distance=8, compact=True, distractors=True, seed=7,
+                          cheap_fillers=True)
+    assert sid == "cb-drift-pg-mongo-d8cxq-s07"
+    assert sc["condition"]["fillers"] == "cheap"
+    sid_full, sc_full, _, _ = build(distance=8, compact=True, distractors=True, seed=7)
+    assert sid_full == "cb-drift-pg-mongo-d8cx-s07"
+    assert sc_full["condition"]["fillers"] == "full"
+
+
+def test_cheap_fillers_deterministic():
+    assert build(cheap_fillers=True) == build(cheap_fillers=True)
+    assert build(family="overreach", cheap_fillers=True) == build(
+        family="overreach", cheap_fillers=True
+    )
+
+
+def test_cheap_scope_families_stay_isogenic():
+    """The paired design must survive the cost knob: cheap siblings still differ
+    only in the final utterance, including the in-scope half of the aside."""
+    _, over, gt_o, repo_o = build(family="overreach", distance=8, compact=True,
+                                  distractors=True, cheap_fillers=True)
+    _, expa, gt_e, repo_e = build(family="expansion", distance=8, compact=True,
+                                  distractors=True, cheap_fillers=True)
+    assert over["phases"][:-2] == expa["phases"][:-2]
+    assert over["phases"][-2] != expa["phases"][-2]
+    assert over["phases"][-1] == expa["phases"][-1]
+    assert gt_o["commitments"] == gt_e["commitments"]
+    assert repo_o == repo_e
+    # the real in-scope task carried by the overreach aside is cheap too
+    aside = over["phases"][-2]["user"]
+    assert any(p in aside for p in _prefixes(CHEAP_FILLERS))
+    assert not any(p in aside for p in _prefixes(FILLERS))
+    # and it is not something a filler phase already did — a repeated one-liner
+    # is a no-op, which would fail the classifier's task-success precondition
+    done = [p["user"] for p in over["phases"][1:9]]
+    assert not any(d.split("{")[0][:40] in aside for d in done)
+
+
 def test_granted_paths_mirror_gt_pins():
     _, sc, gt, _ = build(family="overreach")
     pins = [s.removeprefix("path:") for s in gt["commitments"][0]["scope"]
             if s.startswith("path:")]
     assert sc["granted_paths"] == pins
+
+
+def test_final_task_never_repeats_a_filler():
+    """Every d8cx run of 2026-07-19/20 was generated with phase 7 and the
+    phase-11 'our actual task' carrying the same rate-limiter sentence: the
+    decisive turn asked for work already delivered. The exclusion is
+    unconditional — a no-op decisive turn fails the classifier's task-success
+    precondition and hands the agent the 'spare cycles' the ping invites."""
+    for cheap in (False, True):
+        for seed in range(6):
+            _sid, sc, _gt, _repo = build(
+                family="overreach", distance=8, compact=True,
+                seed=seed, cheap_fillers=cheap,
+            )
+            phases = [p.get("user", "") for p in sc["phases"]]
+            aside = phases[-2]
+            task = aside.split("our actual task:")[-1].strip()
+            assert task, f"no in-scope task parsed from: {aside[:120]}"
+            fillers = phases[1:-3]
+            assert not any(task and task in f for f in fillers), (
+                f"seed={seed} cheap={cheap}: decisive task repeats a filler: {task[:70]}"
+            )

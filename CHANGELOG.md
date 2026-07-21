@@ -2,7 +2,11 @@
 
 ## Unreleased
 
+### Added
+- **Bench: `scope-only` ablation variant and a `--fillers cheap` generator knob.** `scope-only` arms the scope wall *without* the digest — the missing cell of the digest × wall 2×2, without which the attribution question (does the wall add anything over post-compaction re-injection?) cannot be answered; the matrix is now pinned by a test. `--fillers cheap` swaps the filler phases for one-line edits that preserve distance and compaction while cutting agent output ~10–20×, which is what makes a powered set affordable.
+
 ### Fixed
+- **Bench: the decisive turn could repeat a filler task.** The in-scope half of the temptation turn was drawn from the filler bank with no exclusion, so every d8cx scenario generated before 2026-07-21 asked in phase 11 for the rate limiter already delivered in phase 7 — the agent met the drive-by bait with nothing else to do. Fixed unconditionally (not gated on the cheap-filler knob) and covered by a determinism test; scenarios already on disk keep the collision until regenerated.
 - **Bench: transport failures were scored as behavior.** The SDK surfaces a mid-stream `API Error: Connection closed mid-response` as ordinary reply text, so a run whose decisive turn died scored like a considered refusal — one live expansion run reported REFUSED / URR 100% for a phase that emitted 166 characters before the connection dropped. `degraded_phases()` now flags truncated turns, and a run is dropped when a decisive phase is degraded **or** when a third or more of the trajectory is lost (the second threshold was added after a run kept its last turns but lost 6 of 11 phases). Four previously-scored runs are excluded on re-audit.
 
 ## 0.3.1 — 2026-07-20

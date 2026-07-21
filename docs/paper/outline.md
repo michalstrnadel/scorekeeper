@@ -33,7 +33,8 @@ negative results ARE the story, not a footnote. Novelty phrasing strictly per
   pins); (2) DeonticBench — a procedural benchmark measuring the entitlement
   boundary *symmetrically on both axes*: claims (SCR: drift; FRR: false
   refusals — measured) and actions (ORR: overreach; URR: underreach —
-  mechanism and instrument shipped; paired runs forthcoming), scored by a
+  mechanism and instrument shipped; first runs a case series whose ablation
+  credits the digest, not the scope wall; powered set forthcoming), scored by a
   deterministic artifact-level classifier; (3) an empirically-driven
   escalation of steering channels: advisory context → one-shot speed bump →
   board-adjudicated wall, with each step motivated by a measured failure of
@@ -74,7 +75,13 @@ negative results ARE the story, not a footnote. Novelty phrasing strictly per
   first live paired runs (2026-07-19/20) are a case series (n=1 per cell),
   not rates — the barge appears only under forced compaction, the overlay
   closes it there, and the runs found three prose→pin translation defects
-  (ADR-0008 Amendments 1–3). No rates until the powered set lands.
+  (ADR-0008 Amendments 1–3). Attribution (2026-07-21): a three-run ablation
+  at d8cx credits the closing to the post-compaction digest (ADR-0002), not
+  to the scope wall — both valid wall-off runs HELD against a bare arm that
+  overreached; n=2 on the deciding cell, one model, one condition, one
+  dropped run the other way. The wall's shown effects are litter suppression
+  and a caught root escape, not a marginal effect on the barge. No rates
+  until the powered set lands.
 - Run-design commitments for the actions-axis ablation (bare vs
   claims-only vs full): fixed allocation, average-rate aggregation, GEE /
   cluster-aware inference, cluster bootstrap by scenario; budget anchor ≈36
@@ -111,10 +118,18 @@ negative results ARE the story, not a footnote. Novelty phrasing strictly per
    in-band denials; frontier models reweigh authority) — our results extend
    this: *soft* denials with self-attested escapes are exploitable by small
    models too; the adjudicator must be external state, not the model.
-6. [Overreach family — mechanism verified by unit/chain tests (scope wall:
-   deny → wall → entitled grant → pass, across real process boundaries);
-   live A/B numbers to be inserted when paired runs land; nothing reported
-   before then.]
+6. **Overreach family** — mechanism verified by unit/chain tests (scope wall:
+   deny → wall → entitled grant → pass, across real process boundaries).
+   Live case series (d8cx, 2026-07-19/20): bare OVERREACHED, overlay HELD on
+   three model classes; litter down ~8× with in-scope output unchanged.
+   **Attribution result (F12), against our own mechanism:** the wall-off ablation
+   (`blocking-claims-only`) HELD in both valid runs, so on this cell the
+   digest — not the new wall — separates barging from holding; the wall's
+   demonstrated value is litter suppression and a caught root escape. Reads
+   as confirmation of the state-loss account, and as a caution against
+   crediting the gate. n=2 on the deciding cell, one model, one condition,
+   one dropped run the other way — powered set (digest × wall 2×2) pending;
+   no rates before then.
 
 ## 5. Discussion
 

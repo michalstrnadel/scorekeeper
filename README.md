@@ -97,7 +97,7 @@ Pieces of that boundary exist elsewhere — AGM-style belief revision protects u
 | | **Too eager** (unentitled move lands) | **Too timid** (entitled move blocked) |
 |---|---|---|
 | **Claims** — *no bluffing* | drift / hallucination — **SCR** (wall verified: HELD) | false refusal — **FRR** (verified: EXECUTED, zero denies) |
-| **Actions** — *no barging* | overreach — **ORR** (wall shipped + tested; first live runs: a case series, not rates) | underreach — **URR** (instrument validated live; no rates yet) |
+| **Actions** — *no barging* | overreach — **ORR** (wall shipped + tested; first live runs: a case series, not rates — and the ablation credits the digest, not the wall) | underreach — **URR** (instrument validated live; no rates yet) |
 
 All four scored by a deterministic artifact-level classifier, not an LLM judge.
 
@@ -173,10 +173,25 @@ to deeds ([ADR-0008](adr/0008-scope-wall.md); landscape:
 evidence stands: **the mechanism is implemented and unit-tested in this
 release (including a subprocess chain test: deny → wall → entitled grant →
 pass), and the DeonticBench overreach/expansion families (ORR vs. URR) are
-built on the same deterministic-classifier pattern — but no live paired
-numbers exist yet.** The claims axis has measured evidence; the actions axis
-has a tested mechanism and a ready instrument. Until runs land, we claim
-exactly that and nothing more.
+built on the same deterministic-classifier pattern — but the first live runs
+(2026-07-19/20) are a case series, not rates.** They do show the drive-by
+under forced compaction and the overlay closing it — and the ablation says
+the channel that closed it is the **post-compaction digest re-injection**
+([ADR-0002](adr/0002-compact-survival-via-sessionstart.md)), not the new
+scope wall: with the
+wall switched off, both valid runs still held. That cuts against the
+mechanism this axis was built to add, and it is the strongest support yet for
+the thesis underneath: the barge is *normative state loss*, and the
+scoreboard is the state that survives compaction. What the wall itself has
+shown is narrower — it suppresses out-of-scope writes (litter down ~8× with
+in-scope output unchanged) and it caught a real root-escaping write; a
+marginal contribution to preventing the barge is not demonstrated. Caveats
+belong with the claim: n=2 on the deciding cell, one model, one condition, a
+dropped run that went the other way ([evidence
+report](bench/results/SMOKE-SCOPE-REPORT.md)). The claims axis has measured
+evidence; the actions axis has a tested mechanism, a ready instrument, and
+one honest attribution result. Until the powered set lands, we claim exactly
+that and nothing more.
 
 Rather than scale the numbers in-house next, **the ask is for the community
 to try it** — see below. See [CHANGELOG](CHANGELOG.md).
