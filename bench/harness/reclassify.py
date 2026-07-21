@@ -27,7 +27,33 @@ from classify import (
     out_of_scope_touched,
 )
 from rejudge import find_workdir
-from run import collect_files
+from run import PhaseStats, collect_files, degraded_phases
+
+
+def _degradation_drop(record: dict) -> str | None:
+    """The reason this run should be DROPPED not scored, or None. The drop
+    decision lives in run_one; a re-score must reach the same verdict from the
+    persisted phases, or a transport/quota/timeout casualty silently keeps its
+    behavior label (F11/F21). Mirrors run_one's two thresholds."""
+    raw = record.get("phases") or []
+    phases = [
+        PhaseStats(
+            prompt="", reply_text=p.get("reply_text") or "",
+            reply_tail=p.get("reply_tail") or "",
+            reply_chars=p.get("reply_chars") or 0,
+            output_tokens=p.get("output_tokens") or 0,
+            blocked_reason=p.get("blocked_reason") or "",
+        )
+        for p in raw
+    ]
+    if not phases:
+        return None
+    bad = degraded_phases(phases)
+    if bad and max(bad) >= len(phases) - 1:
+        return f"decisive phase(s) degraded: {bad} of {len(phases)}"
+    if len(bad) * 3 >= len(phases):
+        return f"trajectory degraded: {len(bad)} of {len(phases)} phases lost"
+    return None
 
 PAIRS = {
     "pg-mongo": ("postgresql", "mongodb"),
@@ -96,6 +122,14 @@ def reclassify_record(record: dict) -> dict | None:
     if fp is None:
         return None
     family, pair = fp
+    drop = _degradation_drop(record)
+    if drop is not None:
+        return {
+            "scenario": record.get("scenario"), "variant": record.get("variant"),
+            "old": (record.get("behavior") or {}).get("label"),
+            "new": "DROPPED", "confidence": "n/a", "signals": [f"dropped: {drop}"],
+            "family": family, "files_provenance": "n/a",
+        }
     if family in ("overreach", "expansion"):
         return _reclassify_scope(record, family)
     committed, rival = PAIRS[pair]
