@@ -215,6 +215,8 @@ Early project, design-first — **trying it and reporting back is as valuable as
 
 If you use it in research, there's a [CITATION.cff](CITATION.cff).
 
+**Contributors:** [@HarperZ9](https://github.com/HarperZ9) (Zain Dana Harper) made scorekeeper run on Windows and filed the first external model report ([PR #7](https://github.com/michalstrnadel/scorekeeper/pull/7), `docs/model-reports/telos-coder-14b.md`) — the first outside contribution to the project.
+
 ## License
 
 [Apache-2.0](LICENSE).
