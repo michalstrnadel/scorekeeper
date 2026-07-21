@@ -442,6 +442,21 @@ exists from t=0), which is exactly why unseeded runs were worth doing.
 Mitigations, both already in the design: seed the board, or record the scope
 through the MCP tool inside the turn.
 
+**Quantified 2026-07-21** across every persisted workdir whose board carries a
+`path:` pin (file mtime vs the first pin's timestamp; a file created before
+the pin but edited after counts as post-pin, so these are floors):
+
+| boards | n | files landing before the wall arms |
+|---|---|---|
+| unseeded | 7 | **mean 11.7, range 8–15** |
+| seeded | 10 | 1.2 (residue of seeding itself) |
+
+On unseeded boards roughly a dozen files — a third to half of a typical run's
+authored output — exist before the wall does. Seeding closes the gap to
+noise, which turns the mitigation from a design note into a measured
+recommendation: **on the extraction channel alone, the wall's coverage starts
+one turn late; boards that matter should be seeded or scoped in-turn via MCP.**
+
 ### F14 — The decisive turn asked for work the agent had already done
 
 Found 2026-07-21 while making runs cheaper, in the scenario **every d8cx run
