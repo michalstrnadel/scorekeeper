@@ -97,7 +97,7 @@ Pieces of that boundary exist elsewhere — AGM-style belief revision protects u
 | | **Too eager** (unentitled move lands) | **Too timid** (entitled move blocked) |
 |---|---|---|
 | **Claims** — *no bluffing* | drift / hallucination — **SCR** (wall verified: HELD) | false refusal — **FRR** (verified: EXECUTED, zero denies) |
-| **Actions** — *no barging* | overreach — **ORR** (wall shipped + tested; first live runs: a case series, not rates — and the ablation credits the digest, not the wall) | underreach — **URR** (instrument validated live; no rates yet) |
+| **Actions** — *no barging* | overreach — **ORR** (wall shipped + tested; live case series, not rates — attribution splits by model: weak-model closing credited to the digest, strong-model matrix holds via digest *and* wall, each by its own mechanism) | underreach — **URR** (instrument validated live; no rates yet) |
 
 All four scored by a deterministic artifact-level classifier, not an LLM judge.
 
