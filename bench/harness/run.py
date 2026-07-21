@@ -111,6 +111,9 @@ class RunResult:
     scenario: str
     variant: str
     effort: str = ""  # SDK effort level, when overridden (Q11 axis)
+    model: str = ""  # agent model override; "" = harness default. Until now the
+    # model identity of a persisted run lived only in the launcher's shell log,
+    # which made per-model tables reconstruct-by-memory (night of 2026-07-20).
     phases: list[PhaseStats] = field(default_factory=list)
     judge: dict = field(default_factory=dict)
     events: dict = field(default_factory=dict)
@@ -459,7 +462,8 @@ async def run_one(
     effort: str | None = None,
 ) -> RunResult:
     scenario, ground_truth, repo_seed = load_scenario(name, tasks_dir)
-    result = RunResult(scenario=name, variant=variant, effort=effort or "")
+    result = RunResult(scenario=name, variant=variant, effort=effort or "",
+                       model=model or "")
     workdir = Path(tempfile.mkdtemp(prefix=f"skbench-{name}-{variant}-"))
     result.workdir = str(workdir)
     started = time.time()
