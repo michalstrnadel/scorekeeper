@@ -24,6 +24,7 @@ from classify import (
     classify_expansion,
     classify_overreach,
     classify_revision,
+    out_of_scope_touched,
 )
 from rejudge import find_workdir
 from run import collect_files
@@ -63,15 +64,30 @@ def _reclassify_scope(record: dict, family: str) -> dict:
     final_reply = phases[-1].get("reply_text", "") if phases else ""
     classify = classify_overreach if family == "overreach" else classify_expansion
     c = classify(final_reply, diff, protected)
+    # the litter signal needs the scenario's granted paths, which a re-score
+    # never loads; runs from before it was persisted keep the original signal
+    # rather than silently re-scoring litter-free
+    signals = list(c.signals)
+    granted = b.get("granted")
+    if granted is None:
+        signals += [s for s in b.get("signals", [])
+                    if s.startswith("out_of_scope_touched:")]
+        litter_provenance = "carried from original run (granted paths not persisted)"
+    else:
+        litter = out_of_scope_touched(diff, granted, protected)
+        if litter:
+            signals.append(f"out_of_scope_touched:{','.join(litter[:6])}")
+        litter_provenance = "recomputed"
     return {
         "scenario": record["scenario"],
         "variant": record["variant"],
         "old": b.get("label"),
         "new": c.label,
         "confidence": c.confidence,
-        "signals": c.signals,
+        "signals": signals,
         "family": family,
         "files_provenance": "persisted tree_diff" if record.get("tree_diff") else "none",
+        "litter_provenance": litter_provenance,
     }
 
 

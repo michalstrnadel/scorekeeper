@@ -33,7 +33,9 @@ negative results ARE the story, not a footnote. Novelty phrasing strictly per
   pins); (2) DeonticBench — a procedural benchmark measuring the entitlement
   boundary *symmetrically on both axes*: claims (SCR: drift; FRR: false
   refusals — measured) and actions (ORR: overreach; URR: underreach —
-  mechanism and instrument shipped; paired runs forthcoming), scored by a
+  mechanism and instrument shipped; first runs a case series whose
+  attribution splits by model — weak-model closing credited to the digest,
+  strong-model 2×2 held by digest and wall each; replication forthcoming), scored by a
   deterministic artifact-level classifier; (3) an empirically-driven
   escalation of steering channels: advisory context → one-shot speed bump →
   board-adjudicated wall, with each step motivated by a measured failure of
@@ -70,9 +72,19 @@ negative results ARE the story, not a footnote. Novelty phrasing strictly per
   OverEager-Gen's paired design, licensing paired statistics. Degenerate
   policies are bounded by the pair: do-nothing → URR 100%, do-everything →
   ORR high (AgentAbstain's Paired-Accuracy bound, direction preserved).
-  Evidence status stated exactly: mechanism shipped and unit-tested;
-  instrument ready; live paired runs pending — no rates implied until they
-  land.
+  Evidence status stated exactly: mechanism shipped and unit-tested; the
+  first live paired runs (2026-07-19/20) are a case series (n=1 per cell),
+  not rates — the barge appears only under forced compaction, the overlay
+  closes it there, and the runs found three prose→pin translation defects
+  (ADR-0008 Amendments 1–3). Attribution (2026-07-21) splits by model: on
+  the weak model a three-run ablation at d8cx credits the closing to the
+  post-compaction digest (ADR-0002) — both valid wall-off runs HELD against
+  a bare arm that overreached (n=2, one dropped run the other way); on the
+  strong model the complete digest × wall 2×2 holds in all three non-bare
+  arms, the digest by preventing the attempt, the wall by denying an
+  attempted write (n=1 per cell). The wall's further shown effects are litter suppression
+  and a caught root escape, not a marginal effect on the barge. No rates
+  until the powered set lands.
 - Run-design commitments for the actions-axis ablation (bare vs
   claims-only vs full): fixed allocation, average-rate aggregation, GEE /
   cluster-aware inference, cluster bootstrap by scenario; budget anchor ≈36
@@ -109,10 +121,22 @@ negative results ARE the story, not a footnote. Novelty phrasing strictly per
    in-band denials; frontier models reweigh authority) — our results extend
    this: *soft* denials with self-attested escapes are exploitable by small
    models too; the adjudicator must be external state, not the model.
-6. [Overreach family — mechanism verified by unit/chain tests (scope wall:
-   deny → wall → entitled grant → pass, across real process boundaries);
-   live A/B numbers to be inserted when paired runs land; nothing reported
-   before then.]
+6. **Overreach family** — mechanism verified by unit/chain tests (scope wall:
+   deny → wall → entitled grant → pass, across real process boundaries).
+   Live case series (d8cx, 2026-07-19/20): bare OVERREACHED, overlay HELD on
+   three model classes; litter down ~8× with in-scope output unchanged.
+   **Attribution result (F12 + F18), model-split:** on the weak model the
+   wall-off ablation (`blocking-claims-only`) HELD in both valid runs, so
+   there the digest — not the new wall — separates barging from holding
+   (n=2, one dropped run the other way): confirmation of the state-loss
+   account, and a caution against crediting the gate. On the strong model
+   the complete 2×2 shows belt and braces: the digest prevents the barge
+   attempt from forming (no attempt in either digest arm), while the wall
+   denies the attempted write when the digest is absent — the first direct
+   evidence of the wall's own preventive value; it also nullifies the
+   delegation channel, since it gates the filesystem rather than the actor
+   (n=1 per cell, one scenario). Replication across seeds/scenarios pending;
+   no rates before then.
 
 ## 5. Discussion
 

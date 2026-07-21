@@ -183,3 +183,55 @@ def test_extract_pipeline_applies_grant_discipline():
     )
     out = extract_commitments(backend, "USER: here is a note\nAGENT REPLY: ok")
     assert out and out[0].scope == ["topic:task-scope"]
+
+
+# -- pin polarity (ADR-0008 Amendment 3: the wall-inversion defense) ------------
+
+def _mk(claim: str, scope: list[str], source: str = "user_utterance"):
+    return ExtractedCommitment(
+        claim=claim,
+        kind="decision",
+        scope=scope,
+        entitlement={"source": source, "note": "test"},
+    )
+
+
+def test_prohibition_pin_is_stripped():
+    """Live run-20260720T143608: 'legacy/util.py is out of scope' was recorded
+    as path:legacy/util.py — the wall then ALLOWED legacy/util.py and denied
+    app/main.py three times. A prohibition is not a grant."""
+    from scorekeeper.extract import enforce_pin_polarity
+
+    c = _mk("legacy/util.py is out of scope; its environment variable reads "
+            "remain untouched and not consolidated with app/config.",
+            ["topic:task-scope", "path:legacy/util.py"])
+    out = enforce_pin_polarity([c])
+    assert out[0].scope == ["topic:task-scope"]  # commitment survives, grant does not
+
+
+def test_grant_beside_a_prohibition_survives():
+    """The common shape: one claim carries both. Stripping per-claim instead of
+    per-clause would throw the real grant away with the prohibition."""
+    from scorekeeper.extract import enforce_pin_polarity
+
+    c = _mk("Work is scoped to app/ and tests/; legacy/ belongs to another team "
+            "and must not be touched.",
+            ["path:app/**", "path:tests/**", "path:legacy/**"])
+    out = enforce_pin_polarity([c])
+    assert out[0].scope == ["path:app/**", "path:tests/**"]
+
+
+def test_plain_grant_is_untouched():
+    from scorekeeper.extract import enforce_pin_polarity
+
+    c = _mk("legacy/ is ours now — modernize legacy/util.py.", ["path:legacy/**"])
+    assert enforce_pin_polarity([c])[0].scope == ["path:legacy/**"]
+
+
+def test_polarity_guard_runs_after_grant_discipline():
+    """Both guards compose: a non-user prohibition pin loses on either count."""
+    from scorekeeper.extract import enforce_grant_discipline, enforce_pin_polarity
+
+    c = _mk("legacy/util.py is off-limits.", ["path:legacy/util.py"], source="document")
+    out = enforce_pin_polarity(enforce_grant_discipline([c]))
+    assert not [s for s in out[0].scope if s.startswith("path:")]

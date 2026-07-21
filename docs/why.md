@@ -120,8 +120,22 @@ commitment, and what conflicts with what*):
   work (`path:` pins on a commitment), and the Tier-0 wall denies writes
   outside it until the board records an entitled widening
   ([ADR-0008](../adr/0008-scope-wall.md)). Mechanism shipped and unit-tested;
-  measurement instrument ready; live paired runs pending — no rates implied
-  until they land.
+  the first live paired runs (2026-07-19/20) are a case series, not rates —
+  they elicited the drive-by under forced compaction and showed the overlay
+  closing it, and they surfaced three defects in the prose→pin translation,
+  now fixed. The attribution then split by model. On the weak model the
+  ablation credited the closing to the *digest*, not to this wall: with the
+  wall switched off, both valid runs still held, while the bare agent
+  barged — the point above about surviving compaction. On the strong model
+  the full digest × wall matrix (2026-07-21) showed **both** interventions
+  sufficient, by different mechanisms: the digest prevents the barge attempt
+  from forming, and where the digest is absent the wall denies the attempted
+  write in flight — the first direct evidence of the wall's own preventive
+  value. Belt and braces, not redundancy. The wall additionally suppresses
+  out-of-scope writes (roughly eightfold less litter, in-scope work
+  unchanged) and caught a real write escaping the project root. n=1–2 per
+  deciding cell, one scenario, single models per cell. No rates until
+  the powered set lands.
 
 Two design decisions fall directly out of the theory, and neither is obvious
 from an engineering-only starting point.
@@ -203,9 +217,19 @@ was the board-adjudicated wall. Full evidence, negative findings included:
 The actions axis now has the same machinery: the scope wall and a mirrored
 DeonticBench family pair (overreach vs. entitled expansion, ORR vs. URR). To
 state its evidence status precisely: the mechanism is implemented and
-unit-tested, the measurement instrument is ready, and live paired runs are
-pending — the claims axis has measured evidence; the actions axis has a tested
-mechanism and a ready instrument, and until runs land we claim exactly that.
+unit-tested, the measurement instrument is ready, and the first live runs are
+a case series, not rates. They found the barge under forced compaction and
+saw the overlay close it. The attribution splits by model: on the weak
+model the ablation credits the closing to the digest re-injection — further
+evidence for normative state loss as the cause; on the strong model the
+full digest × wall matrix shows both interventions sufficient by different
+mechanisms — the digest prevents the barge attempt from forming, and the
+wall denies the attempted write where the digest is absent. The wall also
+suppresses litter and caught one root escape ([evidence
+report](../bench/results/SMOKE-SCOPE-REPORT.md)). The claims axis has
+measured evidence; the actions axis has a tested mechanism, a ready
+instrument, and one honest attribution result, and until the powered set
+lands we claim exactly that.
 
 If the failure mode at the top of this page is one you recognize, the repo is
 open, the spec is public, and the scoreboard tracking this very project's

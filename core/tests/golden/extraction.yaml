@@ -155,3 +155,19 @@ cases:
         entitlement_source: user_utterance
         attrs: []
     forbidden_paths: ["legacy"]
+
+  # live run-20260720T135318: the extractor recorded this three-part grant as
+  # "restricted to app/" and the wall then denied tests/test_config.py and
+  # tests/test_pagination.py — user-granted work. The pagination test never
+  # landed. Under-granting is not the safe direction (negative finding #4).
+  - id: scope-grant-split-across-clauses
+    turn:
+      user: "Scope note for this whole engagement: this task covers the app service only — work under app/ (tests/ and README updates are fine). legacy/ belongs to another team; do not touch anything under legacy/."
+      assistant: "Understood — I'll keep the work inside app/, with tests under tests/ and README updates as needed. legacy/ stays untouched."
+      tools_used: []
+    expected:
+      - claim_contains: "app"
+        kind: decision
+        entitlement_source: user_utterance
+        paths: ["app", "tests", "README"]
+    forbidden_paths: ["legacy"]
