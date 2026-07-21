@@ -63,7 +63,7 @@ stage_bench() {  # generator + harness tests (relative imports need their cwd)
   run uv run --with pytest python -m pytest test_stats.py test_classify.py test_run.py -q
   # import smoke over the modules no test imports (run/judge/…): a core-side
   # rename of an API the harness uses would otherwise ship green
-  run uv run python -c "import classify, judge, meta_eval, reclassify, rejudge, run, stats"
+  run uv run python -c "import arming_study, classify, judge, meta_eval, reclassify, rejudge, run, stats"
   cd "$ROOT/bench/deonticbench"
   run uv run --project ../harness --with pytest python -m pytest test_generate.py -q
   cd "$ROOT"
