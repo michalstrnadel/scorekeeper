@@ -3,44 +3,59 @@
 from __future__ import annotations
 
 import contextlib
-import os
+import sys
+import threading
 from collections.abc import Iterator
 from pathlib import Path
 
-if os.name == "nt":
+if sys.platform == "win32":
     import msvcrt
 else:
     import fcntl
 
-_HELD_LOCKS: set[Path] = set()
+# In-process serialization mirroring flock semantics for separate Store
+# instances in one Python process (where Windows byte-range locks are less
+# useful for the unit-test shape): blocking acquisition WAITS, exactly like
+# flock across processes; only blocking=False raises. One threading.Lock per
+# resolved path, guarded by a registry lock for thread safety.
+_REGISTRY_GUARD = threading.Lock()
+_PATH_LOCKS: dict[Path, threading.Lock] = {}
+
+
+def _path_lock(resolved: Path) -> threading.Lock:
+    with _REGISTRY_GUARD:
+        lock = _PATH_LOCKS.get(resolved)
+        if lock is None:
+            lock = _PATH_LOCKS[resolved] = threading.Lock()
+        return lock
 
 
 @contextlib.contextmanager
 def exclusive_file_lock(path: Path, blocking: bool = True) -> Iterator[None]:
     """Exclusive process/file lock with POSIX and Windows backends.
 
-    ``blocking=False`` raises ``BlockingIOError`` when another writer already
-    holds the lock. The in-process registry mirrors that behavior for separate
-    Store instances in one Python process, where Windows byte-range locks are
-    otherwise less useful for the unit-test shape.
+    ``blocking=True`` waits for the current holder (in-process or
+    cross-process), matching ``flock``; ``blocking=False`` raises
+    ``BlockingIOError`` when another writer already holds the lock.
     """
     resolved = path.resolve()
-    if resolved in _HELD_LOCKS:
+    plock = _path_lock(resolved)
+    if not plock.acquire(blocking=blocking):
         raise BlockingIOError(str(path))
-
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a+b") as handle:
-        _lock(handle, blocking)
-        _HELD_LOCKS.add(resolved)
-        try:
-            yield
-        finally:
-            _HELD_LOCKS.discard(resolved)
-            _unlock(handle)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a+b") as handle:
+            _lock(handle, blocking)
+            try:
+                yield
+            finally:
+                _unlock(handle)
+    finally:
+        plock.release()
 
 
 def _lock(handle, blocking: bool) -> None:
-    if os.name == "nt":
+    if sys.platform == "win32":
         handle.seek(0)
         mode = msvcrt.LK_LOCK if blocking else msvcrt.LK_NBLCK
         try:
@@ -50,17 +65,12 @@ def _lock(handle, blocking: bool) -> None:
                 raise BlockingIOError(str(exc)) from exc
             raise
     else:
-        lock_ex = fcntl.LOCK_EX  # type: ignore[attr-defined]
-        lock_nb = fcntl.LOCK_NB  # type: ignore[attr-defined]
-        fcntl.flock(  # type: ignore[attr-defined]
-            handle, lock_ex | (0 if blocking else lock_nb)
-        )
+        fcntl.flock(handle, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
 
 
 def _unlock(handle) -> None:
-    if os.name == "nt":
+    if sys.platform == "win32":
         handle.seek(0)
         msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
     else:
-        lock_un = fcntl.LOCK_UN  # type: ignore[attr-defined]
-        fcntl.flock(handle, lock_un)  # type: ignore[attr-defined]
+        fcntl.flock(handle, fcntl.LOCK_UN)

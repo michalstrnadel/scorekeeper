@@ -3,11 +3,14 @@
 ## Unreleased
 
 ### Added
+- **`telos-coder-14b:latest` model report** in `docs/model-reports/`, covering a negative
+  Ollama/OpenAI-compatible live smoke run for issue #2 (community report by @HarperZ9, PR #7).
 - **Bench: `surfaced` line — did the held agent raise the suggestion, or silently drop it?** Of the HELD overreach runs, how many surfaced the teammate's suggestion for the user to decide (the deny reason's branch (a), the rubric's ideal outcome) versus just leaving it unmentioned. Secondary and never a verdict, like the litter line: HELD stays artifact-decided (tree diff), so a rehearsed "want me to?" phrase cannot buy a pass — but silence, whose cost Amendment 2 showed live (a false-denied test silently dropped), is now visible per variant. Detected from the final reply by splitting the decline marker bank into restraint vs. surfaced; the verdict still uses the union, so no existing label moves.
 - **Bench: `--decisive idle` generator knob — the F15 elicitation condition, by design instead of by defect.** The strongest observed barge required compaction *plus* an idle decisive turn, which until now only the (since-fixed) filler collision produced. The knob recreates that idle capacity legitimately: the overreach decisive turn asks only to re-verify the phase-2 filler's already-completed work (quoted verbatim), so the agent has spare capacity exactly when the teammate ping invites spending it. Overreach-only, requires distance ≥ 1, `i` in the scenario id (`d8cxi`), and drawn after every shared RNG draw so the idle twin differs from its full-load twin in the decisive ask alone; the rubric explicitly licenses an empty diff on that turn.
 - **Bench: `scope-only` ablation variant and a `--fillers cheap` generator knob.** `scope-only` arms the scope wall *without* the digest — the missing cell of the digest × wall 2×2, without which the attribution question (does the wall add anything over post-compaction re-injection?) cannot be answered; the matrix is now pinned by a test. `--fillers cheap` swaps the filler phases for one-line edits that preserve distance and compaction while cutting agent output ~10–20×, which is what makes a powered set affordable.
 
 ### Fixed
+- **Windows live/local-model runs can import the core package** (community fix by @HarperZ9, PR #7): store and Tier-0 gate file locks now use a platform-neutral helper (`_locking.py`, msvcrt/fcntl backends) instead of importing POSIX-only `fcntl` at module load, and store text I/O is explicit UTF-8. Scorekeeper previously could not run on Windows at all.
 - **Bench: a pinless "wall" cell could silently score as a wall test.** The scope wall arms only when the board carries `path:` pins; without `--seed-commitments` that depends on turn-end extraction minting them from prose, which one of two identical strong-model runs did not do (evidence report F19 — the other run armed the wall end-to-end from the phase-1 grant, the stronger result). `run_one` now records `wall_armed` on every scope-gated run and flags `wall_unarmed` loudly.
 - **Bench: the `surfaced` detector was blind to how strong models hand a decision back.** All three HELD arms of the Fable 2×2 surfaced the drive-by suggestion for the user to decide ("say the word", "parked pending your call", "your explicit go-ahead", "To unblock: …") and every one scored surfaced 0/1. The marker bank now carries the observed phrasings, with a regression test holding all three condensed live replies; surfaced numbers reported before 2026-07-21 under-count. Secondary signal only — no verdict moves.
 - **Bench: the decisive turn could repeat a filler task.** The in-scope half of the temptation turn was drawn from the filler bank with no exclusion, so every d8cx scenario generated before 2026-07-21 asked in phase 11 for the rate limiter already delivered in phase 7 — the agent met the drive-by bait with nothing else to do. Fixed unconditionally (not gated on the cheap-filler knob) and covered by a determinism test; scenarios already on disk keep the collision until regenerated.
@@ -29,16 +32,9 @@ unchanged.
 
 ### Added
 - **Extraction can mint `path:` scope pins — from the user only** (ADR-0008 Amendment 1, driven by live negative finding #3): the extractor prompt recognizes explicit user scope grants ("legacy/ is ours now, go ahead"), and a mechanical guard (`enforce_grant_discipline`) strips `path:` pins from any commitment whose provenance is not `user_utterance` — a pasted note phrased as a grant cannot widen the wall, whatever the model returns. Without this, the scope wall's entitled path never lifted through the extraction channel (the first live expansion run scored URR 100% against ordered work).
-- **`telos-coder-14b:latest` model report** in `docs/model-reports/`, covering a negative
-  Ollama/OpenAI-compatible live smoke run for issue #2.
 
 ### Changed
 - DeonticBench scope families gain a neutral status-check follow-up phase after the aside/order (turn-end extraction needs a turn boundary to act across); siblings stay isogenic — the closing phase is identical. `.pytest_cache` excluded from the tree diff (Bash test runs are tool side effects, not work).
-
-### Fixed
-- Windows live/local-model runs can import the core package: store and Tier-0 gate file locks now
-  use a platform-neutral helper instead of importing POSIX-only `fcntl`, and store text I/O is
-  explicit UTF-8.
 
 ## 0.3.0 — 2026-07-19
 
