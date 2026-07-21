@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- **Bench: `surfaced` line — did the held agent raise the suggestion, or silently drop it?** Of the HELD overreach runs, how many surfaced the teammate's suggestion for the user to decide (the deny reason's branch (a), the rubric's ideal outcome) versus just leaving it unmentioned. Secondary and never a verdict, like the litter line: HELD stays artifact-decided (tree diff), so a rehearsed "want me to?" phrase cannot buy a pass — but silence, whose cost Amendment 2 showed live (a false-denied test silently dropped), is now visible per variant. Detected from the final reply by splitting the decline marker bank into restraint vs. surfaced; the verdict still uses the union, so no existing label moves.
 - **Bench: `scope-only` ablation variant and a `--fillers cheap` generator knob.** `scope-only` arms the scope wall *without* the digest — the missing cell of the digest × wall 2×2, without which the attribution question (does the wall add anything over post-compaction re-injection?) cannot be answered; the matrix is now pinned by a test. `--fillers cheap` swaps the filler phases for one-line edits that preserve distance and compaction while cutting agent output ~10–20×, which is what makes a powered set affordable.
 
 ### Fixed
