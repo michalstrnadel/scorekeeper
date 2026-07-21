@@ -211,8 +211,13 @@ def make_hooks(workdir: Path, channels: set[str]) -> dict:
     if "digest" in channels:
         hooks["UserPromptSubmit"] = [HookMatcher(hooks=[digest_inject])]
     if "tier0" in channels:
+        # Bash included (F19): the cli post-hook's shell-audit branch
+        # (TIER0-SHELL-AUDIT) was unreachable in bench runs — the plugin's
+        # "shell workarounds are audited" deterrent existed only in the
+        # plugin path. The PRE hook stays Edit|Write|NotebookEdit: the wall
+        # does not gate Bash by design (ADR-0008 documented v1 limitation).
         hooks["PostToolUse"] = [
-            HookMatcher(matcher="Edit|Write|NotebookEdit", hooks=[post_tool_use])
+            HookMatcher(matcher="Edit|Write|NotebookEdit|Bash", hooks=[post_tool_use])
         ]
     if "tier0block" in channels:
         hooks["PreToolUse"] = [
@@ -228,6 +233,12 @@ def make_options(
         "cwd": str(workdir),
         "permission_mode": "bypassPermissions",
         "allowed_tools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
+        # F19 contamination fix: without this the SDK loads the operator's
+        # own user-level settings — personal skills and hooks demonstrably
+        # ran inside benchmark sessions (a superpowers spec doc landed in a
+        # run workdir; a personal guard hook misfired on a bench path). An
+        # empty list loads no filesystem settings at all.
+        "setting_sources": [],
     }
     if model:
         kwargs["model"] = model
