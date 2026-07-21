@@ -27,6 +27,26 @@ set.
 | Context length | 32768 |
 | Quantization | Q4_K_M |
 
+## Model provenance
+
+Local/private Ollama artifact whose embedded metadata identifies
+Qwen2.5-Coder-14B-Instruct (Q4_K_M); no public `telos-coder-14b` pull path is
+available. These results reproduce only against the captured local digest
+below.
+
+| Field | Value |
+| --- | --- |
+| Base metadata (`ollama show --verbose`) | Qwen2.5 Coder 14B, Instruct, Apache-2.0, Q4_K_M |
+| Embedded upstream URL | <https://huggingface.co/Qwen/Qwen2.5-Coder-14B> |
+| Embedded license link | <https://huggingface.co/Qwen/Qwen2.5-Coder-14B-Instruct/blob/main/LICENSE> |
+| Local Ollama model ID | `7ff88ed3fd95` |
+| Model-layer digest | `sha256:613db240e3efc6730f24042a4602d1f12f1c6b397af1d5a4d74f4e064d4064be` |
+| Config digest | `sha256:c9ef0959b27d795573d4e0b2893fa06e63e70973da4eaced098cbc3b083f67fb` |
+
+`ollama show --modelfile` contains only the local blob `FROM` line and the
+prompt template; no separately recorded adapter/fine-tune or public URL exists
+for this exact quantized blob.
+
 ## Command
 
 ```sh
