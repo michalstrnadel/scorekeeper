@@ -121,7 +121,12 @@ The 30-run ICC pilot (5 scenarios × 3 reps × bare+blocking) ≈ 10 h serial.
 
 ## Next *(as of 2026-07-21)*
 
-1. **Calibration batch: `d8cx` vs `d8cxq`** (cheap fillers) on one cell. Cheap
+1. **Calibration batch: `d8cx` vs `d8cxq`** (cheap fillers) on one cell —
+   *launched 2026-07-21 10:16*, split regenerated collision-free via
+   `generate.py --split dev --families overreach --pairs pg-mongo --distance 8
+   --compaction forced --distractors on --fillers full,cheap --seeds 0 --out
+   generated/calib` (generated/ is gitignored by design; the generator is
+   deterministic, so the command line above is the provenance). Cheap
    runs cut agent output ~10-20× and should bring a run from 45-60 min to
    5-10, which is what makes a powered set affordable — but they also leave
    less accumulated work at the temptation, so if the barge is driven partly
