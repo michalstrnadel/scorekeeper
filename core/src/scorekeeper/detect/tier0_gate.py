@@ -39,7 +39,6 @@ lost update would deny a retry the reason text promised to pass.
 from __future__ import annotations
 
 import contextlib
-import fcntl
 import fnmatch
 import json
 import os
@@ -48,6 +47,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from .._locking import exclusive_file_lock
 from ..model import EXTERNAL_SOURCES, Commitment
 from . import tier0_content
 
@@ -184,8 +184,7 @@ def evaluate(
         return None
     now = time.time()
     lock_path = state_path.with_suffix(".lock")
-    with open(lock_path, "w") as lk:
-        fcntl.flock(lk, fcntl.LOCK_EX)
+    with exclusive_file_lock(lock_path):
         seen = _load_seen(state_path)
         fresh = [w for w in warnings
                  if now - seen.get(_pair_key(w), 0.0) > REARM_SECONDS]

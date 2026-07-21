@@ -121,7 +121,7 @@ def test_scoreboard_render(tmp_path):
         )
     )
     store.write_scoreboard()
-    text = store.scoreboard_path.read_text()
+    text = store.scoreboard_path.read_text(encoding="utf-8")
     assert "## Active commitments" in text
     assert "PostgreSQL 16" in text
     assert "→ c-2026-07-08-0001" in text

@@ -3,6 +3,7 @@
 import json
 from datetime import UTC, datetime
 
+import pytest
 from test_cli_hooks import FakeStdin, run_hook, seed_commitment  # noqa: F401
 
 from scorekeeper import Commitment, Entitlement, EntitlementSource, Kind, Store
@@ -413,8 +414,11 @@ def test_symlink_escape_is_denied(tmp_path):
     outside = tmp_path / "elsewhere"
     outside.mkdir()
     (outside / "target.py").write_text("x = 1\n")
-    (root / "app" / "link.py").symlink_to(outside / "target.py")
-    (root / "vendored").symlink_to(outside)
+    try:
+        (root / "app" / "link.py").symlink_to(outside / "target.py")
+        (root / "vendored").symlink_to(outside)
+    except OSError as exc:
+        pytest.skip(f"symlink creation unavailable on this platform: {exc}")
     active = [scope_commitment(["path:app/**", "path:vendored/**"])]
     assert tier0_gate.evaluate_scope("app/link.py", active, root) is not None
     assert tier0_gate.evaluate_scope("vendored/target.py", active, root) is not None

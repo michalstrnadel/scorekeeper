@@ -12,7 +12,6 @@ Nothing is ever deleted (Ghost Memory protection): status transitions only.
 from __future__ import annotations
 
 import contextlib
-import fcntl
 import json
 import os
 import tempfile
@@ -22,6 +21,7 @@ from pathlib import Path
 
 import yaml
 
+from ._locking import exclusive_file_lock
 from .model import Commitment, Status
 
 DIRNAME = ".scorekeeper"
@@ -34,7 +34,7 @@ def _atomic_write(path: Path, text: str) -> None:
     the gate silently skip its check (race reproduced, audit 2026-07-14)."""
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}.")
     try:
-        with os.fdopen(fd, "w") as f:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(text)
         os.replace(tmp, path)
     except OSError:
@@ -78,8 +78,7 @@ class Store:
             yield
             return
         self.dir.mkdir(parents=True, exist_ok=True)
-        with (self.dir / LOCK_FILENAME).open("w") as lk:
-            fcntl.flock(lk, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+        with exclusive_file_lock(self.dir / LOCK_FILENAME, blocking=blocking):
             self._write_lock_held = True
             try:
                 yield
@@ -96,13 +95,13 @@ class Store:
 
     def load(self, cid: str) -> Commitment:
         path = self.commitments_dir / f"{cid}.yaml"
-        return Commitment.model_validate(yaml.safe_load(path.read_text()))
+        return Commitment.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
 
     def all(self) -> list[Commitment]:
         if not self.exists:
             return []
         out = [
-            Commitment.model_validate(yaml.safe_load(p.read_text()))
+            Commitment.model_validate(yaml.safe_load(p.read_text(encoding="utf-8")))
             for p in sorted(self.commitments_dir.glob("c-*.yaml"))
         ]
         return sorted(out, key=lambda c: c.id)
@@ -127,13 +126,17 @@ class Store:
             "detail": detail,
             **extra,
         }
-        with self.log_path.open("a") as f:
+        with self.log_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
     def log_entries(self) -> list[dict]:
         if not self.log_path.exists():
             return []
-        return [json.loads(line) for line in self.log_path.read_text().splitlines() if line]
+        return [
+            json.loads(line)
+            for line in self.log_path.read_text(encoding="utf-8").splitlines()
+            if line
+        ]
 
     # -- rendered views ------------------------------------------------------
 

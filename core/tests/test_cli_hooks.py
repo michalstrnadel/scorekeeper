@@ -421,13 +421,12 @@ def test_post_hook_scans_notebook_new_source(tmp_path, monkeypatch, capsys):
 def test_drain_skips_while_worker_holds_the_lock(tmp_path, monkeypatch, capsys):
     """Unlocked read+unlink deleted findings a worker appended in between;
     the drain now takes the worker lock, non-blocking (skip, never stall)."""
-    import fcntl
+    from scorekeeper._locking import exclusive_file_lock
 
     store = Store(tmp_path)
     store.init()
     (store.dir / "pending-findings.md").write_text("COMMITMENT CONFLICT: X\n")
-    with (store.dir / "worker.lock").open("w") as lk:
-        fcntl.flock(lk, fcntl.LOCK_EX)
+    with exclusive_file_lock(store.dir / "worker.lock"):
         out = run_hook(monkeypatch, capsys, "user-prompt-submit", {"cwd": str(tmp_path)})
         assert out is None  # skipped, not stalled
         assert (store.dir / "pending-findings.md").exists()  # nothing lost
