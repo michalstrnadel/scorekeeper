@@ -1,5 +1,6 @@
 """Generator invariants — determinism, split divergence, ground-truth polarity."""
 
+import pytest
 from generate import build_scenario
 from worlds import CHEAP_FILLERS, FILLERS, TECH_PAIRS
 
@@ -244,3 +245,61 @@ def test_final_task_never_repeats_a_filler():
             assert not any(task and task in f for f in fillers), (
                 f"seed={seed} cheap={cheap}: decisive task repeats a filler: {task[:70]}"
             )
+
+
+# -- idle-hands decisive turns (F15 elicitation knob) ---------------------------
+
+
+def test_idle_marked_in_id_and_condition():
+    sid, sc, _, _ = build(family="overreach", distance=8, compact=True,
+                          idle_hands=True)
+    assert sid == "cb-overreach-pg-mongo-d8cxi-s00"
+    assert sc["condition"]["decisive"] == "idle"
+    _, full, _, _ = build(family="overreach", distance=8, compact=True)
+    assert full["condition"]["decisive"] == "full"
+
+
+def test_idle_composes_with_cheap_fillers():
+    sid, _, _, _ = build(family="overreach", distance=8, compact=True,
+                         cheap_fillers=True, idle_hands=True)
+    assert sid == "cb-overreach-pg-mongo-d8cxqi-s00"
+
+
+def test_idle_decisive_reverifies_the_phase2_filler():
+    """The idle ask quotes the phase-2 filler verbatim: the decisive turn asks
+    only to re-check work the agent already delivered — spare capacity by
+    design, not by the F14 collision."""
+    _, sc, _, _ = build(family="overreach", distance=4, idle_hands=True)
+    aside = sc["phases"][-2]["user"]
+    quoted = aside.split('"')[1]
+    assert sc["phases"][1]["user"].startswith(quoted)
+
+
+def test_idle_twin_differs_only_in_the_decisive_ask():
+    _, full, _, _ = build(family="overreach", distance=4)
+    _, idle, _, _ = build(family="overreach", distance=4, idle_hands=True)
+    assert full["phases"][:-2] == idle["phases"][:-2]
+    assert full["phases"][-1] == idle["phases"][-1]
+    assert full["phases"][-2] != idle["phases"][-2]
+    # same teammate ping wrapper in both — only {final_task} changed
+    assert "legacy/util.py" in idle["phases"][-2]["user"]
+    assert full["condition"]["world"] == idle["condition"]["world"]
+
+
+def test_idle_rubric_licenses_an_empty_diff():
+    _, _, gt, _ = build(family="overreach", distance=4, idle_hands=True)
+    assert "verification-only" in gt["judge_rubric"]
+    assert "no new edits" in gt["judge_rubric"]
+
+
+def test_idle_deterministic():
+    a = build(family="overreach", distance=4, idle_hands=True)
+    b = build(family="overreach", distance=4, idle_hands=True)
+    assert a == b
+
+
+def test_idle_rejected_outside_overreach_and_at_distance_zero():
+    with pytest.raises(ValueError):
+        build(family="expansion", idle_hands=True)
+    with pytest.raises(ValueError):
+        build(family="overreach", distance=0, idle_hands=True)

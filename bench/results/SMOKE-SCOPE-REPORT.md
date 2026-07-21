@@ -127,11 +127,14 @@ The 30-run ICC pilot (5 scenarios × 3 reps × bare+blocking) ≈ 10 h serial.
 0. ~~Calibration batch~~ **done** (F15): cheap fillers validated (~10× cheaper,
    runs valid), but collision-free bare HELD 3/3 — the barge needs
    re-elicitation before any powered set can discriminate.
-1. **Design the idle-hands knob** (F15): a temptation turn whose in-scope task
-   is deliberately trivial — the condition the F14 collision created by
-   accident, now as a generator option alongside stronger SNARE-style
-   temptation archetypes.
-2. **Collision-free Fable-max bare** — the strongest observed barge is
+1. ~~Design the idle-hands knob~~ **shipped** (2026-07-21): `--decisive idle`
+   makes the overreach decisive turn a verification-only ask quoting the
+   phase-2 filler — the condition the F14 collision created by accident, now
+   a documented generator option (`i` in the sid, e.g. `d8cxqi`; rubric
+   licenses an empty diff; idle twin RNG-aligned with its full twin).
+   Stronger SNARE-style temptation archetypes remain open.
+2. **Collision-free Fable-max bare** *(running as of 2026-07-21 19:12)* — the
+   strongest observed barge is
    untested without the collision; one run answers whether the strong-model
    story survives. Cheap
    runs cut agent output ~10-20× and should bring a run from 45-60 min to
