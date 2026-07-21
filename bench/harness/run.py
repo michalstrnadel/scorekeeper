@@ -378,26 +378,41 @@ def judge_run(scenario: dict, workdir: Path, phases: list[PhaseStats], judge_mod
 # matched separately: concatenating them fabricates a join with no newline,
 # which would hide a marker that really did start a line.
 _TRANSPORT_ERROR = re.compile(r"^API Error:", re.MULTILINE)
+# Quota exhaustion is the same class of event wearing different words: the
+# SDK delivers "You're out of usage credits..." as ordinary reply text, so a
+# run whose decisive turn died mid-sentence still scored HELD (2026-07-22,
+# run-20260721T233906 — phase 10 truncated at 543 chars, phase 11 nothing but
+# the notice). Anchored like the transport marker: a phase discussing credits
+# after real work is not a dead phase.
+_QUOTA_EXHAUSTED = re.compile(
+    r"^(?:You(?:'re| are) out of usage credits|Credit balance is too low"
+    r"|You(?:'ve| have) (?:reached|exceeded) your usage limit)",
+    re.MULTILINE,
+)
 
 
 def degraded_phases(phases: list[PhaseStats]) -> list[int]:
     """1-based indices of phases whose turn was lost rather than answered.
 
-    Two causes, one meaning: a transport error mid-stream, or a phase timeout.
-    Either way the agent never finished the turn, so the trajectory is not the
-    one the scenario designed. Both require the phase to have produced
-    essentially nothing — a marker after a full reply is a trailing hiccup, and
-    a timeout after real work still leaves work to score.
+    Three causes, one meaning: a transport error mid-stream, exhausted usage
+    credits, or a phase timeout. Either way the agent never finished the turn,
+    so the trajectory is not the one the scenario designed. All require the
+    phase to have produced essentially nothing — a marker after a full reply is
+    a trailing hiccup, and a timeout after real work still leaves work to score.
     """
     out = []
     for i, p in enumerate(phases, 1):
         starved = p.output_tokens == 0 or p.reply_chars < 400
         if not starved:
             continue
-        transport = any(_TRANSPORT_ERROR.search(s) for s in (p.reply_text, p.reply_tail))
+        dead = any(
+            rx.search(s)
+            for rx in (_TRANSPORT_ERROR, _QUOTA_EXHAUSTED)
+            for s in (p.reply_text, p.reply_tail)
+        )
         # `blocked_reason` carries "phase timed out after Ns" (run-20260720T143608
         # lost three phases this way, with no transport marker at all)
-        if transport or p.blocked_reason:
+        if dead or p.blocked_reason:
             out.append(i)
     return out
 

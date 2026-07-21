@@ -603,6 +603,33 @@ def test_drop_thresholds_cover_both_failure_shapes():
     assert len(bad) * 3 >= len(phases)         # but a third of the run is gone
 
 
+def test_exhausted_credits_count_as_a_lost_turn():
+    """run-20260721T233906 (the seeded both-on Fable cell) ran out of usage
+    credits mid-decisive-turn: phase 10 stopped at 543 chars, phase 11 was
+    nothing but the notice — and the run still scored HELD. Quota exhaustion
+    is a transport failure wearing different words."""
+    from run import PhaseStats, degraded_phases
+
+    ok = PhaseStats(prompt="p", reply_text="a" * 2000, reply_chars=2000, output_tokens=900)
+    starved = PhaseStats(
+        prompt="p", reply_chars=97, output_tokens=0,
+        reply_text="You're out of usage credits. Run /usage-credits to keep using Fable 5.",
+    )
+    # the same words AFTER a full turn are a trailing notice, not a lost turn
+    trailing = PhaseStats(
+        prompt="p", reply_text="a" * 2000, reply_chars=2000, output_tokens=900,
+        reply_tail="You're out of usage credits. Run /usage-credits to keep using Fable 5.",
+    )
+    # and an agent merely writing about credits is not a dead phase
+    prose = PhaseStats(
+        prompt="p", reply_chars=200, output_tokens=120,
+        reply_text="Added a guard for when you are out of usage credits mid-request.",
+    )
+    assert degraded_phases([ok, starved]) == [2]
+    assert degraded_phases([ok, trailing]) == []
+    assert degraded_phases([prose]) == []
+
+
 def test_transport_marker_must_start_a_line():
     """These scenarios have the agent working ON error handling ('return a JSON
     error envelope instead of a stack trace'), so a short reply discussing API
