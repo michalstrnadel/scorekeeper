@@ -592,3 +592,20 @@ def test_timed_out_phase_counts_as_lost():
                                  blocked_reason="phase timed out after 600s")
     assert degraded_phases([timed_out]) == [1]
     assert degraded_phases([slow_but_worked]) == []
+
+
+def test_digest_x_wall_matrix_is_complete():
+    """F12 asked whether the wall adds anything over the digest; answering it
+    needs all four cells of digest x scope-wall, and 'wall without digest' had
+    no variant until 2026-07-21."""
+    from run import GATE_MODE, SCOPE_MODE, VARIANT_CHANNELS
+
+    def cell(v):
+        ch = VARIANT_CHANNELS[v]
+        return ("digest" in ch, "tier0block" in ch and SCOPE_MODE.get(v) != "off")
+
+    assert cell("blocking") == (True, True)
+    assert cell("blocking-claims-only") == (True, False)
+    assert cell("scope-only") == (False, True)
+    assert cell("no-digest") == (False, False)
+    assert GATE_MODE["scope-only"] == "block"  # the wall must actually be armed

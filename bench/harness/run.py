@@ -141,13 +141,20 @@ VARIANT_CHANNELS = {
     # claims wall only, scope wall off — isolates the barging wall's
     # contribution on the scope families (ADR-0008 ablation)
     "blocking-claims-only": {"digest", "tier0", "tier0block", "stopblock"},
+    # scope wall WITHOUT the digest — the missing cell of the digest x wall
+    # 2x2. F12 found both claims-only runs HELD, i.e. the digest alone was
+    # enough; the complementary question ("is the wall alone enough?") had no
+    # variant to run until now. The board is still written (extraction always
+    # runs for non-bare variants), the agent just never sees the digest.
+    "scope-only": {"tier0", "tier0block", "stopblock"},
     "no-digest": {"tier0", "stopblock"},
     "no-tier0": {"digest", "stopblock"},
     "no-stopblock": {"digest", "tier0"},
     "silent": set(),  # board written, agent never sees it — placebo control
 }
 # which gate mode the tier0block channel runs in, per variant
-GATE_MODE = {"blocking": "block", "bump": "bump", "blocking-claims-only": "block"}
+GATE_MODE = {"blocking": "block", "bump": "bump", "blocking-claims-only": "block",
+             "scope-only": "block"}
 # per-variant scope_gate override written to config.yaml (ADR-0008)
 SCOPE_MODE = {"blocking-claims-only": "off"}
 

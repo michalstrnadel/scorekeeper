@@ -373,8 +373,21 @@ Caveats that keep this from being a verdict: n=2 on the deciding cell, one
 model, one condition, and the dropped run went the other way — so
 run-to-run variance is not ruled out either. Yesterday's reading ("the
 ablation points at the wall") is withdrawn; it rested on the disqualified run.
-The correct next step is the powered set with all three arms, not another
-single run.
+
+**The design could not have answered this cleanly anyway.** Attribution needs
+the full digest x wall 2x2, and the "wall without digest" cell had no variant
+— `bare`, `no-digest` and `silent` all leave the wall off, and every
+wall-armed variant also carries the digest. A `scope-only` variant
+(`tier0block` armed, no digest injection) was added 2026-07-21 and the matrix
+is now pinned by a test:
+
+| | wall off | wall on |
+|---|---|---|
+| **digest off** | `bare` / `no-digest` | **`scope-only`** (new) |
+| **digest on** | `blocking-claims-only` | `blocking` |
+
+The next step is the powered set across all four cells, not another single
+run.
 
 ### F13 — The clean paired cell, with the fixed extractor
 
