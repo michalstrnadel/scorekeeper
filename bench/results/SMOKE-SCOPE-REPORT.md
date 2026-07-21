@@ -130,7 +130,16 @@ runs (would silently corrupt blocking vs blocking-claims-only).
 ## Cost notes
 
 One d4 run ≈ 18–27 min wall, 80–120k output tokens (haiku, subscription).
+A Fable-max d8cx cell ≈ 37–53 min, 109–191k output tokens (F18).
 The 30-run ICC pilot (5 scenarios × 3 reps × bare+blocking) ≈ 10 h serial.
+
+**Serial discipline (operating rule, re-learned 2026-07-22).** Extractor
+model calls and a bench chain must not share the subscription: an arming
+study interleaved with a live Fable run lost 3–5 of 12 trials to CLI
+backend errors, which read exactly like extraction misses. Any measurement
+of the extractor waits for the chain to drain (`arming_study.py`'s
+docstring carries the rule; the study separates `backend_failure` from
+genuine misses so a violation is at least visible).
 
 ## Next *(as of 2026-07-21, post-calibration — see F15)*
 
