@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.3.2 — 2026-07-21
+
+The Windows release, and the first with community code: scorekeeper now runs
+on Windows (the POSIX-only `fcntl` import previously broke `import
+scorekeeper` there), carrying @HarperZ9's locking fallback from PR #7
+together with their `telos-coder-14b` model report — the first external
+backend report, and the template for future ones. Bench-side, the release
+records the strong-model attribution evening (F16–F19 in the evidence
+report): the digest and the scope wall each held the strong model by a
+different mechanism, and the harness gained guards so a defective cell
+cannot score silently.
 
 ### Added
 - **`telos-coder-14b:latest` model report** in `docs/model-reports/`, covering a negative
