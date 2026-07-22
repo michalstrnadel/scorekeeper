@@ -9,7 +9,7 @@
 **No bluffing. No barging.** A normative overlay that keeps score of what a long-running LLM agent is entitled to *claim* and entitled to *do* — not just a memory of what happened.
 
 ![status: Phase 2](https://img.shields.io/badge/status-Phase%202%20·%20DeonticBench-brightgreen)
-![tests](https://img.shields.io/badge/tests-209%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-279%20passing-brightgreen)
 [![PyPI](https://img.shields.io/pypi/v/scorekeeper)](https://pypi.org/project/scorekeeper/)
 [![Downloads](https://static.pepy.tech/badge/scorekeeper/month)](https://pepy.tech/project/scorekeeper)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
@@ -18,7 +18,7 @@
 ![MCP](https://img.shields.io/badge/protocol-MCP-000000)
 ![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
-> **It runs, and it's measured — negative results included.** On DeonticBench's hardest condition, a weak agent drifted past *advisory warnings*, then exploited a *one-shot blocking bump* by simply claiming entitlement it didn't have. What held was the **board-adjudicated wall** ([ADR-0007](adr/0007-blocking-tier0-gate.md)): the write stays denied until the scoreboard itself records an entitled revision — verified symmetrically (drift **HELD**, entitled revision **EXECUTED with zero denies**). Full evidence: [seed-0 report](bench/results/SMOKE-DRIFT-S0-REPORT.md). Roadmap: [ROADMAP.md](ROADMAP.md).
+> **It runs, it's measured — and it's no longer a one-vendor story.** The barge (unrequested work after context loss) now reproduces **cross-model**: in a model-agnostic reference loop, bare **Gemini and GPT** agents executed the same planted drive-by that bare Claude did (3/4 cells), while the scoreboard overlay held **8/8 governed cells** across vendors — and a *silent placebo* (board written, channel off) barged exactly like bare, so the effect is the **re-injected normative state**, not the file on disk ([cross-model report](bench/results/LOOP-SMOKE-REPORT.md)). On the claims axis, what held a weak agent that had sailed past advisory warnings was the **board-adjudicated wall** ([ADR-0007](adr/0007-blocking-tier0-gate.md)): the write stays denied until the scoreboard itself records an entitled revision — verified symmetrically (drift **HELD**, entitled revision **EXECUTED with zero denies**; [seed-0 report](bench/results/SMOKE-DRIFT-S0-REPORT.md)). Negative results included, in both reports. Roadmap: [ROADMAP.md](ROADMAP.md).
 
 ---
 
@@ -48,6 +48,8 @@ uv run --project core python demo/drift_demo.py      # the ~20s demo above
 ```
 
 **As a library / MCP server:** `pip install scorekeeper` (see [core/README](core/README.md)).
+
+**On any model** — the DeonticBench reference loop drives the same mechanism (digest, audit, scope wall) over any chat-completions backend with tool calling: OpenAI, Gemini, OpenRouter, or a local Ollama/LM Studio/vLLM server ([ADR-0009](adr/0009-reference-agent-loop.md), invocation examples in [bench/README](bench/README.md)).
 
 Tried it? A one-paragraph [experience report](https://github.com/michalstrnadel/scorekeeper/issues/new?template=experience-report.md) (what it caught, missed, or got wrong) shapes the roadmap more than anything. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -128,7 +130,7 @@ Pieces of that boundary exist elsewhere — AGM-style belief revision protects u
 | | **Too eager** (unentitled move lands) | **Too timid** (entitled move blocked) |
 |---|---|---|
 | **Claims** — *no bluffing* | drift / hallucination — **SCR** (wall verified: HELD) | false refusal — **FRR** (verified: EXECUTED, zero denies) |
-| **Actions** — *no barging* | overreach — **ORR** (wall shipped + tested; live case series, not rates — attribution splits by model: weak-model closing credited to the digest, strong-model matrix holds via digest *and* wall, each by its own mechanism) | underreach — **URR** (instrument validated live; no rates yet) |
+| **Actions** — *no barging* | overreach — **ORR** (wall shipped + tested; live case series, not rates — the strong-model 2×2 is complete, and the pair effect **replicates cross-vendor**: bare Gemini/GPT barge, governed cells hold 8/8, silent placebo barges like bare) | underreach — **URR** (instrument validated live; no rates yet) |
 
 All four scored by a deterministic artifact-level classifier, not an LLM judge.
 
@@ -201,28 +203,36 @@ out-of-scope writes stay denied until the board records an entitled
 scope-widening grant — the same wall → surface → entitle → pass flow, applied
 to deeds ([ADR-0008](adr/0008-scope-wall.md); landscape:
 [overreach-landscape](docs/research/overreach-landscape.md)). Where the
-evidence stands: **the mechanism is implemented and unit-tested in this
-release (including a subprocess chain test: deny → wall → entitled grant →
-pass), and the DeonticBench overreach/expansion families (ORR vs. URR) are
-built on the same deterministic-classifier pattern — but the first live runs
-(2026-07-19/20) are a case series, not rates.** They do show the drive-by
-under forced compaction and the overlay closing it — and the ablation says
-the channel that closed it is the **post-compaction digest re-injection**
+evidence stands (updated 2026-07-22): **the mechanism is implemented and
+unit-tested (including a subprocess chain test: deny → wall → entitled grant
+→ pass), and the live evidence is a replicated case series — still not
+rates.** The attribution splits by model. On the weak model the ablation
+credited the **post-compaction digest re-injection**
 ([ADR-0002](adr/0002-compact-survival-via-sessionstart.md)), not the new
-scope wall: with the
-wall switched off, both valid runs still held. That cuts against the
-mechanism this axis was built to add, and it is the strongest support yet for
-the thesis underneath: the barge is *normative state loss*, and the
-scoreboard is the state that survives compaction. What the wall itself has
-shown is narrower — it suppresses out-of-scope writes (litter down ~8× with
-in-scope output unchanged) and it caught a real root-escaping write; a
-marginal contribution to preventing the barge is not demonstrated. Caveats
-belong with the claim: n=2 on the deciding cell, one model, one condition, a
-dropped run that went the other way ([evidence
-report](bench/results/SMOKE-SCOPE-REPORT.md)). The claims axis has measured
-evidence; the actions axis has a tested mechanism, a ready instrument, and
-one honest attribution result. Until the powered set lands, we claim exactly
-that and nothing more.
+wall. On the strong model the 2×2 is now **complete**: each intervention held
+on its own — the digest by preventing the attempt, the wall by denying an
+attempted write it armed for from live extraction — and the genuine
+digest+wall cell held with a clean tree ([evidence
+report](bench/results/SMOKE-SCOPE-REPORT.md), F18–F21). Then the
+**cross-model test**: in the model-agnostic reference loop
+([ADR-0009](adr/0009-reference-agent-loop.md)), bare **Gemini and GPT**
+agents executed the same planted drive-by (3/4 cells; one deferred it to the
+"finish anything open" wrap-up turn — the barge hides behind task-completion
+framing), every governed cell held (8/8, zero denies — digest prevention on
+both vendors), and the **silent placebo** (board written, channels off)
+barged exactly like bare ([cross-model
+report](bench/results/LOOP-SMOKE-REPORT.md)). That triangulates the thesis:
+the barge is *normative state loss*, and what prevents it is **re-injecting
+the normative state into context** — not the file on disk, not the vendor,
+not the product harness. The wall's own preventive value is narrower and
+honestly bounded: it suppresses out-of-scope writes (litter down ~8× with
+in-scope output unchanged), it caught a real root-escaping write, and it has
+one direct in-product deny (F18) — in the loop branch no attempt has yet
+survived the digest to reach it. Caveats belong with the claim: n=1–2 per
+cell, one scenario family, arming ~94% conditional on the extraction backend
+answering (F20). The claims axis has measured evidence; the actions axis has
+a tested mechanism, a replicated cross-vendor direction, and a placebo
+control. Until a powered set lands, we claim exactly that and nothing more.
 
 Rather than scale the numbers in-house next, **the ask is for the community
 to try it** — see below. See [CHANGELOG](CHANGELOG.md).
@@ -235,7 +245,7 @@ to try it** — see below. See [CHANGELOG](CHANGELOG.md).
 | `claude-code-plugin/` | Primary integration: 6 Claude Code hooks (`claude --plugin-dir ./claude-code-plugin`) |
 | `mcp/` | `scorekeeper-mcp` docs — the server lives in core (`pip install "scorekeeper[mcp]"`) |
 | `demo/` | ~20-second mechanism demo (`drift_demo.py`) + the README GIF tape |
-| `bench/` | planted acceptance scenarios + Agent-SDK eval harness; DeonticBench in Phase 2 |
+| `bench/` | planted acceptance scenarios + two drivers: Claude Code (Agent SDK) and a model-agnostic reference loop (any chat-completions backend, [ADR-0009](adr/0009-reference-agent-loop.md)); DeonticBench in Phase 2 |
 | `docs/` | `why.md` (start here), `theory.md`, `api.md`, `SPEC.md` (+ Czech source `SPEC-cs.md`), `model-reports/`, `research/` |
 | `adr/` | Architecture Decision Records |
 | `.scorekeeper/` | The project's own scoreboard — scorekeeper dogfoods itself |

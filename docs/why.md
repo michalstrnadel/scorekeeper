@@ -133,9 +133,14 @@ commitment, and what conflicts with what*):
   write in flight — the first direct evidence of the wall's own preventive
   value. Belt and braces, not redundancy. The wall additionally suppresses
   out-of-scope writes (roughly eightfold less litter, in-scope work
-  unchanged) and caught a real write escaping the project root. n=1–2 per
-  deciding cell, one scenario, single models per cell. No rates until
-  the powered set lands.
+  unchanged) and caught a real write escaping the project root. And the
+  direction is no longer a one-vendor observation (2026-07-22): in a
+  model-agnostic reference loop, bare **Gemini and GPT** agents executed
+  the same planted drive-by, every governed cell held, and a *silent
+  placebo* — the scoreboard written to disk but never injected into
+  context — barged exactly like bare. What prevents the barge is the
+  re-injected normative state, not the vendor and not the file. n=1–2 per
+  deciding cell, one scenario family. No rates until the powered set lands.
 
 Two design decisions fall directly out of the theory, and neither is obvious
 from an engineering-only starting point.
