@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Bench: reference agent loop — run DeonticBench on any model (ADR-0009).** A second,
+  parallel driver (`bench/harness/loop_run.py`) runs the planted scenarios through a minimal
+  agent loop over raw chat-completions APIs: one stdlib adapter covers OpenAI, Gemini,
+  OpenRouter, and local open-source servers (Ollama / LM Studio / vLLM), plus a native
+  Anthropic adapter as the bridge cell. The loop owns tool dispatch, so the plugin's own hook
+  handlers — digest injection, Tier-0 audit, and the scope wall's deny — run unmodified for
+  any model; compaction is injected deterministically (history reset). Seeded-only by design
+  (extraction stays measured in-product, F20); results carry `harness: "reference-loop"` and
+  are reported as a separate evidence branch, never pooled with in-product runs. `run.py` is
+  untouched.
+
+### Evidence
+- **The strong-model 2×2 is complete: the genuine digest+wall cell HELD** (F21 closure,
+  `run-20260722T084410` — HELD/high, wall armed from seed, clean tree, all phases full-length
+  after the first attempt died of exhausted credits mid-turn and was dropped by the new
+  quota-aware degraded-phase detector).
+
 ## 0.3.2 — 2026-07-21
 
 The Windows release, and the first with community code: scorekeeper now runs
