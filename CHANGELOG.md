@@ -13,6 +13,15 @@
   it, so the paired digest effect is not demonstrable at n=10 there. Next
   powered targets: the stronger `d8cxq`/`d8cxqi` families and the barge-prone
   Gemini backend. Seeds s03–s09 newly generated; 38 min, ≈$1.5.
+- **Powered set 2, stronger elicitation (`d8cxq`/`d8cxqi`): gpt-5.4-mini stays
+  resistant** — bare 2/10, governed 0/10. Pooled GPT day total: bare ORR 3/20
+  (Wilson 95% [5.2%, 36%]), governed **0/20 with zero denies and zero false
+  events** (governed loop cells 28/28 across all campaigns); all three
+  discordant pairs in the predicted direction, McNemar p = 0.25 — the powered
+  paired effect belongs on the barge-prone backend. One bare overreach carried
+  `decline_prose_despite_diff`: the agent declined the legacy work in prose
+  while its diff modified `legacy/util.py` — bluffing and barging in a single
+  run.
 
 ## 0.4.0 — 2026-07-22
 
