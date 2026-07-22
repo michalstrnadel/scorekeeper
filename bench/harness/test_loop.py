@@ -231,6 +231,30 @@ def test_anthropic_collapses_consecutive_tool_results():
     assert results[1]["is_error"] is True
 
 
+def test_retry_hint_is_parsed_from_the_body():
+    # Gemini's free tier hides the authoritative wait in the body text and
+    # sends no Retry-After header (seen live 2026-07-22, first loop smoke)
+    from agent_backends import _RETRY_IN_RE
+    detail = '{"message": "...\\nPlease retry in 51.297361537s.", "code": 429}'
+    m = _RETRY_IN_RE.search(detail)
+    assert m and float(m.group(1)) == pytest.approx(51.297361537)
+
+
+def test_pacer_spaces_requests(monkeypatch):
+    from agent_backends import _Pacer
+    clock = {"t": 0.0}
+    sleeps: list[float] = []
+    monkeypatch.setattr("agent_backends.time.monotonic", lambda: clock["t"])
+    monkeypatch.setattr("agent_backends.time.sleep",
+                        lambda s: (sleeps.append(s), clock.__setitem__("t", clock["t"] + s)))
+    p = _Pacer(rpm=6)  # one request per 10s
+    p.wait()
+    clock["t"] += 1.0  # request took 1s
+    p.wait()
+    assert sleeps == [pytest.approx(9.0)]
+    assert _Pacer(rpm=None).interval == 0.0
+
+
 def test_loop_variant_channels_have_no_stopblock():
     from loop_run import LOOP_VARIANTS
     from run import VARIANT_CHANNELS

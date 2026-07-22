@@ -20,6 +20,7 @@ from __future__ import annotations
 import http.client
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -31,6 +32,12 @@ MAX_RETRIES = 4
 TRANSIENT_CODES = {429, 500, 502, 503, 529}
 REQUEST_TIMEOUT_S = 300.0
 BUDGET_S = 540.0  # sits under the loop's 600s phase cap
+
+# providers hide the authoritative wait in the body, not the header — Gemini's
+# free tier says "Please retry in 51.29s" while sending no Retry-After (seen
+# live 2026-07-22, first loop smoke). Same regex family as core's
+# openai_compat backend.
+_RETRY_IN_RE = re.compile(r"retry in ([0-9.]+)s", re.IGNORECASE)
 
 
 @dataclass
@@ -50,6 +57,24 @@ class TurnResult:
     stop_reason: str = "stop"  # "stop" | "tool_calls" | "length"
 
 
+class _Pacer:
+    """Client-side request pacing for rate-limited (free-tier) keys: waiting
+    by construction beats bouncing off 429s, which some quotas count."""
+
+    def __init__(self, rpm: float | None):
+        self.interval = 60.0 / rpm if rpm else 0.0
+        self._last: float | None = None
+
+    def wait(self) -> None:
+        if not self.interval:
+            return
+        if self._last is not None:
+            due = self._last + self.interval - time.monotonic()
+            if due > 0:
+                time.sleep(due)
+        self._last = time.monotonic()
+
+
 def _post_json(url: str, headers: dict, payload: dict, name: str) -> dict:
     body = json.dumps(payload).encode("utf-8")
     deadline = time.monotonic() + BUDGET_S
@@ -63,8 +88,11 @@ def _post_json(url: str, headers: dict, payload: dict, name: str) -> dict:
             if e.code in TRANSIENT_CODES and attempt < MAX_RETRIES:
                 delay = 15.0 * (attempt + 1)
                 header = e.headers.get("Retry-After") if e.headers else None
+                hint = _RETRY_IN_RE.search(detail)
                 if header and header.replace(".", "", 1).isdigit():
-                    delay = min(float(header) + 1.0, 65.0)
+                    delay = min(float(header) + 1.0, 90.0)
+                elif hint:
+                    delay = min(float(hint.group(1)) + 1.0, 90.0)
                 if time.monotonic() + delay <= deadline:
                     time.sleep(delay)
                     continue
@@ -97,11 +125,13 @@ class OpenAICompatAgentBackend:
         model: str,
         api_key: str = "",
         temperature: float | None = 0.0,
+        rpm: float | None = None,
     ):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.api_key = api_key
         self.temperature = temperature
+        self._pacer = _Pacer(rpm)
 
     # -- wire translation ---------------------------------------------------
 
@@ -162,6 +192,7 @@ class OpenAICompatAgentBackend:
     # -- protocol -----------------------------------------------------------
 
     def run_turn(self, system: str, messages: list[dict], tools: list[dict]) -> TurnResult:
+        self._pacer.wait()
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
@@ -204,11 +235,13 @@ class AnthropicAgentBackend:
         api_key: str = "",
         temperature: float | None = 0.0,
         max_tokens: int = 8192,
+        rpm: float | None = None,
     ):
         self.model = model
         self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
         self.temperature = temperature
         self.max_tokens = max_tokens
+        self._pacer = _Pacer(rpm)
 
     @staticmethod
     def _translate_tools(tools: list[dict]) -> list[dict]:
@@ -252,6 +285,7 @@ class AnthropicAgentBackend:
         return wire
 
     def run_turn(self, system: str, messages: list[dict], tools: list[dict]) -> TurnResult:
+        self._pacer.wait()
         if not self.api_key:
             raise BackendError(f"{self.name}: ANTHROPIC_API_KEY not set")
         headers = {
@@ -314,17 +348,18 @@ def make_backend(
     model: str,
     base_url: str | None = None,
     temperature: float | None = 0.0,
+    rpm: float | None = None,
 ):
     """Build an AgentBackend from a CLI preset. `openai-compat` + --base-url is
     the generic escape hatch (key via LOOP_API_KEY, optional)."""
     if kind == "anthropic":
-        return AnthropicAgentBackend(model=model, temperature=temperature)
+        return AnthropicAgentBackend(model=model, temperature=temperature, rpm=rpm)
     if kind == "openai-compat":
         if not base_url:
             raise BackendError("openai-compat requires --base-url")
         return OpenAICompatAgentBackend(
             base_url, model, api_key=os.environ.get("LOOP_API_KEY", ""),
-            temperature=temperature,
+            temperature=temperature, rpm=rpm,
         )
     if kind not in PRESETS:
         raise BackendError(
@@ -336,7 +371,7 @@ def make_backend(
     if key_env and not api_key:
         raise BackendError(f"{kind}: {key_env} not set")
     backend = OpenAICompatAgentBackend(
-        base_url or url, model, api_key=api_key, temperature=temperature
+        base_url or url, model, api_key=api_key, temperature=temperature, rpm=rpm
     )
     backend.name = f"openai_compat/{kind}"
     return backend

@@ -271,6 +271,11 @@ def main() -> int:
     parser.add_argument("--model", required=True, help="model id on the chosen backend")
     parser.add_argument("--base-url", default=None, help="for --backend openai-compat")
     parser.add_argument("--temperature", type=float, default=0.0)
+    parser.add_argument(
+        "--rpm", type=float, default=None,
+        help="client-side requests-per-minute cap (free-tier keys: pace by "
+             "construction instead of bouncing off 429s)",
+    )
     parser.add_argument("--judge-model", default="models/gemini-2.5-flash")
     parser.add_argument(
         "--tasks-dir", default=str(TASKS_DIR),
@@ -295,7 +300,9 @@ def main() -> int:
     os.environ.pop("SCOREKEEPER_SCOPE_GATE", None)
 
     try:
-        backend = make_backend(args.backend, args.model, args.base_url, args.temperature)
+        backend = make_backend(
+            args.backend, args.model, args.base_url, args.temperature, rpm=args.rpm
+        )
     except BackendError as e:
         parser.error(str(e))
 
