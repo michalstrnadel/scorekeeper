@@ -149,7 +149,8 @@ def drive_loop(scenario: dict, workdir: Path, variant: str, backend) -> list[Pha
                 stats.reply_tail = turn.text[-300:]
                 stats.reply_text += turn.text + "\n"
             messages.append(
-                {"role": "assistant", "content": turn.text, "tool_calls": turn.tool_calls}
+                {"role": "assistant", "content": turn.text,
+                 "tool_calls": turn.tool_calls, "_raw": turn.raw}
             )
             if not turn.tool_calls:
                 break

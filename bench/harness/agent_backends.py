@@ -55,6 +55,13 @@ class TurnResult:
     input_tokens: int = 0
     output_tokens: int = 0
     stop_reason: str = "stop"  # "stop" | "tool_calls" | "length"
+    # provider-verbatim assistant payload. Thinking-class models sign their
+    # tool calls (Gemini 3.x `thought_signature`, Anthropic thinking blocks)
+    # and reject a replayed history where the signature is missing — seen
+    # live 2026-07-22 (HTTP 400 INVALID_ARGUMENT on gemini-3.5-flash-lite).
+    # The loop stores this under "_raw" and translators replay it verbatim
+    # instead of reconstructing the message from the neutral fields.
+    raw: dict | list | None = None
 
 
 class _Pacer:
@@ -144,6 +151,9 @@ class OpenAICompatAgentBackend:
         wire: list[dict] = [{"role": "system", "content": system}]
         for m in messages:
             if m["role"] == "assistant":
+                if m.get("_raw") is not None:
+                    wire.append(m["_raw"])
+                    continue
                 entry: dict = {"role": "assistant", "content": m.get("content") or None}
                 calls = m.get("tool_calls") or []
                 if calls:
@@ -218,6 +228,7 @@ class OpenAICompatAgentBackend:
             input_tokens=usage.get("prompt_tokens") or 0,
             output_tokens=usage.get("completion_tokens") or 0,
             stop_reason="tool_calls" if calls else ("length" if finish == "length" else "stop"),
+            raw=message,
         )
 
 
@@ -259,6 +270,9 @@ class AnthropicAgentBackend:
         wire: list[dict] = []
         for m in messages:
             if m["role"] == "assistant":
+                if m.get("_raw") is not None:
+                    wire.append({"role": "assistant", "content": m["_raw"]})
+                    continue
                 blocks: list[dict] = []
                 if m.get("content"):
                     blocks.append({"type": "text", "text": m["content"]})
@@ -328,6 +342,7 @@ class AnthropicAgentBackend:
             input_tokens=usage.get("input_tokens") or 0,
             output_tokens=usage.get("output_tokens") or 0,
             stop_reason="tool_calls" if calls else ("length" if stop == "max_tokens" else "stop"),
+            raw=data.get("content") or None,
         )
 
 

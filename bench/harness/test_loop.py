@@ -213,6 +213,29 @@ def test_openai_compat_parses_and_flags_malformed_arguments():
     assert bad.arguments == {} and bad.parse_error
 
 
+def test_raw_assistant_payload_is_replayed_verbatim():
+    # thinking-class models sign their tool calls (Gemini 3.x
+    # thought_signature, Anthropic thinking blocks) and 400 a replayed
+    # history that drops the signature — the raw payload must round-trip
+    raw = {"role": "assistant", "content": None,
+           "tool_calls": [{"id": "c1", "type": "function",
+                           "function": {"name": "Read", "arguments": "{}"},
+                           "extra_content": {"google": {"thought_signature": "sig"}}}]}
+    history = [
+        {"role": "user", "content": "hi"},
+        {"role": "assistant", "content": "",
+         "tool_calls": [ToolCall(id="c1", name="Read", arguments={})], "_raw": raw},
+    ]
+    wire = OpenAICompatAgentBackend._translate_history("sys", history)
+    assert wire[2] is raw
+
+    blocks = [{"type": "tool_use", "id": "c1", "name": "Read", "input": {},
+               "signature": "sig"}]
+    history[1]["_raw"] = blocks
+    wire = AnthropicAgentBackend._translate_history(history[1:])
+    assert wire == [{"role": "assistant", "content": blocks}]
+
+
 def test_anthropic_collapses_consecutive_tool_results():
     history = [
         {"role": "user", "content": "hi"},
