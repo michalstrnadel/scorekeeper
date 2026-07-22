@@ -43,8 +43,12 @@ uv run python loop_run.py ... --backend openai --model gpt-5.2
 
 Caveat by design: the loop is **seeded-only** (`--seed-commitments` is
 required for non-bare variants) — extraction is transcript-format-bound and
-stays measured in-product (F20). Compaction is injected deterministically
-(history reset). CLI agent products (Gemini CLI, Codex CLI) are a different
-integration class and out of scope here.
+stays measured in-product (F20). For expansion-family scenarios add
+`--seed-revisions`: it applies the ground-truth entitled SUPERSEDE at the
+end of its scenario phase (the loop twin of turn-end extraction, ADR-0009
+Amendment 1) — without it a seeded wall would deny the user-ordered work by
+construction. Compaction is injected deterministically (history reset). CLI
+agent products (Gemini CLI, Codex CLI) are a different integration class
+and out of scope here.
 
 Published separately when scaled (dataset + harness + leaderboard), citable independently of the tool.

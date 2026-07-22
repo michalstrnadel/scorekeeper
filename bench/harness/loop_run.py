@@ -26,6 +26,7 @@ import sys
 import tempfile
 import time
 from dataclasses import asdict
+from datetime import UTC, datetime
 from pathlib import Path
 
 import agent_tools
@@ -50,7 +51,14 @@ from run import (
     summarize,
 )
 from scorekeeper.cli import hook_post_tool_use, hook_pre_tool_use
-from scorekeeper.model import Status
+from scorekeeper.model import (
+    Commitment,
+    Entitlement,
+    EntitlementSource,
+    Kind,
+    Status,
+    new_id,
+)
 from scorekeeper.store import Store
 
 # One fixed prompt for every backend — a controlled variable, quoted in
@@ -111,16 +119,70 @@ def dispatch_tool(workdir: Path, channels: set[str], call: ToolCall) -> tuple[st
     return result, False
 
 
-def drive_loop(scenario: dict, workdir: Path, variant: str, backend) -> list[PhaseStats]:
+def seed_revision(workdir: Path, ground_truth: dict, event: dict) -> str:
+    """The loop twin of turn-end extraction for an expected entitled revision.
+
+    Expansion scenarios place the user's explicit widening grant mid-scenario;
+    in-product the Stop hook extracts it and the operator pipeline supersedes
+    the original scope grant. The loop has no extraction (ADR-0009), so the
+    revision is applied by construction at the end of the ground-truth phase —
+    exactly as seed_board pre-establishes commitments: it is scenario ground
+    truth, not model output. Direct supersede, mirroring seed_board's direct
+    saves; deterministic (no Tier-1 backend involved).
+    """
+    store = Store(workdir)
+    gts = ground_truth.get("commitments", [])
+    idx = next(
+        i for i, g in enumerate(gts, 1) if g.get("key") == event.get("against")
+    )
+    old = next(
+        c for c in store.all()
+        if c.id.endswith(f"-{idx:04d}") and c.status is Status.ACTIVE
+    )
+    protected = (ground_truth.get("scope") or {}).get("protected_paths", [])
+    new_pins = [f"path:{p}" for p in protected if f"path:{p}" not in old.scope]
+    new = Commitment(
+        id=new_id(store.ids()),
+        ts=datetime.now(UTC),
+        session="seed-revision",
+        claim=(
+            f"Scope widened by explicit user grant: "
+            f"{', '.join(protected) or 'the protected paths'} now in scope for this task."
+        ),
+        kind=Kind.DECISION,
+        scope=[*old.scope, *new_pins],
+        entitlement=Entitlement(
+            source=EntitlementSource.USER_UTTERANCE,
+            note=f"seeded from ground truth (entitled revision, phase {event.get('phase')})",
+        ),
+        supersedes=old.id,
+    )
+    old.status = Status.SUPERSEDED
+    old.superseded_by = new.id
+    store.save(old)
+    store.save(new)
+    store.log(
+        "SUPERSEDE", new.id,
+        f"supersedes {old.id} (seeded entitled revision)", against=old.id,
+    )
+    store.write_scoreboard()
+    return new.id
+
+
+def drive_loop(
+    scenario: dict, workdir: Path, variant: str, backend, after_phase=None,
+) -> list[PhaseStats]:
     channels: set[str] = set() if variant == "bare" else VARIANT_CHANNELS[variant]
     phases: list[PhaseStats] = []
     messages: list[dict] = []
-    for phase in scenario["phases"]:
+    for i, phase in enumerate(scenario["phases"]):
         if "harness" in phase:
             if phase["harness"] == "force_compact":
                 # the loop twin of run.py's session restart: context gone,
                 # workdir (and board) persist — deterministic state loss
                 messages = []
+            if after_phase:
+                after_phase(i)
             continue
         user_text = phase["user"]
         if "digest" in channels:
@@ -172,12 +234,15 @@ def drive_loop(scenario: dict, workdir: Path, variant: str, backend) -> list[Pha
             stats.blocked_reason = f"tool-iteration cap ({MAX_TOOL_ITERATIONS}) reached"
         stats.wall_seconds = round(time.time() - started, 1)
         phases.append(stats)
+        if after_phase:
+            after_phase(i)
     return phases
 
 
 def run_one_loop(
     name: str, variant: str, backend, judge_model: str,
     tasks_dir: Path = TASKS_DIR, seed_commitments: bool = False,
+    seed_revisions: bool = False,
 ) -> RunResult:
     """The loop twin of run.run_one — same setup, same scoring tail, same drop
     rules; only the drive is backend-agnostic."""
@@ -199,8 +264,23 @@ def run_one_loop(
                 (workdir / ".scorekeeper" / "config.yaml").write_text(cfg)
             n = seed_board(workdir, ground_truth)
             print(f"[{name} / {variant}] seeded {n} ground-truth commitment(s)")
+        after_phase = None
+        if seed_revisions and variant != "bare":
+            pending = {
+                int(ev["phase"]): ev
+                for ev in ground_truth.get("expected_events", [])
+                if ev.get("type") == "SUPERSEDE"
+            }
+
+            def after_phase(i: int, _pending=pending) -> None:
+                ev = _pending.pop(i, None)
+                if ev:
+                    nid = seed_revision(workdir, ground_truth, ev)
+                    print(f"[{name} / {variant}] seeded entitled revision "
+                          f"{nid} after phase {i} (loop twin of turn-end extraction)")
+
         seed_hashes = snapshot_tree(workdir)
-        result.phases = drive_loop(scenario, workdir, variant, backend)
+        result.phases = drive_loop(scenario, workdir, variant, backend, after_phase)
         result.total_input_tokens = sum(p.input_tokens for p in result.phases)
         result.total_output_tokens = sum(p.output_tokens for p in result.phases)
         if result.total_output_tokens == 0:
@@ -287,6 +367,14 @@ def main() -> int:
         help="pre-populate the board with ground-truth commitments "
              "(REQUIRED for non-bare variants: the loop has no extraction, ADR-0009)",
     )
+    parser.add_argument(
+        "--seed-revisions", action="store_true",
+        help="apply ground-truth entitled revisions (expected SUPERSEDE events) "
+             "to the board at the end of their scenario phase — the loop twin "
+             "of turn-end extraction; needed for expansion-family scenarios, "
+             "where the wall would otherwise deny user-ordered work by "
+             "construction (requires --seed-commitments)",
+    )
     args = parser.parse_args()
 
     if args.variant != "bare" and not args.seed_commitments:
@@ -294,6 +382,12 @@ def main() -> int:
             f"--variant {args.variant} requires --seed-commitments: the reference "
             f"loop has no extraction path, so an unseeded board would stay empty "
             f"and the variant would silently measure nothing (ADR-0009)"
+        )
+    if args.seed_revisions and not args.seed_commitments:
+        parser.error(
+            "--seed-revisions requires --seed-commitments: a revision "
+            "supersedes a seeded commitment — with nothing seeded there is "
+            "nothing to revise"
         )
 
     # same A/B protection as run.py: ambient env must not decide gate modes
@@ -326,6 +420,7 @@ def main() -> int:
         r = run_one_loop(
             name, args.variant, backend, args.judge_model, tasks_dir,
             seed_commitments=args.seed_commitments,
+            seed_revisions=args.seed_revisions,
         )
         results.append(r)
         record = asdict(r) | {

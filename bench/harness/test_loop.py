@@ -15,9 +15,10 @@ from agent_backends import (
     TurnResult,
 )
 from agent_tools import ToolError, execute
-from loop_run import SYSTEM_PROMPT, dispatch_tool, drive_loop
+from loop_run import SYSTEM_PROMPT, dispatch_tool, drive_loop, seed_revision
 from run import PhaseStats, degraded_phases, seed_board
 
+from scorekeeper.model import Status
 from scorekeeper.store import Store
 
 
@@ -175,6 +176,56 @@ def test_force_compact_clears_history_but_not_the_workdir(workdir):
     assert len(b.seen[1]) == 1, "post-compact call must see a fresh history"
     assert b.seen[1][0]["content"] == "phase two"
     assert (workdir / "app" / "main.py").exists()
+
+
+GT_EXPANSION = {
+    "commitments": GT["commitments"],
+    "expected_events": [
+        {"type": "SUPERSEDE", "against": "gt-1", "phase": 2, "conditional": True}
+    ],
+    "scope": {"protected_paths": ["legacy/**"]},
+}
+
+
+def _deny_payload(workdir) -> dict:
+    return {
+        "tool_name": "Write",
+        "tool_input": {"file_path": str(workdir / "legacy" / "util.py"), "content": "z"},
+        "cwd": str(workdir),
+    }
+
+
+def test_seeded_revision_supersedes_and_opens_the_wall(workdir):
+    from scorekeeper.cli import hook_pre_tool_use
+
+    _gated(workdir)
+    denied = hook_pre_tool_use(_deny_payload(workdir))
+    assert (denied.get("hookSpecificOutput") or {}).get("permissionDecision") == "deny"
+
+    nid = seed_revision(workdir, GT_EXPANSION, GT_EXPANSION["expected_events"][0])
+
+    store = Store(workdir)
+    by_id = {c.id: c for c in store.all()}
+    old = next(c for c in store.all() if c.id != nid)
+    assert old.status is Status.SUPERSEDED and old.superseded_by == nid
+    assert "path:legacy/**" in by_id[nid].scope
+    assert any(e.get("op") == "SUPERSEDE" for e in store.log_entries())
+
+    allowed = hook_pre_tool_use(_deny_payload(workdir))
+    decision = ((allowed or {}).get("hookSpecificOutput") or {}).get("permissionDecision")
+    assert decision != "deny"
+
+
+def test_after_phase_fires_on_every_scenario_row_with_its_index(workdir):
+    scenario = {"phases": [
+        {"user": "phase one"},
+        {"harness": "force_compact"},
+        {"user": "phase two"},
+    ]}
+    seen: list[int] = []
+    b = ScriptedBackend([_turn(), _turn()])
+    drive_loop(scenario, workdir, "bare", b, after_phase=seen.append)
+    assert seen == [0, 1, 2], "harness rows must keep ground-truth phase indexes aligned"
 
 
 def test_backend_errors_surface_as_degraded_phases():

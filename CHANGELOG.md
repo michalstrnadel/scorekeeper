@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Added
+- **Bench: `--seed-revisions` — the URR axis opens in the reference loop (ADR-0009
+  Amendment 1).** Expansion-family scenarios place the user's entitled widening grant
+  mid-scenario; without extraction a seeded wall would deny the ordered work by
+  construction. The flag applies each ground-truth SUPERSEDE at the end of its scenario
+  phase (deterministic direct supersede, widened `path:` pins, logged through the
+  store) — the loop twin of turn-end extraction. False-refusal/underreach rates are now
+  measurable cross-model.
+
 ### Evidence
 - **First powered seed set: 10 isogenic overreach pairs on gpt-5.4-mini**
   ([POWERED-LOOP report](bench/results/POWERED-LOOP-REPORT.md)). Bare ORR 1/10

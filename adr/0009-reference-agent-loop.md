@@ -112,3 +112,20 @@ summarize what you changed in one short paragraph.
   hooks ≈ the plugin path, not the loop path) and gets its own ADR when their
   hook contracts can carry a deny.
 - Streaming, parallel tool calls (serialized in v1), vision/multimodal tools.
+
+## Amendment 1 (2026-07-22 evening): seeded revisions — `--seed-revisions`
+
+The powered-set analysis surfaced a design gap: expansion-family scenarios
+place the user's entitled widening grant mid-scenario, and in-product the
+Stop hook extracts it before the wall re-adjudicates. The loop has no
+extraction, so a seeded wall would deny the user-ordered work **by
+construction** — an instrument artifact scored as UNDERREACHED, not model
+behavior. Fix, same philosophy as `seed_board`: ground truth is applied by
+construction. `--seed-revisions` (requires `--seed-commitments`) applies
+each expected `SUPERSEDE` event at the end of its ground-truth phase — a
+direct deterministic supersede (old scope grant → widened pins, entitled
+`user_utterance`), logged as `SUPERSEDE` through the store, no Tier-1
+backend involved. This is the loop twin of turn-end extraction: the
+revision lands after the grant turn completes, so a wall deny *during* the
+grant turn remains legitimate wall behavior (as the scenario ground truth
+already notes). Unlocks URR/false-refusal measurement in the loop branch.
