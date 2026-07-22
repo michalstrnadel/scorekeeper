@@ -48,3 +48,4 @@ bench/results/*.log
 
 # local-only working drafts (launch copy, private notes)
 drafts/
+.superpowers/
