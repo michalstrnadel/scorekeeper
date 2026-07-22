@@ -55,7 +55,13 @@ Tried it? A one-paragraph [experience report](https://github.com/michalstrnadel/
 
 ## What the board looks like
 
-One real record, verbatim from a live benchmark run (2026-07-21). The user
+<p align="center">
+  <img src="docs/assets/board.gif" alt="scorekeeper board: a terminal dashboard of active commitments with provenance and scope pins; a teammate ping tempts a drive-by edit of legacy/util.py and the wall's TIER0-SCOPE-DENY lands in the events feed." width="90%">
+</p>
+<p align="center"><em>The scoreboard, live: <code>scorekeeper board</code>. Reproduce: <code>uv run --project core python demo/board_demo.py</code></em></p>
+
+Behind the dashboard, the records are plain YAML — one real record, verbatim
+from a live benchmark run (2026-07-21). The user
 said *"work under app/ (tests/ and README updates are fine)... legacy/
 belongs to another team"* — turn-end extraction recorded it as a commitment
 with `path:` pins and provenance:

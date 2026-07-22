@@ -13,6 +13,12 @@
   (extraction stays measured in-product, F20); results carry `harness: "reference-loop"` and
   are reported as a separate evidence branch, never pooled with in-product runs. `run.py` is
   untouched.
+- **`scorekeeper board` — the scoreboard as a terminal dashboard.** Header counts
+  (active / challenged / conflicted / denies today), active commitments with scope pins
+  and provenance glyphs (★ external / ⚠ unentitled), recent events colored by op class
+  (denies red). Pure stdlib ANSI — no new dependencies; color auto-disables on non-tty
+  and `NO_COLOR`. The README's "What the board looks like" section is now carried by a
+  VHS-rendered GIF of it (`demo/board_demo.py` + `demo/board.tape`).
 
 ### Evidence
 - **Cross-model replication with a placebo control: the barge is not a Claude behavior, and

@@ -434,6 +434,12 @@ is empty.
 
 Print the full human-readable scoreboard (`Store.render_scoreboard()`).
 
+### `scorekeeper board [--root DIR] [--events N] [--no-color]`
+
+Colored terminal dashboard: header counts (active / challenged / conflicted / denies today),
+active commitments with scope pins and provenance glyphs (★ external / ⚠ unentitled), recent
+events colored by op class. Color auto-disables on non-tty or `NO_COLOR`.
+
 ### `scorekeeper worker PAYLOAD_FILE`
 
 Internal: the detached async-extraction worker spawned by the stop hook (ADR-0006). Reads a saved

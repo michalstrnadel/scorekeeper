@@ -47,7 +47,7 @@ result = apply(store, [ExtractedCommitment(
 print(store.render_digest())
 ```
 
-Storage is transparent and git-committable: `.scorekeeper/commitments/*.yaml`, an append-only `log.jsonl` audit trail, and a generated `scoreboard.md`. Nothing is ever deleted — statuses transition.
+Storage is transparent and git-committable: `.scorekeeper/commitments/*.yaml`, an append-only `log.jsonl` audit trail, and a generated `scoreboard.md`. Nothing is ever deleted — statuses transition. `scorekeeper board` renders it all as a colored terminal dashboard (`--events N`, `--no-color`; color auto-disables on non-tty or `NO_COLOR`).
 
 ## Model backends
 
