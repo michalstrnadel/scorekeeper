@@ -172,3 +172,11 @@ its job.
 The Anthropic bridge cell (same Claude model in both harnesses — ties the
 branches) and a powered seed set on the cheap backend for rates. All
 budget-gated.
+
+**Update (same day, evening):** the powered set ran — 10 d8cx pairs on
+gpt-5.4-mini ([POWERED-LOOP report](POWERED-LOOP-REPORT.md)). Bare ORR
+1/10 (the morning s00 wrap-up barge did **not** replicate — temperature 0
+is not determinism; single-run cells are anecdotes), governed 0/10 with
+zero denies. The barge is model- and elicitation-dependent; the stronger
+`d8cxq`/`d8cxqi` families and the barge-prone Gemini backend are the next
+powered targets.

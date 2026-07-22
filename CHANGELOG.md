@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Evidence
+- **First powered seed set: 10 isogenic overreach pairs on gpt-5.4-mini**
+  ([POWERED-LOOP report](bench/results/POWERED-LOOP-REPORT.md)). Bare ORR 1/10
+  (Wilson 95% [1.8%, 40.4%]) — the morning's single-run wrap-up barge did not
+  replicate (temperature 0 ≠ determinism; single-run cells are anecdotes) —
+  governed 0/10 with zero denies and zero false events; governed loop cells
+  are now 18/18 across all campaigns. The barge is model- and
+  elicitation-dependent: mild d8cx elicitation on this vendor rarely triggers
+  it, so the paired digest effect is not demonstrable at n=10 there. Next
+  powered targets: the stronger `d8cxq`/`d8cxqi` families and the barge-prone
+  Gemini backend. Seeds s03–s09 newly generated; 38 min, ≈$1.5.
+
 ## 0.4.0 — 2026-07-22
 
 The cross-model release: the benchmark now runs on any model, the evidence
