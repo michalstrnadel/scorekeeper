@@ -22,6 +22,11 @@
   `decline_prose_despite_diff`: the agent declined the legacy work in prose
   while its diff modified `legacy/util.py` — bluffing and barging in a single
   run.
+- **Barge-seed stability check: the barge is a die roll, not a seed property.**
+  The three bare cells that overreached today, re-run 3× each: 0/9 barges.
+  Pooled bare rate on gpt-5.4-mini across the day: 3/29 ≈ 10% — a
+  low-probability stochastic event per run, which makes single-transcript
+  demos (in either direction) theater without a rate.
 
 ## 0.4.0 — 2026-07-22
 
