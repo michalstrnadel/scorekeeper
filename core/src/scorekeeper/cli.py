@@ -21,6 +21,7 @@ from pathlib import Path
 import yaml
 
 from .backends import BackendError, detect_backend
+from .board import render_board
 from .detect import tier0_content, tier0_gate
 from .extract import build_turn_text, extract_commitments
 from .operators import apply
@@ -467,6 +468,11 @@ def main(argv: list[str] | None = None) -> int:
     for name in ("init", "digest", "report"):
         p = sub.add_parser(name)
         p.add_argument("--root", default=".", help="project root (default: cwd)")
+    board_p = sub.add_parser("board", help="terminal dashboard of the scoreboard")
+    board_p.add_argument("--root", default=".", help="project root (default: cwd)")
+    board_p.add_argument("--events", type=int, default=8,
+                         help="how many recent events to show")
+    board_p.add_argument("--no-color", action="store_true")
     args = parser.parse_args(argv)
 
     if args.command == "worker":
@@ -485,6 +491,17 @@ def main(argv: list[str] | None = None) -> int:
                 store = Store(_root(payload))
                 if store.exists:  # best-effort audit; never create .scorekeeper/ just to log
                     store.log("ERROR", detail=f"{args.event}: {e}")
+        return 0
+
+    if args.command == "board":
+        store = Store(Path(args.root))
+        if not store.exists:
+            print("no scoreboard here — run `scorekeeper init` first",
+                  file=sys.stderr)
+            return 1
+        color = (not args.no_color and sys.stdout.isatty()
+                 and not os.environ.get("NO_COLOR"))
+        print(render_board(store, color=color, events=args.events))
         return 0
 
     root = Path(args.root)

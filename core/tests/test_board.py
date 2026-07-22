@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 
 import pytest
 
+from scorekeeper import cli
 from scorekeeper.board import _short_id, render_board
 from scorekeeper.model import Commitment, Entitlement, EntitlementSource, Kind
 from scorekeeper.store import Store
@@ -100,3 +101,18 @@ def test_malformed_log_entries_are_skipped(board_store):
     board_store.log_path.open("a", encoding="utf-8").write('{"op": "ASSERT"}\n')
     out = render_board(board_store, color=False)  # entry missing ts/detail
     assert "ASSERT" in out  # renders, no raise
+
+
+def test_cli_board_prints_dashboard(board_store, capsys, monkeypatch):
+    monkeypatch.setenv("NO_COLOR", "1")
+    rc = cli.main(["board", "--root", str(board_store.root)])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "ACTIVE COMMITMENTS" in out and ESC not in out
+
+
+def test_cli_board_without_store_fails_politely(tmp_path, capsys):
+    rc = cli.main(["board", "--root", str(tmp_path)])
+    err = capsys.readouterr().err
+    assert rc == 1
+    assert "scorekeeper init" in err

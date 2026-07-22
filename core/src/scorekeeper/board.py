@@ -76,7 +76,7 @@ def render_board(store: Store, *, color: bool = True, width: int = 80,
 
     # header
     head = [_c("◆ scorekeeper", "magenta", "bold", on=color),
-            _c("·", "dim", on=color), store.root.name,
+            _c("·", "dim", on=color), store.root.resolve().name,
             _c("·", "dim", on=color),
             _c(f"{len(active)} active", "green", on=color)]
     if challenged:
