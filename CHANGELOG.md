@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 — 2026-07-22
+
+The cross-model release: the benchmark now runs on any model, the evidence
+replicates beyond Claude, and the scoreboard has a face — `scorekeeper board`.
 
 ### Added
 - **Bench: reference agent loop — run DeonticBench on any model (ADR-0009).** A second,

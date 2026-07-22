@@ -10,7 +10,7 @@ PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # The scorer the uvx/pipx paths fetch must at least know this plugin's hook
 # events — an older PyPI release rejecting an event blocked every Edit/Write
 # (issue #6). Bump in lockstep with the plugin version.
-MIN_SCORER="scorekeeper>=0.3.2"
+MIN_SCORER="scorekeeper>=0.4.0"
 
 # Hooks run in a non-interactive shell that may not source the user's profile,
 # so tools installed by pip --user / uv / homebrew / cargo can be off PATH.
